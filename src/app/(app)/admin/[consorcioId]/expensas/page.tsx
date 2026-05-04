@@ -18,17 +18,21 @@ export const metadata: Metadata = {
 const PER_PAGE = 12;
 
 export default async function AdminExpensasPage({
+  params,
   searchParams,
 }: Readonly<{
+  params: Promise<{ consorcioId: string }>;
   searchParams: Promise<{ page?: string }>;
 }>) {
   const user = await requireUser();
-  const params = await searchParams;
-  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const { consorcioId } = await params;
+  const sp = await searchParams;
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
   const paginated = await getExpensePeriodsForAdmin(user, {
     page,
     perPage: PER_PAGE,
+    consorcioId,
   });
 
   return (
@@ -37,8 +41,8 @@ export default async function AdminExpensasPage({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
-              href="/admin"
-              aria-label="Volver al panel admin"
+              href={`/admin/${consorcioId}`}
+              aria-label="Volver al panel del consorcio"
               className={cn(
                 buttonVariants({ variant: "outline", size: "icon-lg" }),
                 "touch-manipulation",
@@ -51,7 +55,7 @@ export default async function AdminExpensasPage({
             </h1>
           </div>
           <Link
-            href="/admin/expensas/nueva"
+            href={`/admin/${consorcioId}/expensas/nueva`}
             className={cn(
               buttonVariants(),
               "h-11 px-4 text-sm touch-manipulation",
@@ -76,13 +80,14 @@ export default async function AdminExpensasPage({
             >
               {paginated.items.map((period) => (
                 <li key={period.period}>
-                  <PeriodCard summary={period} />
+                  <PeriodCard summary={period} consorcioId={consorcioId} />
                 </li>
               ))}
             </ul>
 
             {paginated.totalPages > 1 && (
               <Pagination
+                consorcioId={consorcioId}
                 page={paginated.page}
                 totalPages={paginated.totalPages}
               />
@@ -96,13 +101,14 @@ export default async function AdminExpensasPage({
 
 function PeriodCard({
   summary,
-}: Readonly<{ summary: ExpensePeriodSummary }>) {
+  consorcioId,
+}: Readonly<{ summary: ExpensePeriodSummary; consorcioId: string }>) {
   const periodLabel = formatPeriod(summary.period);
   const totalLabel = `${summary.total} ${summary.total === 1 ? "expensa" : "expensas"}`;
 
   return (
     <Link
-      href={`/admin/expensas/periodo/${summary.period}`}
+      href={`/admin/${consorcioId}/expensas/periodo/${summary.period}`}
       aria-label={`Ver ${periodLabel}`}
       className="block touch-manipulation rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
@@ -177,11 +183,13 @@ function StatusDot({
 }
 
 function Pagination({
+  consorcioId,
   page,
   totalPages,
-}: Readonly<{ page: number; totalPages: number }>) {
+}: Readonly<{ consorcioId: string; page: number; totalPages: number }>) {
   const hasPrev = page > 1;
   const hasNext = page < totalPages;
+  const base = `/admin/${consorcioId}/expensas`;
 
   return (
     <nav
@@ -190,7 +198,7 @@ function Pagination({
     >
       {hasPrev ? (
         <Link
-          href={`/admin/expensas?page=${page - 1}`}
+          href={`${base}?page=${page - 1}`}
           className={cn(
             buttonVariants({ variant: "outline" }),
             "h-11 px-4 text-sm touch-manipulation",
@@ -210,7 +218,7 @@ function Pagination({
 
       {hasNext ? (
         <Link
-          href={`/admin/expensas?page=${page + 1}`}
+          href={`${base}?page=${page + 1}`}
           className={cn(
             buttonVariants({ variant: "outline" }),
             "h-11 px-4 text-sm touch-manipulation",

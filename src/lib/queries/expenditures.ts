@@ -53,6 +53,7 @@ export type ExpenditureRow = {
 export type ExpendituresFilters = {
   category?: ExpenditureCategory;
   month?: string;
+  consorcioId?: string;
 };
 
 export type PaginatedExpenditures = {
@@ -85,6 +86,9 @@ export async function getExpendituresForUser(
   const conditions = [];
   if (ids !== "all") {
     conditions.push(inArray(expenditures.consorcioId, ids));
+  }
+  if (filters.consorcioId) {
+    conditions.push(eq(expenditures.consorcioId, filters.consorcioId));
   }
   if (filters.category) {
     conditions.push(eq(expenditures.category, filters.category));

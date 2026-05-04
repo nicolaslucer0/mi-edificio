@@ -1,7 +1,7 @@
 import "server-only";
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { expenditures, expenses, units } from "@/lib/db/schema";
+import { consorcios, expenditures, expenses, units } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
 import { getViewableConsorcioIds } from "./expenditures";
 
@@ -11,6 +11,39 @@ export type MonthlyBalance = {
   spentCents: number;
   balanceCents: number;
 };
+
+export type OpeningBalanceSummary = {
+  totalCents: number;
+  earliestDate: Date | null;
+};
+
+export async function getOpeningBalanceForUser(
+  user: CurrentUser,
+): Promise<OpeningBalanceSummary> {
+  const ids = getViewableConsorcioIds(user);
+  if (ids !== "all" && ids.length === 0) {
+    return { totalCents: 0, earliestDate: null };
+  }
+
+  const where = ids === "all" ? undefined : inArray(consorcios.id, ids);
+
+  const [row] = await db
+    .select({
+      totalCents: sql<number>`coalesce(sum(${consorcios.openingBalanceCents}), 0)::int`,
+      earliestDate: sql<Date | null>`min(${consorcios.openingBalanceDate})`,
+    })
+    .from(consorcios)
+    .where(
+      where
+        ? and(where, isNotNull(consorcios.openingBalanceDate))
+        : isNotNull(consorcios.openingBalanceDate),
+    );
+
+  return {
+    totalCents: Number(row?.totalCents ?? 0),
+    earliestDate: row?.earliestDate ?? null,
+  };
+}
 
 export async function getMonthlyBalance(
   user: CurrentUser,

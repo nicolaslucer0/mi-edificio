@@ -1,8 +1,12 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
-import { getConsorciosForAdmin, getUnitsForAdmin } from "@/lib/queries/admin";
+import {
+  getConsorcioForAdmin,
+  getUnitsForAdmin,
+} from "@/lib/queries/admin";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -30,20 +34,27 @@ function defaultDueDate(): string {
   return `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
 }
 
-export default async function NewExpensePage() {
+export default async function NewExpensePage({
+  params,
+}: Readonly<{
+  params: Promise<{ consorcioId: string }>;
+}>) {
   const user = await requireUser();
-  const [consorcios, adminUnits] = await Promise.all([
-    getConsorciosForAdmin(user),
+  const { consorcioId } = await params;
+  const [consorcio, allUnits] = await Promise.all([
+    getConsorcioForAdmin(user, consorcioId),
     getUnitsForAdmin(user),
   ]);
+  if (!consorcio) notFound();
+  const units = allUnits.filter((u) => u.consorcioId === consorcioId);
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin"
-            aria-label="Volver al panel admin"
+            href={`/admin/${consorcioId}/expensas`}
+            aria-label="Volver al listado"
             className={cn(
               buttonVariants({ variant: "outline", size: "icon-lg" }),
               "touch-manipulation",
@@ -64,8 +75,9 @@ export default async function NewExpensePage() {
           </CardHeader>
           <CardContent>
             <ExpenseForm
-              consorcios={consorcios}
-              units={adminUnits}
+              consorcioId={consorcioId}
+              consorcioName={consorcio.name}
+              units={units}
               defaultPeriod={defaultPeriod()}
               defaultDueDate={defaultDueDate()}
             />

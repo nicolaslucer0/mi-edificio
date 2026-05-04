@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
-import { getConsorciosForAdmin } from "@/lib/queries/admin";
+import { getConsorcioForAdmin } from "@/lib/queries/admin";
 import { getExpenditureById } from "@/lib/queries/expenditures";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -26,24 +26,26 @@ function isoDate(date: Date): string {
 export default async function EditExpenditurePage({
   params,
 }: Readonly<{
-  params: Promise<{ id: string }>;
+  params: Promise<{ consorcioId: string; id: string }>;
 }>) {
-  const { id } = await params;
+  const { consorcioId, id } = await params;
   const user = await requireUser();
-  const [expenditure, consorciosList] = await Promise.all([
+  const [expenditure, consorcio] = await Promise.all([
     getExpenditureById(user, id),
-    getConsorciosForAdmin(user),
+    getConsorcioForAdmin(user, consorcioId),
   ]);
 
   if (!expenditure) notFound();
+  if (!consorcio) notFound();
+  if (expenditure.consorcioId !== consorcioId) notFound();
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center gap-3">
           <Link
-            href="/gastos"
-            aria-label="Volver a gastos"
+            href={`/admin/${consorcioId}/gastos`}
+            aria-label="Volver al listado de gastos"
             className={cn(
               buttonVariants({ variant: "outline", size: "icon-lg" }),
               "touch-manipulation",
@@ -64,7 +66,8 @@ export default async function EditExpenditurePage({
           </CardHeader>
           <CardContent>
             <ExpenditureForm
-              consorciosList={consorciosList}
+              consorciosList={[consorcio]}
+              consorcioId={consorcioId}
               defaultDate={isoDate(expenditure.date)}
               initialValues={{
                 id: expenditure.id,

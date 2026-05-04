@@ -23,6 +23,7 @@ const TYPE_OPTIONS = [
 
 type Props = {
   id: string;
+  consorcioId: string;
   unitDisplay: string;
   consorcioName: string;
   defaultPeriod: string;
@@ -46,10 +47,10 @@ export function ExpenseEditForm(props: Readonly<Props>) {
   useEffect(() => {
     if (state?.ok) {
       toast.success("Expensa actualizada.");
-      router.push("/admin/expensas");
+      router.push(`/admin/${props.consorcioId}/expensas`);
       router.refresh();
     }
-  }, [state, router]);
+  }, [state, router, props.consorcioId]);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">

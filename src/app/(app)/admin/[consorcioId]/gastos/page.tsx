@@ -25,8 +25,10 @@ export const metadata: Metadata = {
 const PER_PAGE = 10;
 
 export default async function AdminExpendituresPage({
+  params,
   searchParams,
 }: Readonly<{
+  params: Promise<{ consorcioId: string }>;
   searchParams: Promise<{
     page?: string;
     category?: string;
@@ -34,31 +36,30 @@ export default async function AdminExpendituresPage({
   }>;
 }>) {
   const user = await requireUser();
-  const params = await searchParams;
+  const { consorcioId } = await params;
+  const sp = await searchParams;
   const category =
-    params.category && isValidCategory(params.category)
-      ? params.category
-      : undefined;
-  const month =
-    params.month && isValidMonth(params.month) ? params.month : undefined;
-  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+    sp.category && isValidCategory(sp.category) ? sp.category : undefined;
+  const month = sp.month && isValidMonth(sp.month) ? sp.month : undefined;
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
 
   const paginated = await getExpendituresForUser(user, {
     page,
     perPage: PER_PAGE,
-    filters: { category, month },
+    filters: { category, month, consorcioId },
   });
 
   const isFiltered = Boolean(category || month);
   const periodLabel = month ? formatPeriod(month) : "todos los meses";
+  const basePath = `/admin/${consorcioId}/gastos`;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin"
-            aria-label="Volver al panel admin"
+            href={`/admin/${consorcioId}`}
+            aria-label="Volver al panel del consorcio"
             className={cn(
               buttonVariants({ variant: "outline", size: "icon-lg" }),
               "touch-manipulation",
@@ -72,7 +73,7 @@ export default async function AdminExpendituresPage({
         </div>
 
         <Link
-          href="/admin/gastos/nueva"
+          href={`${basePath}/nueva`}
           className={cn(
             buttonVariants(),
             "h-12 px-5 text-base touch-manipulation",
@@ -84,7 +85,11 @@ export default async function AdminExpendituresPage({
 
         <Card>
           <CardContent className="flex flex-col gap-4 p-5">
-            <ExpenditureFilters category={category} month={month} />
+            <ExpenditureFilters
+              category={category}
+              month={month}
+              basePath={basePath}
+            />
             <div className="flex flex-col gap-1 border-t pt-4 text-center">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 Total {periodLabel}
@@ -117,13 +122,18 @@ export default async function AdminExpendituresPage({
             >
               {paginated.items.map((item) => (
                 <li key={item.id}>
-                  <ExpenditureItem item={item} showAdminActions />
+                  <ExpenditureItem
+                    item={item}
+                    showAdminActions
+                    editHrefBase={basePath}
+                  />
                 </li>
               ))}
             </ul>
 
             {paginated.totalPages > 1 && (
               <Pagination
+                consorcioId={consorcioId}
                 page={paginated.page}
                 totalPages={paginated.totalPages}
                 category={category}
@@ -138,11 +148,13 @@ export default async function AdminExpendituresPage({
 }
 
 function Pagination({
+  consorcioId,
   page,
   totalPages,
   category,
   month,
 }: Readonly<{
+  consorcioId: string;
   page: number;
   totalPages: number;
   category: ExpenditureCategory | undefined;
@@ -154,7 +166,8 @@ function Pagination({
     if (month) params.set("month", month);
     if (p > 1) params.set("page", String(p));
     const qs = params.toString();
-    return qs ? `/admin/gastos?${qs}` : "/admin/gastos";
+    const base = `/admin/${consorcioId}/gastos`;
+    return qs ? `${base}?${qs}` : base;
   };
   const hasPrev = page > 1;
   const hasNext = page < totalPages;

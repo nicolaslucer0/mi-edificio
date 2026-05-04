@@ -1,9 +1,17 @@
 import Link from "next/link";
-import { ChevronLeft, TrendingDown, TrendingUp } from "lucide-react";
+import { ChevronLeft, Coins, TrendingDown, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
-import { getMonthlyBalance, type MonthlyBalance } from "@/lib/queries/balance";
-import { formatCurrencyCents, formatPeriod } from "@/lib/format";
+import {
+  getMonthlyBalance,
+  getOpeningBalanceForUser,
+  type MonthlyBalance,
+} from "@/lib/queries/balance";
+import {
+  formatCurrencyCents,
+  formatDate,
+  formatPeriod,
+} from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -14,7 +22,10 @@ export const metadata: Metadata = {
 
 export default async function BalancePage() {
   const user = await requireUser();
-  const months = await getMonthlyBalance(user, 12);
+  const [months, opening] = await Promise.all([
+    getMonthlyBalance(user, 12),
+    getOpeningBalanceForUser(user),
+  ]);
 
   const totals = months.reduce(
     (acc, m) => ({
@@ -23,7 +34,8 @@ export default async function BalancePage() {
     }),
     { collected: 0, spent: 0 },
   );
-  const totalBalance = totals.collected - totals.spent;
+  const totalBalance =
+    opening.totalCents + totals.collected - totals.spent;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
@@ -49,6 +61,30 @@ export default async function BalancePage() {
           por mes.
         </p>
 
+        {opening.totalCents > 0 && opening.earliestDate && (
+          <Card className="border-l-4 border-l-primary">
+            <CardContent className="flex items-center gap-3 p-5">
+              <div
+                aria-hidden="true"
+                className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+              >
+                <Coins className="size-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Saldo inicial
+                </p>
+                <p className="text-lg font-bold tabular-nums">
+                  {formatCurrencyCents(opening.totalCents)}
+                </p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Al {formatDate(opening.earliestDate)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardContent className="grid gap-4 p-5 sm:grid-cols-3">
             <Stat
@@ -64,7 +100,7 @@ export default async function BalancePage() {
               tone="negative"
             />
             <Stat
-              label="Saldo (12m)"
+              label="Saldo total"
               value={formatCurrencyCents(totalBalance)}
               tone={totalBalance >= 0 ? "positive" : "negative"}
               emphasis

@@ -35,11 +35,13 @@ type Role = "admin" | "owner" | "tenant";
 type Props = {
   membership: UserMembershipRow;
   unitsInConsorcio: AdminUnit[];
+  consorcioId: string;
 };
 
 export function MembershipRow({
   membership,
   unitsInConsorcio,
+  consorcioId,
 }: Readonly<Props>) {
   const [editing, setEditing] = useState(false);
   const display = describeMembership(membership);
@@ -59,7 +61,7 @@ export function MembershipRow({
       <div className="min-w-0 flex-1 text-sm leading-tight">
         {membership.unitId ? (
           <Link
-            href={`/admin/consorcios#unit-${membership.unitId}`}
+            href={`/admin/${consorcioId}/unidades#unit-${membership.unitId}`}
             className="hover:text-foreground hover:underline underline-offset-2"
           >
             {display}

@@ -28,6 +28,14 @@ export type AdminConsorcioWithUnits = {
   units: AdminUnitRow[];
 };
 
+export async function getConsorcioWithUnitsForAdmin(
+  user: CurrentUser,
+  consorcioId: string,
+): Promise<AdminConsorcioWithUnits | null> {
+  const all = await getConsorciosWithUnitsForAdmin(user);
+  return all.find((c) => c.id === consorcioId) ?? null;
+}
+
 export async function getConsorciosWithUnitsForAdmin(
   user: CurrentUser,
 ): Promise<AdminConsorcioWithUnits[]> {

@@ -120,6 +120,8 @@ export const consorcios = pgTable("consorcio", {
   paymentAlias: text(),
   paymentCbu: text(),
   paymentHolderName: text(),
+  openingBalanceCents: integer().notNull().default(0),
+  openingBalanceDate: timestamp({ mode: "date" }),
   createdAt: timestamp().defaultNow().notNull(),
 });
 

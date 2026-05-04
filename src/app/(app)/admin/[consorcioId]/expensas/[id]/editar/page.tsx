@@ -21,12 +21,13 @@ export const metadata: Metadata = {
 export default async function EditExpensePage({
   params,
 }: Readonly<{
-  params: Promise<{ id: string }>;
+  params: Promise<{ consorcioId: string; id: string }>;
 }>) {
   const user = await requireUser();
-  const { id } = await params;
+  const { consorcioId, id } = await params;
   const expense = await getExpenseForAdmin(user, id);
   if (!expense) notFound();
+  if (expense.consorcioId !== consorcioId) notFound();
 
   const unitDisplay = expense.unitFloor
     ? `Piso ${expense.unitFloor} — Unidad ${expense.unitLabel}`
@@ -37,7 +38,7 @@ export default async function EditExpensePage({
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin/expensas"
+            href={`/admin/${consorcioId}/expensas`}
             aria-label="Volver al listado"
             className={cn(
               buttonVariants({ variant: "outline", size: "icon-lg" }),
@@ -60,6 +61,7 @@ export default async function EditExpensePage({
           <CardContent>
             <ExpenseEditForm
               id={expense.id}
+              consorcioId={consorcioId}
               unitDisplay={unitDisplay}
               consorcioName={expense.consorcioName}
               defaultPeriod={expense.period}

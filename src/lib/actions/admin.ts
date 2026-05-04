@@ -118,7 +118,7 @@ export async function approveClaim(claimId: string): Promise<ActionResult> {
     }
   }
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
   revalidatePath("/");
   return { ok: true };
@@ -186,7 +186,7 @@ export async function rejectClaim(
     }
   }
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
   revalidatePath("/");
   return { ok: true };
@@ -233,9 +233,55 @@ export async function updatePaymentInfo(
     })
     .where(eq(consorcios.id, parsed.data.consorcioId));
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/datos-de-pago");
+  revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
+  return { ok: true };
+}
+
+const openingBalanceSchema = z.object({
+  consorcioId: z.uuid(),
+  openingBalancePesos: z.coerce
+    .number()
+    .int()
+    .gte(0, "El saldo no puede ser negativo."),
+  openingBalanceDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Formato YYYY-MM-DD." }),
+});
+
+export async function updateOpeningBalance(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const parsed = openingBalanceSchema.safeParse({
+    consorcioId: formData.get("consorcioId"),
+    openingBalancePesos: formData.get("openingBalancePesos"),
+    openingBalanceDate: formData.get("openingBalanceDate"),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+    };
+  }
+
+  if (!canAccessConsorcio(ctx, parsed.data.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  await db
+    .update(consorcios)
+    .set({
+      openingBalanceCents: parsed.data.openingBalancePesos * 100,
+      openingBalanceDate: new Date(parsed.data.openingBalanceDate),
+    })
+    .where(eq(consorcios.id, parsed.data.consorcioId));
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/balance");
   return { ok: true };
 }
 
@@ -354,8 +400,7 @@ export async function createExpense(
     })),
   );
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/expensas");
+  revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
   revalidatePath("/");
 
@@ -454,8 +499,7 @@ export async function updateExpense(
     })
     .where(eq(expenses.id, parsed.data.id));
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/expensas");
+  revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
   revalidatePath("/");
   return { ok: true };
@@ -481,8 +525,7 @@ export async function deleteExpense(id: string): Promise<ActionResult> {
 
   await db.delete(expenses).where(eq(expenses.id, id));
 
-  revalidatePath("/admin");
-  revalidatePath("/admin/expensas");
+  revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
   revalidatePath("/");
   return { ok: true };
@@ -600,7 +643,7 @@ export async function createExpenditure(
     createdByUserId: ctx.userId,
   });
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/gastos");
   revalidatePath("/balance");
   return { ok: true };
@@ -674,7 +717,7 @@ export async function updateExpenditure(
     })
     .where(eq(expenditures.id, parsed.data.id));
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/gastos");
   revalidatePath("/balance");
   return { ok: true };
@@ -700,7 +743,7 @@ export async function deleteExpenditure(id: string): Promise<ActionResult> {
   await db.delete(expenditures).where(eq(expenditures.id, id));
   await deleteReceipt(existing.receiptUrl);
 
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   revalidatePath("/gastos");
   revalidatePath("/balance");
   return { ok: true };
@@ -811,8 +854,7 @@ export async function addUserMembership(
     unitId: resolvedUnitId,
   });
 
-  revalidatePath("/admin/usuarios");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }
 
@@ -911,9 +953,7 @@ export async function updateUserMembership(
     .set({ role, unitId: resolvedUnitId })
     .where(eq(memberships.id, membershipId));
 
-  revalidatePath("/admin/usuarios");
-  revalidatePath("/admin/consorcios");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }
 
@@ -953,8 +993,7 @@ export async function removeUserMembership(
 
   await db.delete(memberships).where(eq(memberships.id, membershipId));
 
-  revalidatePath("/admin/usuarios");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }
 
@@ -995,8 +1034,7 @@ export async function createConsorcio(
     address: parsed.data.address?.trim() || null,
   });
 
-  revalidatePath("/admin/consorcios");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }
 
@@ -1054,8 +1092,7 @@ export async function createUnit(
     floor: cleanFloor,
   });
 
-  revalidatePath("/admin/consorcios");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }
 
@@ -1098,7 +1135,6 @@ export async function deleteUnit(unitId: string): Promise<ActionResult> {
 
   await db.delete(units).where(eq(units.id, unitId));
 
-  revalidatePath("/admin/consorcios");
-  revalidatePath("/admin");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }

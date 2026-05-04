@@ -33,16 +33,17 @@ type UnitGroup = {
 export default async function PeriodDetailPage({
   params,
 }: Readonly<{
-  params: Promise<{ period: string }>;
+  params: Promise<{ consorcioId: string; period: string }>;
 }>) {
   const user = await requireUser();
-  const { period } = await params;
+  const { consorcioId, period } = await params;
   if (!PERIOD_REGEX.test(period)) notFound();
 
   const paginated = await getExpensesForAdmin(user, {
     page: 1,
     perPage: PER_PAGE,
     period,
+    consorcioId,
   });
 
   if (paginated.items.length === 0) notFound();
@@ -61,7 +62,7 @@ export default async function PeriodDetailPage({
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
-              href="/admin/expensas"
+              href={`/admin/${consorcioId}/expensas`}
               aria-label="Volver al listado de períodos"
               className={cn(
                 buttonVariants({ variant: "outline", size: "icon-lg" }),
@@ -82,7 +83,7 @@ export default async function PeriodDetailPage({
             </div>
           </div>
           <Link
-            href="/admin/expensas/nueva"
+            href={`/admin/${consorcioId}/expensas/nueva`}
             className={cn(
               buttonVariants(),
               "h-11 px-4 text-sm touch-manipulation",
@@ -96,7 +97,7 @@ export default async function PeriodDetailPage({
         <ul className="flex flex-col gap-3" aria-label="Unidades del período">
           {groups.map((g) => (
             <li key={g.unitId}>
-              <UnitGroupCard group={g} />
+              <UnitGroupCard group={g} consorcioId={consorcioId} />
             </li>
           ))}
         </ul>
@@ -128,12 +129,10 @@ function groupByUnit(items: AdminExpenseRow[]): UnitGroup[] {
       return a.type === "ordinaria" ? -1 : 1;
     });
   }
-  return Array.from(map.values()).sort(byConsorcioFloorLabel);
+  return Array.from(map.values()).sort(byFloorLabel);
 }
 
-function byConsorcioFloorLabel(a: UnitGroup, b: UnitGroup): number {
-  const consorcio = a.consorcioName.localeCompare(b.consorcioName, "es");
-  if (consorcio !== 0) return consorcio;
+function byFloorLabel(a: UnitGroup, b: UnitGroup): number {
   const floorA = a.unitFloor ?? "";
   const floorB = b.unitFloor ?? "";
   const floor = floorA.localeCompare(floorB, "es", { numeric: true });
@@ -141,7 +140,10 @@ function byConsorcioFloorLabel(a: UnitGroup, b: UnitGroup): number {
   return a.unitLabel.localeCompare(b.unitLabel, "es", { numeric: true });
 }
 
-function UnitGroupCard({ group }: Readonly<{ group: UnitGroup }>) {
+function UnitGroupCard({
+  group,
+  consorcioId,
+}: Readonly<{ group: UnitGroup; consorcioId: string }>) {
   const unitDisplay = group.unitFloor
     ? `Piso ${group.unitFloor} — Unidad ${group.unitLabel}`
     : `Unidad ${group.unitLabel}`;
@@ -151,9 +153,6 @@ function UnitGroupCard({ group }: Readonly<{ group: UnitGroup }>) {
       <CardContent className="flex flex-col gap-3 p-5">
         <div className="flex flex-col gap-0.5">
           <p className="text-sm font-semibold leading-tight">{unitDisplay}</p>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            {group.consorcioName}
-          </p>
         </div>
 
         <ul
@@ -162,7 +161,11 @@ function UnitGroupCard({ group }: Readonly<{ group: UnitGroup }>) {
         >
           {group.expenses.map((expense) => (
             <li key={expense.id} className="flex">
-              <ExpenseRow expense={expense} unitDisplay={unitDisplay} />
+              <ExpenseRow
+                expense={expense}
+                unitDisplay={unitDisplay}
+                consorcioId={consorcioId}
+              />
             </li>
           ))}
         </ul>
@@ -174,7 +177,12 @@ function UnitGroupCard({ group }: Readonly<{ group: UnitGroup }>) {
 function ExpenseRow({
   expense,
   unitDisplay,
-}: Readonly<{ expense: AdminExpenseRow; unitDisplay: string }>) {
+  consorcioId,
+}: Readonly<{
+  expense: AdminExpenseRow;
+  unitDisplay: string;
+  consorcioId: string;
+}>) {
   const isExtraordinaria = expense.type === "extraordinaria";
   const deleteLabel = `${formatPeriod(expense.period)} · ${unitDisplay} · ${
     isExtraordinaria ? "Extraordinaria" : "Ordinaria"
@@ -211,7 +219,7 @@ function ExpenseRow({
 
       <div className="flex items-center gap-1 self-end">
         <Link
-          href={`/admin/expensas/${expense.id}/editar`}
+          href={`/admin/${consorcioId}/expensas/${expense.id}/editar`}
           aria-label={`Editar expensa ${deleteLabel}`}
           className={cn(
             buttonVariants({ variant: "ghost", size: "icon-sm" }),

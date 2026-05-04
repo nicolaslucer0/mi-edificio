@@ -11,7 +11,15 @@ import { cn } from "@/lib/utils";
 export function ExpenditureItem({
   item,
   showAdminActions = false,
-}: Readonly<{ item: ExpenditureRow; showAdminActions?: boolean }>) {
+  editHrefBase,
+}: Readonly<{
+  item: ExpenditureRow;
+  showAdminActions?: boolean;
+  editHrefBase?: string;
+}>) {
+  const editHref = editHrefBase
+    ? `${editHrefBase}/${item.id}/editar`
+    : `/admin/gastos/${item.id}/editar`;
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 p-5">
@@ -59,7 +67,7 @@ export function ExpenditureItem({
             {showAdminActions && (
               <div className="flex items-center gap-1">
                 <Link
-                  href={`/admin/gastos/${item.id}/editar`}
+                  href={editHref}
                   aria-label={`Editar gasto: ${item.description}`}
                   className={cn(
                     buttonVariants({ variant: "ghost", size: "icon-sm" }),

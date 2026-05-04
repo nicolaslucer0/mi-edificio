@@ -1,9 +1,11 @@
 import "server-only";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   consorcios,
+  expenditures,
   expenses,
+  memberships,
   paymentClaims,
   units,
   users,
@@ -61,7 +63,35 @@ export type AdminConsorcio = {
   paymentAlias: string | null;
   paymentCbu: string | null;
   paymentHolderName: string | null;
+  openingBalanceCents: number;
+  openingBalanceDate: Date | null;
 };
+
+export async function getConsorcioForAdmin(
+  user: CurrentUser,
+  consorcioId: string,
+): Promise<AdminConsorcio | null> {
+  const ids = getAccessibleConsorcioIds(user);
+  if (ids !== "all" && !ids.includes(consorcioId)) return null;
+
+  const [row] = await db
+    .select({
+      id: consorcios.id,
+      name: consorcios.name,
+      type: consorcios.type,
+      address: consorcios.address,
+      paymentAlias: consorcios.paymentAlias,
+      paymentCbu: consorcios.paymentCbu,
+      paymentHolderName: consorcios.paymentHolderName,
+      openingBalanceCents: consorcios.openingBalanceCents,
+      openingBalanceDate: consorcios.openingBalanceDate,
+    })
+    .from(consorcios)
+    .where(eq(consorcios.id, consorcioId))
+    .limit(1);
+
+  return row ?? null;
+}
 
 export async function getConsorciosForAdmin(
   user: CurrentUser,
@@ -77,6 +107,8 @@ export async function getConsorciosForAdmin(
     paymentAlias: consorcios.paymentAlias,
     paymentCbu: consorcios.paymentCbu,
     paymentHolderName: consorcios.paymentHolderName,
+    openingBalanceCents: consorcios.openingBalanceCents,
+    openingBalanceDate: consorcios.openingBalanceDate,
   };
 
   if (ids === "all") {
@@ -87,6 +119,114 @@ export async function getConsorciosForAdmin(
     .from(consorcios)
     .where(inArray(consorcios.id, ids))
     .orderBy(consorcios.name);
+}
+
+export type ConsorcioDashboardStats = {
+  totalBalanceCents: number;
+  openingBalanceCents: number;
+  openingBalanceDate: Date | null;
+  pendingThisMonthCents: number;
+  pendingThisMonthCount: number;
+  claimsPendingCount: number;
+  unitCount: number;
+  vecinoCount: number;
+};
+
+function currentMonthRange(): { start: Date; end: Date; period: string } {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return { start, end, period };
+}
+
+export async function getConsorcioDashboardStats(
+  user: CurrentUser,
+  consorcioId: string,
+): Promise<ConsorcioDashboardStats | null> {
+  const consorcio = await getConsorcioForAdmin(user, consorcioId);
+  if (!consorcio) return null;
+
+  const { period } = currentMonthRange();
+
+  const [
+    paidSum,
+    spentSum,
+    pendingMonth,
+    claimsCount,
+    unitCount,
+    vecinoCount,
+  ] = await Promise.all([
+    db
+      .select({
+        total: sql<number>`coalesce(sum(${expenses.amountCents}), 0)::int`,
+      })
+      .from(expenses)
+      .innerJoin(units, eq(units.id, expenses.unitId))
+      .where(
+        and(
+          eq(units.consorcioId, consorcioId),
+          eq(expenses.status, "pagado"),
+        ),
+      ),
+    db
+      .select({
+        total: sql<number>`coalesce(sum(${expenditures.amountCents}), 0)::int`,
+      })
+      .from(expenditures)
+      .where(eq(expenditures.consorcioId, consorcioId)),
+    db
+      .select({
+        total: sql<number>`coalesce(sum(${expenses.amountCents}), 0)::int`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(expenses)
+      .innerJoin(units, eq(units.id, expenses.unitId))
+      .where(
+        and(
+          eq(units.consorcioId, consorcioId),
+          eq(expenses.period, period),
+          notInArray(expenses.status, ["pagado"]),
+        ),
+      ),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(paymentClaims)
+      .innerJoin(expenses, eq(expenses.id, paymentClaims.expenseId))
+      .innerJoin(units, eq(units.id, expenses.unitId))
+      .where(
+        and(
+          eq(units.consorcioId, consorcioId),
+          eq(paymentClaims.resolution, "pending"),
+        ),
+      ),
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(units)
+      .where(eq(units.consorcioId, consorcioId)),
+    db
+      .select({
+        count: sql<number>`count(distinct ${memberships.userId})::int`,
+      })
+      .from(memberships)
+      .where(eq(memberships.consorcioId, consorcioId)),
+  ]);
+
+  const totalBalance =
+    consorcio.openingBalanceCents +
+    Number(paidSum[0]?.total ?? 0) -
+    Number(spentSum[0]?.total ?? 0);
+
+  return {
+    totalBalanceCents: totalBalance,
+    openingBalanceCents: consorcio.openingBalanceCents,
+    openingBalanceDate: consorcio.openingBalanceDate,
+    pendingThisMonthCents: Number(pendingMonth[0]?.total ?? 0),
+    pendingThisMonthCount: Number(pendingMonth[0]?.count ?? 0),
+    claimsPendingCount: Number(claimsCount[0]?.count ?? 0),
+    unitCount: Number(unitCount[0]?.count ?? 0),
+    vecinoCount: Number(vecinoCount[0]?.count ?? 0),
+  };
 }
 
 export type AdminUnit = {

@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatUnitWithFloor } from "@/lib/format";
-import type { AdminConsorcio, AdminUnit } from "@/lib/queries/admin";
+import type { AdminUnit } from "@/lib/queries/admin";
 
 const TYPE_OPTIONS = [
   { label: "Ordinaria", value: "ordinaria" },
@@ -37,14 +37,16 @@ function buildSuccessMessage(state: {
 }
 
 type Props = {
-  consorcios: AdminConsorcio[];
+  consorcioId: string;
+  consorcioName: string;
   units: AdminUnit[];
   defaultPeriod: string;
   defaultDueDate: string;
 };
 
 export function ExpenseForm({
-  consorcios,
+  consorcioId,
+  consorcioName,
   units,
   defaultPeriod,
   defaultDueDate,
@@ -56,39 +58,30 @@ export function ExpenseForm({
   >(createExpense, null);
 
   const targetItems = useMemo(() => {
-    const items: Array<{ label: string; value: string }> = [];
-    for (const c of consorcios) {
+    const items: Array<{ label: string; value: string }> = [
+      {
+        label: `Todas las unidades de ${consorcioName}`,
+        value: `consorcio:${consorcioId}`,
+      },
+    ];
+    for (const u of units) {
       items.push({
-        label: `Todas las unidades — ${c.name}`,
-        value: `consorcio:${c.id}`,
+        label: formatUnitWithFloor(u),
+        value: `unit:${u.id}`,
       });
-      for (const u of units.filter((x) => x.consorcioId === c.id)) {
-        items.push({
-          label: `${formatUnitWithFloor(u)} — ${c.name}`,
-          value: `unit:${u.id}`,
-        });
-      }
     }
     return items;
-  }, [consorcios, units]);
+  }, [consorcioId, consorcioName, units]);
 
   const [target, setTarget] = useState<string>(targetItems[0]?.value ?? "");
 
   useEffect(() => {
     if (state?.ok) {
       toast.success(buildSuccessMessage(state));
-      router.push("/admin/expensas");
+      router.push(`/admin/${consorcioId}/expensas`);
       router.refresh();
     }
-  }, [state, router]);
-
-  if (targetItems.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground leading-relaxed">
-        No hay unidades cargadas todavía.
-      </p>
-    );
-  }
+  }, [state, router, consorcioId]);
 
   return (
     <form action={formAction} className="flex flex-col gap-5">

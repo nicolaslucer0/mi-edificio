@@ -112,15 +112,18 @@ export type PaginatedExpensePeriods = {
 
 export async function getExpensePeriodsForAdmin(
   user: CurrentUser,
-  options: { page: number; perPage: number },
+  options: { page: number; perPage: number; consorcioId?: string },
 ): Promise<PaginatedExpensePeriods> {
   const ids = getAccessibleConsorcioIds(user);
-  const { page, perPage } = options;
+  const { page, perPage, consorcioId } = options;
   if (ids !== "all" && ids.length === 0) {
     return { items: [], total: 0, page, perPage, totalPages: 0 };
   }
 
-  const where = ids === "all" ? undefined : inArray(units.consorcioId, ids);
+  const conditions = [];
+  if (ids !== "all") conditions.push(inArray(units.consorcioId, ids));
+  if (consorcioId) conditions.push(eq(units.consorcioId, consorcioId));
+  const where = conditions.length === 0 ? undefined : and(...conditions);
   const offset = (page - 1) * perPage;
 
   const [items, totalResult] = await Promise.all([

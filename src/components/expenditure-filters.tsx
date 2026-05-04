@@ -33,9 +33,14 @@ function lastMonths(n: number): string[] {
 type Props = {
   category: string | undefined;
   month: string | undefined;
+  basePath?: string;
 };
 
-export function ExpenditureFilters({ category, month }: Readonly<Props>) {
+export function ExpenditureFilters({
+  category,
+  month,
+  basePath = "/gastos",
+}: Readonly<Props>) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
@@ -67,7 +72,7 @@ export function ExpenditureFilters({ category, month }: Readonly<Props>) {
     params.delete("page");
     const qs = params.toString();
     startTransition(() => {
-      router.push(qs ? `/gastos?${qs}` : "/gastos");
+      router.push(qs ? `${basePath}?${qs}` : basePath);
     });
   }
 

@@ -23,22 +23,38 @@ export type UserWithMemberships = {
   memberships: UserMembershipRow[];
 };
 
+function pickVisibleConsorcioIds(
+  ids: "all" | string[],
+  consorcioId: string | undefined,
+): string[] | null {
+  if (consorcioId) return [consorcioId];
+  if (ids === "all") return null;
+  return ids;
+}
+
 export async function getUsersForAdmin(
   user: CurrentUser,
+  options: { consorcioId?: string } = {},
 ): Promise<UserWithMemberships[]> {
   const ids = getAccessibleConsorcioIds(user);
   if (ids !== "all" && ids.length === 0) return [];
 
-  const scopedUserIdsRows =
-    ids === "all"
-      ? await db
-          .select({ id: users.id })
-          .from(users)
-          .where(isNotNull(users.email))
-      : await db
-          .selectDistinct({ id: memberships.userId })
-          .from(memberships)
-          .where(inArray(memberships.consorcioId, ids));
+  const { consorcioId } = options;
+  if (consorcioId && ids !== "all" && !ids.includes(consorcioId)) {
+    return [];
+  }
+
+  const visibleConsorcioIds = pickVisibleConsorcioIds(ids, consorcioId);
+
+  const scopedUserIdsRows = visibleConsorcioIds
+    ? await db
+        .selectDistinct({ id: memberships.userId })
+        .from(memberships)
+        .where(inArray(memberships.consorcioId, visibleConsorcioIds))
+    : await db
+        .select({ id: users.id })
+        .from(users)
+        .where(isNotNull(users.email));
 
   const scopedUserIds = scopedUserIdsRows.map((r) => r.id);
   if (scopedUserIds.length === 0) return [];
@@ -49,13 +65,12 @@ export async function getUsersForAdmin(
     .where(inArray(users.id, scopedUserIds))
     .orderBy(asc(users.email));
 
-  const membershipWhere =
-    ids === "all"
-      ? inArray(memberships.userId, scopedUserIds)
-      : and(
-          inArray(memberships.userId, scopedUserIds),
-          inArray(memberships.consorcioId, ids),
-        );
+  const membershipWhere = visibleConsorcioIds
+    ? and(
+        inArray(memberships.userId, scopedUserIds),
+        inArray(memberships.consorcioId, visibleConsorcioIds),
+      )
+    : inArray(memberships.userId, scopedUserIds);
 
   const membershipRows = await db
     .select({

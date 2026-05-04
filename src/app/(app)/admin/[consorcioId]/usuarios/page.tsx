@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import {
-  getConsorciosForAdmin,
+  getConsorcioForAdmin,
   getUnitsForAdmin,
   type AdminConsorcio,
   type AdminUnit,
@@ -28,21 +29,31 @@ export const metadata: Metadata = {
   title: "Vecinos — Mi edificio",
 };
 
-export default async function UsuariosPage() {
+export default async function UsuariosPage({
+  params,
+}: Readonly<{
+  params: Promise<{ consorcioId: string }>;
+}>) {
   const user = await requireUser();
-  const [consorcios, units, usersList] = await Promise.all([
-    getConsorciosForAdmin(user),
+  const { consorcioId } = await params;
+
+  const [consorcio, allUnits, usersList] = await Promise.all([
+    getConsorcioForAdmin(user, consorcioId),
     getUnitsForAdmin(user),
-    getUsersForAdmin(user),
+    getUsersForAdmin(user, { consorcioId }),
   ]);
+  if (!consorcio) notFound();
+
+  const consorcios = [consorcio];
+  const units = allUnits.filter((u) => u.consorcioId === consorcioId);
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin"
-            aria-label="Volver al panel admin"
+            href={`/admin/${consorcioId}`}
+            aria-label="Volver al panel del consorcio"
             className={cn(
               buttonVariants({ variant: "outline", size: "icon-lg" }),
               "touch-manipulation",
@@ -99,6 +110,7 @@ export default async function UsuariosPage() {
                     userRow={u}
                     consorcios={consorcios}
                     units={units}
+                    consorcioId={consorcioId}
                   />
                 </li>
               ))}
@@ -114,10 +126,12 @@ function UserCard({
   userRow,
   consorcios,
   units,
+  consorcioId,
 }: Readonly<{
   userRow: UserWithMemberships;
   consorcios: AdminConsorcio[];
   units: AdminUnit[];
+  consorcioId: string;
 }>) {
   const display = userRow.name ?? userRow.email;
   return (
@@ -133,7 +147,7 @@ function UserCard({
         </div>
         {userRow.memberships.length === 0 ? (
           <p className="text-xs leading-relaxed text-muted-foreground">
-            Sin asignaciones en tus consorcios.
+            Sin asignaciones en este consorcio.
           </p>
         ) : (
           <ul className="flex flex-col gap-2" aria-label="Asignaciones">
@@ -146,6 +160,7 @@ function UserCard({
                   <MembershipRow
                     membership={m}
                     unitsInConsorcio={unitsInConsorcio}
+                    consorcioId={consorcioId}
                   />
                 </li>
               );

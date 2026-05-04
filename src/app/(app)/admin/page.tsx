@@ -1,165 +1,118 @@
 import Link from "next/link";
-import { Building2, ChevronLeft, Plus, Receipt, Users, Wallet } from "lucide-react";
+import { redirect } from "next/navigation";
+import { Building2, ChevronRight, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
-import { getPendingClaimsForAdmin } from "@/lib/queries/admin";
+import { getConsorciosForAdmin } from "@/lib/queries/admin";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ClaimDecisionCard } from "@/components/claim-decision-card";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Panel admin — Mi edificio",
 };
 
-export default async function AdminDashboard() {
+const TYPE_LABELS = {
+  edificio: "Edificio",
+  ph: "PH",
+  barrio_cerrado: "Barrio cerrado",
+} as const;
+
+export default async function AdminPickerPage() {
   const user = await requireUser();
-  const pendingClaims = await getPendingClaimsForAdmin(user);
+  const consorciosList = await getConsorciosForAdmin(user);
+
+  if (consorciosList.length === 1) {
+    redirect(`/admin/${consorciosList[0].id}`);
+  }
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            aria-label="Volver al inicio"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
+        <header className="flex flex-col gap-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Panel admin
+          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-balance">
+            Elegí un consorcio
           </h1>
-        </div>
+          <p className="text-sm text-muted-foreground">
+            Vas a entrar al panel de administración del consorcio que selecciones.
+          </p>
+        </header>
 
-        <section aria-labelledby="claims-heading" className="flex flex-col gap-3">
-          <h2
-            id="claims-heading"
-            className="text-lg font-semibold tracking-tight"
-          >
-            Pagos por validar
-            {pendingClaims.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({pendingClaims.length})
-              </span>
-            )}
-          </h2>
-          {pendingClaims.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center text-muted-foreground">
-                No hay pagos esperando validación 🎉
-              </CardContent>
-            </Card>
-          ) : (
-            <ul
-              className="flex flex-col gap-3"
-              aria-label="Lista de pagos por validar"
-            >
-              {pendingClaims.map((claim) => (
-                <li key={claim.claimId}>
-                  <ClaimDecisionCard
-                    claimId={claim.claimId}
-                    period={claim.period}
-                    amountCents={claim.amountCents}
-                    unitLabel={claim.unitLabel}
-                    consorcioName={claim.consorcioName}
-                    claimedByName={claim.claimedByName}
-                    claimedByEmail={claim.claimedByEmail}
-                    note={claim.note}
-                    claimedAt={claim.claimedAt}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        {consorciosList.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center gap-4 p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Todavía no tenés consorcios asignados.
+              </p>
+              {user.isSuperAdmin && (
+                <Link
+                  href="/admin/consorcios"
+                  className={cn(
+                    buttonVariants(),
+                    "h-11 px-4 text-sm touch-manipulation",
+                  )}
+                >
+                  <Plus aria-hidden="true" className="size-4" />
+                  Crear consorcio
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <ul className="flex flex-col gap-3" aria-label="Consorcios">
+            {consorciosList.map((c) => (
+              <li key={c.id}>
+                <Link
+                  href={`/admin/${c.id}`}
+                  className="group/c block touch-manipulation rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <Card className="transition-colors hover:bg-muted/40">
+                    <CardContent className="flex items-center gap-3 p-5">
+                      <div
+                        aria-hidden="true"
+                        className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+                      >
+                        <Building2 className="size-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-base font-semibold leading-tight">
+                          {c.name}
+                        </p>
+                        <p className="text-xs leading-relaxed text-muted-foreground">
+                          {TYPE_LABELS[c.type]}
+                          {c.address ? ` · ${c.address}` : ""}
+                        </p>
+                      </div>
+                      <ChevronRight
+                        aria-hidden="true"
+                        className="size-5 shrink-0 text-muted-foreground"
+                      />
+                    </CardContent>
+                  </Card>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
 
-        <section aria-labelledby="actions-heading" className="flex flex-col gap-3">
-          <h2
-            id="actions-heading"
-            className="text-lg font-semibold tracking-tight"
-          >
-            Acciones
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <ActionCard
-              href="/admin/expensas"
-              title="Gestionar expensas"
-              description="Cargar, editar o borrar expensas. Soporta crear para todo un consorcio."
-              icon={<Plus className="size-5" />}
-            />
-            <ActionCard
-              href="/admin/gastos"
-              title="Gestionar gastos"
-              description="Cargar, editar o borrar gastos del consorcio."
-              icon={<Receipt className="size-5" />}
-            />
-            <ActionCard
-              href="/admin/datos-de-pago"
-              title="Datos de pago"
-              description="Editar alias, CBU y titular del consorcio."
-              icon={<Wallet className="size-5" />}
-            />
-            <ActionCard
-              href="/admin/usuarios"
-              title="Vecinos"
-              description="Agregar vecinos y gestionar sus unidades."
-              icon={<Users className="size-5" />}
-            />
-            <ActionCard
+        {user.isSuperAdmin && consorciosList.length > 0 && (
+          <div className="flex justify-center">
+            <Link
               href="/admin/consorcios"
-              title="Consorcios y unidades"
-              description="Crear consorcios y cargar unidades por piso."
-              icon={<Building2 className="size-5" />}
-            />
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "h-11 px-4 text-sm touch-manipulation",
+              )}
+            >
+              <Plus aria-hidden="true" className="size-4" />
+              Crear nuevo consorcio
+            </Link>
           </div>
-        </section>
+        )}
       </div>
     </main>
-  );
-}
-
-function ActionCard({
-  href,
-  title,
-  description,
-  icon,
-}: Readonly<{
-  href: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-}>) {
-  return (
-    <Link
-      href={href}
-      className="block touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
-    >
-      <Card className="h-full transition-colors hover:bg-muted/50">
-        <CardHeader className="flex-row items-center gap-3 space-y-0">
-          <div
-            aria-hidden="true"
-            className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary"
-          >
-            {icon}
-          </div>
-          <div className="flex flex-col gap-1">
-            <CardTitle className="text-base font-semibold">{title}</CardTitle>
-            <CardDescription className="text-xs leading-relaxed">
-              {description}
-            </CardDescription>
-          </div>
-        </CardHeader>
-      </Card>
-    </Link>
   );
 }

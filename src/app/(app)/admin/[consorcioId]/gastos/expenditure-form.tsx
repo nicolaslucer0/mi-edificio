@@ -53,12 +53,14 @@ export type ExpenditureFormInitialValues = {
 
 type Props = {
   consorciosList: AdminConsorcio[];
+  consorcioId: string;
   defaultDate: string;
   initialValues?: ExpenditureFormInitialValues;
 };
 
 export function ExpenditureForm({
   consorciosList,
+  consorcioId,
   defaultDate,
   initialValues,
 }: Readonly<Props>) {
@@ -88,10 +90,10 @@ export function ExpenditureForm({
   useEffect(() => {
     if (state?.ok) {
       toast.success(isEdit ? "Gasto actualizado." : "Gasto registrado.");
-      router.push("/gastos");
+      router.push(`/admin/${consorcioId}/gastos`);
       router.refresh();
     }
-  }, [state, router, isEdit]);
+  }, [state, router, isEdit, consorcioId]);
 
   if (consorciosList.length === 0) {
     return (
