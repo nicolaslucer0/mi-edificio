@@ -2,53 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, Home, Receipt, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getNavItems } from "./nav-items";
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof Home;
-  isActive: (pathname: string) => boolean;
+type Props = {
+  isAdmin: boolean;
 };
 
-const ITEMS: NavItem[] = [
-  {
-    href: "/",
-    label: "Inicio",
-    icon: Home,
-    isActive: (p) => p === "/",
-  },
-  {
-    href: "/expensas",
-    label: "Expensas",
-    icon: Wallet,
-    isActive: (p) => p.startsWith("/expensas"),
-  },
-  {
-    href: "/gastos",
-    label: "Gastos",
-    icon: Receipt,
-    isActive: (p) => p.startsWith("/gastos"),
-  },
-  {
-    href: "/balance",
-    label: "Balance",
-    icon: BarChart3,
-    isActive: (p) => p.startsWith("/balance"),
-  },
-];
-
-export function BottomNav() {
+export function BottomNav({ isAdmin }: Readonly<Props>) {
   const pathname = usePathname();
+  const items = getNavItems(isAdmin);
 
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-border/40 bg-background/85 backdrop-blur-md supports-backdrop-filter:bg-background/70"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-border/40 bg-background/85 backdrop-blur-md supports-backdrop-filter:bg-background/70 lg:hidden"
     >
       <ul className="mx-auto flex max-w-2xl items-stretch px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {ITEMS.map((item) => {
+        {items.map((item) => {
           const active = item.isActive(pathname);
           const Icon = item.icon;
           return (

@@ -10,7 +10,7 @@ type Props = {
 
 export function TopBar({ name, email, isAdmin }: Readonly<Props>) {
   return (
-    <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-md supports-backdrop-filter:bg-background/60">
+    <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-md supports-backdrop-filter:bg-background/60 lg:hidden">
       <div className="mx-auto flex h-14 w-full max-w-2xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6">
         <Link
           href="/"

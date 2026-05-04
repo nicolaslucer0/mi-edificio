@@ -1,13 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  BarChart3,
-  Check,
-  Clock,
-  Receipt,
-  ShieldCheck,
-  Wallet,
-} from "lucide-react";
+import { ArrowRight, Check, Clock } from "lucide-react";
 import { requireUser, roleLabel } from "@/lib/session";
 import {
   getDebtForUser,
@@ -40,7 +32,6 @@ function getFirstName(name: string | null, email: string): string {
 
 export default async function Home() {
   const user = await requireUser();
-  const isAdmin = user.isSuperAdmin || user.isAdmin;
   const [debt, recent] = await Promise.all([
     getDebtForUser(user),
     getRecentExpensesForUser(user, 3),
@@ -65,10 +56,6 @@ export default async function Home() {
           {debt.amountCents === 0 ? <UpToDateCard /> : <DebtCard debt={debt} />}
         </section>
       )}
-
-      <section className="mx-auto w-full max-w-2xl">
-        <QuickActions isAdmin={isAdmin} />
-      </section>
 
       {recent.length > 0 && (
         <section className="mx-auto w-full max-w-2xl">
@@ -152,44 +139,6 @@ function UpToDateCard() {
         <p className="text-sm leading-relaxed text-success/80 dark:text-success-foreground/70">
           No tenés expensas pendientes.
         </p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function QuickActions({ isAdmin }: Readonly<{ isAdmin: boolean }>) {
-  const actions = [
-    { href: "/expensas", label: "Expensas", icon: Wallet },
-    { href: "/gastos", label: "Gastos", icon: Receipt },
-    { href: "/balance", label: "Balance", icon: BarChart3 },
-  ];
-  if (isAdmin) {
-    actions.push({ href: "/admin", label: "Admin", icon: ShieldCheck });
-  }
-
-  return (
-    <Card>
-      <CardContent
-        className={cn(
-          "grid gap-1 px-2 py-4 sm:px-3",
-          actions.length === 4 ? "grid-cols-4" : "grid-cols-3",
-        )}
-      >
-        {actions.map((a) => {
-          const Icon = a.icon;
-          return (
-            <Link
-              key={a.href}
-              href={a.href}
-              className="group/qa flex flex-col items-center gap-2 rounded-xl px-2 py-2 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
-            >
-              <span className="flex size-12 items-center justify-center rounded-2xl bg-muted text-foreground transition-all duration-200 group-hover/qa:bg-foreground group-hover/qa:text-background group-active/qa:scale-95">
-                <Icon aria-hidden="true" className="size-5" />
-              </span>
-              <span className="text-xs font-medium">{a.label}</span>
-            </Link>
-          );
-        })}
       </CardContent>
     </Card>
   );
