@@ -57,6 +57,36 @@ export type PaginatedExpenses = {
   totalPages: number;
 };
 
+export async function getRecentExpensesForUser(
+  user: CurrentUser,
+  limit: number,
+): Promise<ExpenseRow[]> {
+  const unitIds = user.memberships
+    .filter(
+      (m) => (m.role === "owner" || m.role === "tenant") && m.unitId !== null,
+    )
+    .map((m) => m.unitId as string);
+  if (unitIds.length === 0) return [];
+
+  return db
+    .select({
+      id: expenses.id,
+      unitId: expenses.unitId,
+      unitLabel: units.label,
+      period: expenses.period,
+      dueDate: expenses.dueDate,
+      amountCents: expenses.amountCents,
+      type: expenses.type,
+      status: expenses.status,
+      description: expenses.description,
+    })
+    .from(expenses)
+    .innerJoin(units, eq(units.id, expenses.unitId))
+    .where(inArray(expenses.unitId, unitIds))
+    .orderBy(desc(expenses.period))
+    .limit(limit);
+}
+
 export async function getExpensesForUser(
   user: CurrentUser,
   options: { page: number; perPage: number },

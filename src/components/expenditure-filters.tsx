@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import {
   Select,
   SelectContent,
@@ -39,7 +39,26 @@ export function ExpenditureFilters({ category, month }: Readonly<Props>) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
-  const months = lastMonths(12);
+  const months = useMemo(() => lastMonths(12), []);
+
+  const categoryItems = useMemo(
+    () => [
+      { label: "Todas las categorías", value: ALL_VALUE },
+      ...EXPENDITURE_CATEGORIES.map((c) => ({
+        label: formatExpenditureCategory(c),
+        value: c,
+      })),
+    ],
+    [],
+  );
+
+  const monthItems = useMemo(
+    () => [
+      { label: "Todos los meses", value: ALL_VALUE },
+      ...months.map((m) => ({ label: formatPeriod(m), value: m })),
+    ],
+    [months],
+  );
 
   function setParam(key: string, value: string | null) {
     const params = new URLSearchParams(searchParams.toString());
@@ -59,6 +78,7 @@ export function ExpenditureFilters({ category, month }: Readonly<Props>) {
           Categoría
         </Label>
         <Select
+          items={categoryItems}
           value={category ?? ALL_VALUE}
           onValueChange={(v) => setParam("category", v)}
           disabled={pending}
@@ -86,6 +106,7 @@ export function ExpenditureFilters({ category, month }: Readonly<Props>) {
           Mes
         </Label>
         <Select
+          items={monthItems}
           value={month ?? ALL_VALUE}
           onValueChange={(v) => setParam("month", v)}
           disabled={pending}

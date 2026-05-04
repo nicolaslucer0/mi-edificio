@@ -4,9 +4,22 @@ import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { auth } from "./auth";
 import { db } from "./db";
-import { memberships, type roleEnum } from "./db/schema";
+import { memberships } from "./db/schema";
+import type { Role } from "./roles";
 
-type Role = (typeof roleEnum.enumValues)[number];
+export { roleLabel } from "./roles";
+export type { Role } from "./roles";
+
+const ROLE_PRIORITY: readonly Role[] = [
+  "super_admin",
+  "admin",
+  "owner",
+  "tenant",
+];
+
+function pickPrimaryRole(roles: Set<Role>): Role {
+  return ROLE_PRIORITY.find((r) => roles.has(r)) ?? "tenant";
+}
 
 export type CurrentUser = {
   id: string;
@@ -25,17 +38,6 @@ export type CurrentUser = {
   primaryRole: Role;
 };
 
-const ROLE_LABELS: Record<Role, string> = {
-  super_admin: "Administrador general",
-  admin: "Administrador del consorcio",
-  owner: "Propietario",
-  tenant: "Inquilino",
-};
-
-export function roleLabel(role: Role): string {
-  return ROLE_LABELS[role];
-}
-
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await auth();
   if (!session?.user?.id || !session.user.email) return null;
@@ -51,13 +53,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
     .where(eq(memberships.userId, session.user.id));
 
   const roles = new Set(userMemberships.map((m) => m.role));
-  const primaryRole: Role = roles.has("super_admin")
-    ? "super_admin"
-    : roles.has("admin")
-      ? "admin"
-      : roles.has("owner")
-        ? "owner"
-        : "tenant";
+  const primaryRole = pickPrimaryRole(roles);
 
   return {
     id: session.user.id,

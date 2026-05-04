@@ -54,3 +54,11 @@ export function formatExpenditureCategory(category: ExpenditureCategory): string
 export const EXPENDITURE_CATEGORIES = Object.keys(
   EXPENDITURE_CATEGORY_LABELS,
 ) as ExpenditureCategory[];
+
+export function formatUnitWithFloor(unit: {
+  label: string;
+  floor: string | null;
+}): string {
+  if (!unit.floor) return `Unidad ${unit.label}`;
+  return `Piso ${unit.floor} — Unidad ${unit.label}`;
+}

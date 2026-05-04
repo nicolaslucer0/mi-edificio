@@ -92,6 +92,7 @@ export async function getConsorciosForAdmin(
 export type AdminUnit = {
   id: string;
   label: string;
+  floor: string | null;
   consorcioId: string;
   consorcioName: string;
 };
@@ -106,12 +107,13 @@ export async function getUnitsForAdmin(
     .select({
       id: units.id,
       label: units.label,
+      floor: units.floor,
       consorcioId: consorcios.id,
       consorcioName: consorcios.name,
     })
     .from(units)
     .innerJoin(consorcios, eq(consorcios.id, units.consorcioId))
-    .orderBy(consorcios.name, units.label);
+    .orderBy(consorcios.name, units.floor, units.label);
 
   if (ids === "all") return baseQuery;
   return baseQuery.where(inArray(units.consorcioId, ids));

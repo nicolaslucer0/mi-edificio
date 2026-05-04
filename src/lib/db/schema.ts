@@ -131,6 +131,7 @@ export const units = pgTable(
       .notNull()
       .references(() => consorcios.id, { onDelete: "cascade" }),
     label: text().notNull(),
+    floor: text(),
     createdAt: timestamp().defaultNow().notNull(),
   },
   (t) => [index("unit_consorcio_idx").on(t.consorcioId)],

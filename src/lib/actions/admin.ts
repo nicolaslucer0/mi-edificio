@@ -198,7 +198,9 @@ const paymentInfoSchema = z.object({
   paymentAlias: z.string().min(6, "El alias es muy corto.").max(40),
   paymentCbu: z
     .string()
-    .regex(/^\d{22}$/, { message: "El CBU/CVU debe tener 22 dígitos." }),
+    .refine((v) => v === "" || /^\d{22}$/.test(v), {
+      message: "El CBU/CVU debe tener 22 dígitos.",
+    }),
 });
 
 export async function updatePaymentInfo(
@@ -227,7 +229,7 @@ export async function updatePaymentInfo(
     .set({
       paymentHolderName: parsed.data.paymentHolderName.trim(),
       paymentAlias: parsed.data.paymentAlias.trim(),
-      paymentCbu: parsed.data.paymentCbu.trim(),
+      paymentCbu: parsed.data.paymentCbu.trim() || null,
     })
     .where(eq(consorcios.id, parsed.data.consorcioId));
 
@@ -522,5 +524,402 @@ export async function deleteExpenditure(id: string): Promise<ActionResult> {
   revalidatePath("/admin");
   revalidatePath("/gastos");
   revalidatePath("/balance");
+  return { ok: true };
+}
+
+const addMembershipSchema = z
+  .object({
+    email: z.email("Ingresá un email válido."),
+    name: z.string().max(120).optional(),
+    role: z.enum(["admin", "owner", "tenant"]),
+    consorcioId: z.uuid(),
+    unitId: z.string().optional(),
+  })
+  .refine(
+    (v) => v.role === "admin" || (v.unitId && /^[0-9a-f-]{36}$/i.test(v.unitId)),
+    { message: "Elegí una unidad para este rol.", path: ["unitId"] },
+  );
+
+export async function addUserMembership(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const parsed = addMembershipSchema.safeParse({
+    email: formData.get("email"),
+    name: formData.get("name") || undefined,
+    role: formData.get("role"),
+    consorcioId: formData.get("consorcioId"),
+    unitId: formData.get("unitId") || undefined,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+    };
+  }
+
+  const { email, name, role, consorcioId, unitId } = parsed.data;
+
+  if (!canAccessConsorcio(ctx, consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  let resolvedUnitId: string | null = null;
+  if (role === "owner" || role === "tenant") {
+    if (!unitId) return { ok: false, error: "Falta la unidad." };
+    const [unitRow] = await db
+      .select({ consorcioId: units.consorcioId })
+      .from(units)
+      .where(eq(units.id, unitId))
+      .limit(1);
+    if (!unitRow) return { ok: false, error: "La unidad no existe." };
+    if (unitRow.consorcioId !== consorcioId) {
+      return { ok: false, error: "La unidad no pertenece a ese consorcio." };
+    }
+    resolvedUnitId = unitId;
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = name?.trim() || null;
+
+  const [existingUser] = await db
+    .select({ id: users.id, name: users.name })
+    .from(users)
+    .where(eq(users.email, cleanEmail))
+    .limit(1);
+
+  let userId: string;
+  if (existingUser) {
+    userId = existingUser.id;
+    if (cleanName && !existingUser.name) {
+      await db
+        .update(users)
+        .set({ name: cleanName })
+        .where(eq(users.id, userId));
+    }
+  } else {
+    const [created] = await db
+      .insert(users)
+      .values({ email: cleanEmail, name: cleanName })
+      .returning({ id: users.id });
+    userId = created.id;
+  }
+
+  const dupConditions = [
+    eq(memberships.userId, userId),
+    eq(memberships.role, role),
+    eq(memberships.consorcioId, consorcioId),
+  ];
+  if (resolvedUnitId) {
+    dupConditions.push(eq(memberships.unitId, resolvedUnitId));
+  }
+  const [dup] = await db
+    .select({ id: memberships.id })
+    .from(memberships)
+    .where(and(...dupConditions))
+    .limit(1);
+  if (dup) {
+    return { ok: false, error: "Esa persona ya tiene esa asignación." };
+  }
+
+  await db.insert(memberships).values({
+    userId,
+    role,
+    consorcioId,
+    unitId: resolvedUnitId,
+  });
+
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+const updateMembershipSchema = z
+  .object({
+    membershipId: z.uuid(),
+    role: z.enum(["admin", "owner", "tenant"]),
+    unitId: z.string().optional(),
+  })
+  .refine(
+    (v) => v.role === "admin" || (v.unitId && /^[0-9a-f-]{36}$/i.test(v.unitId)),
+    { message: "Elegí una unidad para este rol.", path: ["unitId"] },
+  );
+
+export async function updateUserMembership(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const parsed = updateMembershipSchema.safeParse({
+    membershipId: formData.get("membershipId"),
+    role: formData.get("role"),
+    unitId: formData.get("unitId") || undefined,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+    };
+  }
+
+  const { membershipId, role, unitId } = parsed.data;
+
+  const [current] = await db
+    .select({
+      id: memberships.id,
+      userId: memberships.userId,
+      role: memberships.role,
+      consorcioId: memberships.consorcioId,
+      unitId: memberships.unitId,
+    })
+    .from(memberships)
+    .where(eq(memberships.id, membershipId))
+    .limit(1);
+  if (!current) return { ok: false, error: "La asignación no existe." };
+  if (current.role === "super_admin") {
+    return { ok: false, error: "No se puede modificar al administrador general." };
+  }
+  if (!current.consorcioId || !canAccessConsorcio(ctx, current.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+  if (
+    current.userId === ctx.userId &&
+    current.role === "admin" &&
+    role !== "admin"
+  ) {
+    return {
+      ok: false,
+      error: "No podés quitarte a vos mismo como admin del consorcio.",
+    };
+  }
+
+  let resolvedUnitId: string | null = null;
+  if (role === "owner" || role === "tenant") {
+    if (!unitId) return { ok: false, error: "Falta la unidad." };
+    const [unitRow] = await db
+      .select({ consorcioId: units.consorcioId })
+      .from(units)
+      .where(eq(units.id, unitId))
+      .limit(1);
+    if (!unitRow) return { ok: false, error: "La unidad no existe." };
+    if (unitRow.consorcioId !== current.consorcioId) {
+      return { ok: false, error: "La unidad no pertenece a ese consorcio." };
+    }
+    resolvedUnitId = unitId;
+  }
+
+  const dupConditions = [
+    eq(memberships.userId, current.userId),
+    eq(memberships.role, role),
+    eq(memberships.consorcioId, current.consorcioId),
+  ];
+  if (resolvedUnitId) dupConditions.push(eq(memberships.unitId, resolvedUnitId));
+  const dupRows = await db
+    .select({ id: memberships.id })
+    .from(memberships)
+    .where(and(...dupConditions));
+  if (dupRows.some((r) => r.id !== membershipId)) {
+    return { ok: false, error: "Esa persona ya tiene esa asignación." };
+  }
+
+  await db
+    .update(memberships)
+    .set({ role, unitId: resolvedUnitId })
+    .where(eq(memberships.id, membershipId));
+
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/admin/consorcios");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+export async function removeUserMembership(
+  membershipId: string,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const [m] = await db
+    .select({
+      id: memberships.id,
+      userId: memberships.userId,
+      role: memberships.role,
+      consorcioId: memberships.consorcioId,
+    })
+    .from(memberships)
+    .where(eq(memberships.id, membershipId))
+    .limit(1);
+  if (!m) return { ok: false, error: "La asignación no existe." };
+
+  if (m.role === "super_admin") {
+    return {
+      ok: false,
+      error: "No se puede borrar al administrador general desde acá.",
+    };
+  }
+  if (!m.consorcioId || !canAccessConsorcio(ctx, m.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+  if (m.userId === ctx.userId && m.role === "admin") {
+    return {
+      ok: false,
+      error: "No podés quitarte a vos mismo como admin del consorcio.",
+    };
+  }
+
+  await db.delete(memberships).where(eq(memberships.id, membershipId));
+
+  revalidatePath("/admin/usuarios");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+const createConsorcioSchema = z.object({
+  name: z.string().min(3, "El nombre es muy corto.").max(120),
+  type: z.enum(["edificio", "ph", "barrio_cerrado"]),
+  address: z.string().max(200).optional(),
+});
+
+export async function createConsorcio(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+  if (!ctx.isSuperAdmin) {
+    return {
+      ok: false,
+      error: "Sólo el administrador general puede crear consorcios.",
+    };
+  }
+
+  const parsed = createConsorcioSchema.safeParse({
+    name: formData.get("name"),
+    type: formData.get("type"),
+    address: formData.get("address") || undefined,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+    };
+  }
+
+  await db.insert(consorcios).values({
+    name: parsed.data.name.trim(),
+    type: parsed.data.type,
+    address: parsed.data.address?.trim() || null,
+  });
+
+  revalidatePath("/admin/consorcios");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+const createUnitSchema = z.object({
+  consorcioId: z.uuid(),
+  label: z.string().min(1, "Falta el nombre/número.").max(40),
+  floor: z.string().max(20).optional(),
+});
+
+export async function createUnit(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const parsed = createUnitSchema.safeParse({
+    consorcioId: formData.get("consorcioId"),
+    label: formData.get("label"),
+    floor: formData.get("floor") || undefined,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+    };
+  }
+
+  if (!canAccessConsorcio(ctx, parsed.data.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  const cleanLabel = parsed.data.label.trim();
+  const cleanFloor = parsed.data.floor?.trim() || null;
+
+  const dupConditions = [
+    eq(units.consorcioId, parsed.data.consorcioId),
+    eq(units.label, cleanLabel),
+  ];
+  if (cleanFloor) {
+    dupConditions.push(eq(units.floor, cleanFloor));
+  }
+  const [dup] = await db
+    .select({ id: units.id })
+    .from(units)
+    .where(and(...dupConditions))
+    .limit(1);
+  if (dup) {
+    return { ok: false, error: "Ya existe una unidad con ese nombre y piso." };
+  }
+
+  await db.insert(units).values({
+    consorcioId: parsed.data.consorcioId,
+    label: cleanLabel,
+    floor: cleanFloor,
+  });
+
+  revalidatePath("/admin/consorcios");
+  revalidatePath("/admin");
+  return { ok: true };
+}
+
+export async function deleteUnit(unitId: string): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const [u] = await db
+    .select({ id: units.id, consorcioId: units.consorcioId })
+    .from(units)
+    .where(eq(units.id, unitId))
+    .limit(1);
+  if (!u) return { ok: false, error: "La unidad no existe." };
+  if (!canAccessConsorcio(ctx, u.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  const [withMembers] = await db
+    .select({ id: memberships.id })
+    .from(memberships)
+    .where(eq(memberships.unitId, unitId))
+    .limit(1);
+  if (withMembers) {
+    return {
+      ok: false,
+      error: "Quitá primero a los vecinos asignados a esta unidad.",
+    };
+  }
+  const [withExpense] = await db
+    .select({ id: expenses.id })
+    .from(expenses)
+    .where(eq(expenses.unitId, unitId))
+    .limit(1);
+  if (withExpense) {
+    return {
+      ok: false,
+      error: "Esta unidad ya tiene expensas cargadas; no se puede borrar.",
+    };
+  }
+
+  await db.delete(units).where(eq(units.id, unitId));
+
+  revalidatePath("/admin/consorcios");
+  revalidatePath("/admin");
   return { ok: true };
 }

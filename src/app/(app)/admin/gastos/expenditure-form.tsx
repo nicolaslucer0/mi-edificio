@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -71,6 +71,20 @@ export function ExpenditureForm({
     FormData
   >(action, null);
 
+  const consorcioItems = useMemo(
+    () => consorciosList.map((c) => ({ label: c.name, value: c.id })),
+    [consorciosList],
+  );
+
+  const categoryItems = useMemo(
+    () =>
+      EXPENDITURE_CATEGORIES.map((c) => ({
+        label: formatExpenditureCategory(c),
+        value: c,
+      })),
+    [],
+  );
+
   useEffect(() => {
     if (state?.ok) {
       toast.success(isEdit ? "Gasto actualizado." : "Gasto registrado.");
@@ -107,6 +121,7 @@ export function ExpenditureForm({
           </Label>
           <Select
             name="consorcioId"
+            items={consorcioItems}
             defaultValue={defaultConsorcioId}
             disabled={pending}
           >
@@ -189,6 +204,7 @@ export function ExpenditureForm({
         </Label>
         <Select
           name="category"
+          items={categoryItems}
           defaultValue={initialValues?.category ?? "mantenimiento"}
           disabled={pending}
         >

@@ -10,7 +10,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -26,7 +25,7 @@ function getInitials(name: string | null, email: string): string {
   if (name) {
     const parts = name.trim().split(/\s+/);
     if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      return (parts[0][0] + parts.at(-1)![0]).toUpperCase();
     }
     return parts[0].slice(0, 2).toUpperCase();
   }
@@ -50,14 +49,14 @@ export function UserMenu({ name, email, isAdmin }: Readonly<Props>) {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" sideOffset={8} className="min-w-56">
-        <DropdownMenuLabel className="px-2 pt-2 pb-1">
+        <div className="flex flex-col gap-0.5 px-2 pt-2 pb-1">
           <p className="text-sm font-medium text-foreground truncate">
             {display}
           </p>
           {name && (
             <p className="text-xs text-muted-foreground truncate">{email}</p>
           )}
-        </DropdownMenuLabel>
+        </div>
         <DropdownMenuSeparator />
         {isAdmin && (
           <>
@@ -75,6 +74,7 @@ export function UserMenu({ name, email, isAdmin }: Readonly<Props>) {
         <form action={signOutAction}>
           <DropdownMenuItem
             variant="destructive"
+            nativeButton
             render={
               <button type="submit" className="w-full cursor-pointer">
                 <LogOut aria-hidden="true" />

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, Plus, Receipt, Wallet } from "lucide-react";
+import { Building2, ChevronLeft, Plus, Receipt, Users, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getPendingClaimsForAdmin } from "@/lib/queries/admin";
@@ -108,6 +108,18 @@ export default async function AdminDashboard() {
               title="Datos de pago"
               description="Editar alias, CBU y titular del consorcio."
               icon={<Wallet className="size-5" />}
+            />
+            <ActionCard
+              href="/admin/usuarios"
+              title="Vecinos"
+              description="Agregar vecinos y gestionar sus unidades."
+              icon={<Users className="size-5" />}
+            />
+            <ActionCard
+              href="/admin/consorcios"
+              title="Consorcios y unidades"
+              description="Crear consorcios y cargar unidades por piso."
+              icon={<Building2 className="size-5" />}
             />
           </div>
         </section>

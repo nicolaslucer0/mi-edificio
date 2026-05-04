@@ -40,7 +40,10 @@ export default function RootLayout({
       lang="es"
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">
+      <body
+        className="min-h-full flex flex-col font-sans"
+        suppressHydrationWarning
+      >
         {children}
         <Toaster />
       </body>

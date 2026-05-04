@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -18,7 +18,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { formatUnitWithFloor } from "@/lib/format";
 import type { AdminUnit } from "@/lib/queries/admin";
+
+const TYPE_OPTIONS = [
+  { label: "Ordinaria", value: "ordinaria" },
+  { label: "Extraordinaria", value: "extraordinaria" },
+];
 
 type Props = {
   units: AdminUnit[];
@@ -36,6 +42,15 @@ export function ExpenseForm({
     ActionResult | null,
     FormData
   >(createExpense, null);
+
+  const unitItems = useMemo(
+    () =>
+      units.map((u) => ({
+        label: `${formatUnitWithFloor(u)} — ${u.consorcioName}`,
+        value: u.id,
+      })),
+    [units],
+  );
 
   useEffect(() => {
     if (state?.ok) {
@@ -59,7 +74,12 @@ export function ExpenseForm({
         <Label htmlFor="unitId" className="text-base">
           Unidad
         </Label>
-        <Select name="unitId" defaultValue={units[0].id} disabled={pending}>
+        <Select
+          name="unitId"
+          items={unitItems}
+          defaultValue={units[0].id}
+          disabled={pending}
+        >
           <SelectTrigger
             id="unitId"
             className="h-12 w-full text-base"
@@ -70,7 +90,7 @@ export function ExpenseForm({
           <SelectContent>
             {units.map((u) => (
               <SelectItem key={u.id} value={u.id}>
-                Unidad {u.label} — {u.consorcioName}
+                {formatUnitWithFloor(u)} — {u.consorcioName}
               </SelectItem>
             ))}
           </SelectContent>
@@ -132,7 +152,12 @@ export function ExpenseForm({
           <Label htmlFor="type" className="text-base">
             Tipo
           </Label>
-          <Select name="type" defaultValue="ordinaria" disabled={pending}>
+          <Select
+            name="type"
+            items={TYPE_OPTIONS}
+            defaultValue="ordinaria"
+            disabled={pending}
+          >
             <SelectTrigger
               id="type"
               className="h-12 w-full text-base"

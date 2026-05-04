@@ -83,14 +83,13 @@ export function PaymentInfoForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="paymentCbu" className="text-base">
-          CBU / CVU
+          CBU / CVU{" "}
+          <span className="font-normal text-muted-foreground">(opcional)</span>
         </Label>
         <Input
           id="paymentCbu"
           name="paymentCbu"
-          required
           inputMode="numeric"
-          pattern="\d{22}"
           defaultValue={paymentCbu ?? ""}
           placeholder="22 dígitos"
           autoComplete="off"
@@ -98,6 +97,9 @@ export function PaymentInfoForm({
           className="h-12 text-base font-mono tabular-nums"
           disabled={pending}
         />
+        <p className="text-xs text-muted-foreground leading-relaxed">
+          Si lo cargás, tienen que ser exactamente 22 dígitos numéricos.
+        </p>
       </div>
 
       {state && !state.ok && (
