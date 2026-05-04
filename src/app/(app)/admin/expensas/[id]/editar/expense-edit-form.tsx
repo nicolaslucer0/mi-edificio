@@ -1,12 +1,9 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  createExpense,
-  type CreateExpenseResult,
-} from "@/lib/actions/admin";
+import { updateExpense, type ActionResult } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,111 +15,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatUnitWithFloor } from "@/lib/format";
-import type { AdminConsorcio, AdminUnit } from "@/lib/queries/admin";
 
 const TYPE_OPTIONS = [
   { label: "Ordinaria", value: "ordinaria" },
   { label: "Extraordinaria", value: "extraordinaria" },
 ];
 
-function buildSuccessMessage(state: {
-  created: number;
-  skipped: number;
-}): string {
-  if (state.created === 1) return "Expensa creada.";
-  const skippedSuffix =
-    state.skipped > 0 ? ` (${state.skipped} ya existían)` : "";
-  return `${state.created} expensas creadas${skippedSuffix}.`;
-}
-
 type Props = {
-  consorcios: AdminConsorcio[];
-  units: AdminUnit[];
+  id: string;
+  unitDisplay: string;
+  consorcioName: string;
   defaultPeriod: string;
   defaultDueDate: string;
+  defaultAmountPesos: number;
+  defaultType: "ordinaria" | "extraordinaria";
+  defaultDescription: string;
 };
 
-export function ExpenseForm({
-  consorcios,
-  units,
-  defaultPeriod,
-  defaultDueDate,
-}: Readonly<Props>) {
+function toDateInputValue(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function ExpenseEditForm(props: Readonly<Props>) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<
-    CreateExpenseResult | null,
+    ActionResult | null,
     FormData
-  >(createExpense, null);
-
-  const targetItems = useMemo(() => {
-    const items: Array<{ label: string; value: string }> = [];
-    for (const c of consorcios) {
-      items.push({
-        label: `Todas las unidades — ${c.name}`,
-        value: `consorcio:${c.id}`,
-      });
-      for (const u of units.filter((x) => x.consorcioId === c.id)) {
-        items.push({
-          label: `${formatUnitWithFloor(u)} — ${c.name}`,
-          value: `unit:${u.id}`,
-        });
-      }
-    }
-    return items;
-  }, [consorcios, units]);
-
-  const [target, setTarget] = useState<string>(targetItems[0]?.value ?? "");
+  >(updateExpense, null);
 
   useEffect(() => {
     if (state?.ok) {
-      toast.success(buildSuccessMessage(state));
+      toast.success("Expensa actualizada.");
       router.push("/admin/expensas");
       router.refresh();
     }
   }, [state, router]);
 
-  if (targetItems.length === 0) {
-    return (
-      <p className="text-sm text-muted-foreground leading-relaxed">
-        No hay unidades cargadas todavía.
-      </p>
-    );
-  }
-
   return (
     <form action={formAction} className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="target" className="text-base">
-          Para quién
-        </Label>
-        <Select
-          name="target"
-          items={targetItems}
-          value={target}
-          onValueChange={(v) => setTarget(v ?? "")}
-          disabled={pending}
-        >
-          <SelectTrigger
-            id="target"
-            className="h-12 w-full text-base"
-            data-size="default"
-          >
-            <SelectValue placeholder="Elegí destino" />
-          </SelectTrigger>
-          <SelectContent>
-            {targetItems.map((item) => (
-              <SelectItem key={item.value} value={item.value}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Elegí "Todas las unidades" para crear una expensa por cada unidad del
-          consorcio con el mismo monto.
-        </p>
-      </div>
+      <input type="hidden" name="id" value={props.id} />
+
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Editando:{" "}
+        <span className="font-medium text-foreground">
+          {props.unitDisplay} · {props.consorcioName}
+        </span>
+      </p>
 
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
@@ -135,7 +73,7 @@ export function ExpenseForm({
             required
             pattern="\d{4}-(0[1-9]|1[0-2])"
             placeholder="2026-05"
-            defaultValue={defaultPeriod}
+            defaultValue={props.defaultPeriod}
             className="h-12 text-base font-mono"
             disabled={pending}
           />
@@ -150,7 +88,7 @@ export function ExpenseForm({
             name="dueDate"
             type="date"
             required
-            defaultValue={defaultDueDate}
+            defaultValue={props.defaultDueDate}
             className="h-12 text-base"
             disabled={pending}
           />
@@ -169,7 +107,7 @@ export function ExpenseForm({
             required
             min={1}
             step={1}
-            placeholder="105000"
+            defaultValue={props.defaultAmountPesos}
             className="h-12 text-base tabular-nums"
             disabled={pending}
           />
@@ -182,7 +120,7 @@ export function ExpenseForm({
           <Select
             name="type"
             items={TYPE_OPTIONS}
-            defaultValue="ordinaria"
+            defaultValue={props.defaultType}
             disabled={pending}
           >
             <SelectTrigger
@@ -209,6 +147,7 @@ export function ExpenseForm({
           name="description"
           rows={2}
           maxLength={500}
+          defaultValue={props.defaultDescription}
           placeholder="Ej. Incluye obra de pintura del frente."
           disabled={pending}
         />
@@ -218,7 +157,7 @@ export function ExpenseForm({
         <p
           role="alert"
           aria-live="polite"
-          className="text-sm text-destructive leading-relaxed"
+          className="text-sm leading-relaxed text-destructive"
         >
           {state.error}
         </p>
@@ -229,8 +168,10 @@ export function ExpenseForm({
         disabled={pending}
         className="h-12 text-base touch-manipulation"
       >
-        {pending ? "Creando…" : "Crear expensa"}
+        {pending ? "Guardando…" : "Guardar cambios"}
       </Button>
     </form>
   );
 }
+
+export { toDateInputValue };

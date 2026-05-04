@@ -192,6 +192,11 @@ function RecentRow({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold leading-tight truncate">
           {formatPeriod(expense.period)}
+          {expense.type === "extraordinaria" && (
+            <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              · Extra
+            </span>
+          )}
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">{display.label}</p>
       </div>

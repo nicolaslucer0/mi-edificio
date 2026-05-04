@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { put, del } from "@vercel/blob";
 import { auth } from "@/lib/auth";
@@ -239,24 +239,37 @@ export async function updatePaymentInfo(
   return { ok: true };
 }
 
-const createExpenseSchema = z.object({
-  unitId: z.uuid(),
-  period: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "Formato YYYY-MM." }),
-  dueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Formato YYYY-MM-DD." }),
-  amountPesos: z.coerce.number().int().positive("El monto debe ser mayor a 0."),
-  type: z.enum(["ordinaria", "extraordinaria"]),
-  description: z.string().max(500).optional(),
-});
+const createExpenseSchema = z
+  .object({
+    target: z
+      .string()
+      .regex(/^(unit|consorcio):[0-9a-f-]{36}$/i, {
+        message: "Elegí una unidad o todas las unidades del consorcio.",
+      }),
+    period: z
+      .string()
+      .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "Formato YYYY-MM." }),
+    dueDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Formato YYYY-MM-DD." }),
+    amountPesos: z.coerce.number().int().positive("El monto debe ser mayor a 0."),
+    type: z.enum(["ordinaria", "extraordinaria"]),
+    description: z.string().max(500).optional(),
+  });
+
+export type CreateExpenseResult =
+  | { ok: true; created: number; skipped: number }
+  | { ok: false; error: string };
 
 export async function createExpense(
-  _prev: ActionResult | null,
+  _prev: CreateExpenseResult | null,
   formData: FormData,
-): Promise<ActionResult> {
+): Promise<CreateExpenseResult> {
   const ctx = await requireAdminContext();
   if (!ctx) return { ok: false, error: "Sin permisos." };
 
   const parsed = createExpenseSchema.safeParse({
-    unitId: formData.get("unitId"),
+    target: formData.get("target"),
     period: formData.get("period"),
     dueDate: formData.get("dueDate"),
     amountPesos: formData.get("amountPesos"),
@@ -264,46 +277,212 @@ export async function createExpense(
     description: formData.get("description") || undefined,
   });
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
-  }
-
-  const [unitRow] = await db
-    .select({ id: units.id, consorcioId: units.consorcioId })
-    .from(units)
-    .where(eq(units.id, parsed.data.unitId))
-    .limit(1);
-  if (!unitRow) return { ok: false, error: "La unidad no existe." };
-  if (!canAccessConsorcio(ctx, unitRow.consorcioId)) {
-    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
-  }
-
-  const existing = await db
-    .select({ id: expenses.id })
-    .from(expenses)
-    .where(
-      and(
-        eq(expenses.unitId, parsed.data.unitId),
-        eq(expenses.period, parsed.data.period),
-      ),
-    )
-    .limit(1);
-  if (existing.length > 0) {
     return {
       ok: false,
-      error: "Ya hay una expensa para esa unidad y período.",
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
     };
   }
 
-  await db.insert(expenses).values({
-    unitId: parsed.data.unitId,
-    period: parsed.data.period,
-    dueDate: new Date(parsed.data.dueDate),
-    amountCents: parsed.data.amountPesos * 100,
-    type: parsed.data.type,
-    description: parsed.data.description?.trim() ?? null,
-  });
+  const [scope, scopeId] = parsed.data.target.split(":");
+  const description = parsed.data.description?.trim() || null;
+  const dueDate = new Date(parsed.data.dueDate);
+  const amountCents = parsed.data.amountPesos * 100;
+
+  let targetUnitIds: string[];
+
+  if (scope === "unit") {
+    const [unitRow] = await db
+      .select({ consorcioId: units.consorcioId })
+      .from(units)
+      .where(eq(units.id, scopeId))
+      .limit(1);
+    if (!unitRow) return { ok: false, error: "La unidad no existe." };
+    if (!canAccessConsorcio(ctx, unitRow.consorcioId)) {
+      return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+    }
+    targetUnitIds = [scopeId];
+  } else {
+    if (!canAccessConsorcio(ctx, scopeId)) {
+      return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+    }
+    const rows = await db
+      .select({ id: units.id })
+      .from(units)
+      .where(eq(units.consorcioId, scopeId));
+    if (rows.length === 0) {
+      return {
+        ok: false,
+        error: "Este consorcio todavía no tiene unidades cargadas.",
+      };
+    }
+    targetUnitIds = rows.map((r) => r.id);
+  }
+
+  const existing = await db
+    .select({ unitId: expenses.unitId })
+    .from(expenses)
+    .where(
+      and(
+        inArray(expenses.unitId, targetUnitIds),
+        eq(expenses.period, parsed.data.period),
+        eq(expenses.type, parsed.data.type),
+      ),
+    );
+  const existingSet = new Set(existing.map((e) => e.unitId));
+  const toInsert = targetUnitIds.filter((id) => !existingSet.has(id));
+
+  if (toInsert.length === 0) {
+    const typeLabel =
+      parsed.data.type === "ordinaria" ? "ordinaria" : "extraordinaria";
+    return {
+      ok: false,
+      error:
+        scope === "unit"
+          ? `Ya hay una expensa ${typeLabel} para esa unidad y período.`
+          : `Todas las unidades ya tienen una expensa ${typeLabel} para ese período.`,
+    };
+  }
+
+  await db.insert(expenses).values(
+    toInsert.map((unitId) => ({
+      unitId,
+      period: parsed.data.period,
+      dueDate,
+      amountCents,
+      type: parsed.data.type,
+      description,
+    })),
+  );
 
   revalidatePath("/admin");
+  revalidatePath("/admin/expensas");
+  revalidatePath("/expensas");
+  revalidatePath("/");
+
+  return {
+    ok: true,
+    created: toInsert.length,
+    skipped: existingSet.size,
+  };
+}
+
+const updateExpenseSchema = z.object({
+  id: z.uuid(),
+  period: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "Formato YYYY-MM." }),
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Formato YYYY-MM-DD." }),
+  amountPesos: z.coerce.number().int().positive("El monto debe ser mayor a 0."),
+  type: z.enum(["ordinaria", "extraordinaria"]),
+  description: z.string().max(500).optional(),
+});
+
+export async function updateExpense(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const parsed = updateExpenseSchema.safeParse({
+    id: formData.get("id"),
+    period: formData.get("period"),
+    dueDate: formData.get("dueDate"),
+    amountPesos: formData.get("amountPesos"),
+    type: formData.get("type"),
+    description: formData.get("description") || undefined,
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+    };
+  }
+
+  const [current] = await db
+    .select({
+      id: expenses.id,
+      unitId: expenses.unitId,
+      consorcioId: units.consorcioId,
+      currentPeriod: expenses.period,
+      currentType: expenses.type,
+    })
+    .from(expenses)
+    .innerJoin(units, eq(units.id, expenses.unitId))
+    .where(eq(expenses.id, parsed.data.id))
+    .limit(1);
+  if (!current) return { ok: false, error: "La expensa no existe." };
+  if (!canAccessConsorcio(ctx, current.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  if (
+    parsed.data.period !== current.currentPeriod ||
+    parsed.data.type !== current.currentType
+  ) {
+    const [dup] = await db
+      .select({ id: expenses.id })
+      .from(expenses)
+      .where(
+        and(
+          eq(expenses.unitId, current.unitId),
+          eq(expenses.period, parsed.data.period),
+          eq(expenses.type, parsed.data.type),
+        ),
+      )
+      .limit(1);
+    if (dup && dup.id !== parsed.data.id) {
+      const typeLabel =
+        parsed.data.type === "ordinaria" ? "ordinaria" : "extraordinaria";
+      return {
+        ok: false,
+        error: `Ya hay una expensa ${typeLabel} para esa unidad y período.`,
+      };
+    }
+  }
+
+  await db
+    .update(expenses)
+    .set({
+      period: parsed.data.period,
+      dueDate: new Date(parsed.data.dueDate),
+      amountCents: parsed.data.amountPesos * 100,
+      type: parsed.data.type,
+      description: parsed.data.description?.trim() || null,
+    })
+    .where(eq(expenses.id, parsed.data.id));
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/expensas");
+  revalidatePath("/expensas");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function deleteExpense(id: string): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const [current] = await db
+    .select({
+      id: expenses.id,
+      consorcioId: units.consorcioId,
+    })
+    .from(expenses)
+    .innerJoin(units, eq(units.id, expenses.unitId))
+    .where(eq(expenses.id, id))
+    .limit(1);
+  if (!current) return { ok: false, error: "La expensa no existe." };
+  if (!canAccessConsorcio(ctx, current.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  await db.delete(expenses).where(eq(expenses.id, id));
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/expensas");
   revalidatePath("/expensas");
   revalidatePath("/");
   return { ok: true };

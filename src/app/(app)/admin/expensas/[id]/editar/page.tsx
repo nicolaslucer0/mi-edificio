@@ -1,8 +1,9 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
-import { getConsorciosForAdmin, getUnitsForAdmin } from "@/lib/queries/admin";
+import { getExpenseForAdmin } from "@/lib/queries/expenses-admin";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -10,40 +11,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ExpenseForm } from "./expense-form";
 import { cn } from "@/lib/utils";
+import { ExpenseEditForm, toDateInputValue } from "./expense-edit-form";
 
 export const metadata: Metadata = {
-  title: "Nueva expensa — Mi edificio",
+  title: "Editar expensa — Mi edificio",
 };
 
-function defaultPeriod(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  return `${year}-${month}`;
-}
-
-function defaultDueDate(): string {
-  const now = new Date();
-  const due = new Date(now.getFullYear(), now.getMonth() + 1, 10);
-  return `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`;
-}
-
-export default async function NewExpensePage() {
+export default async function EditExpensePage({
+  params,
+}: Readonly<{
+  params: Promise<{ id: string }>;
+}>) {
   const user = await requireUser();
-  const [consorcios, adminUnits] = await Promise.all([
-    getConsorciosForAdmin(user),
-    getUnitsForAdmin(user),
-  ]);
+  const { id } = await params;
+  const expense = await getExpenseForAdmin(user, id);
+  if (!expense) notFound();
+
+  const unitDisplay = expense.unitFloor
+    ? `Piso ${expense.unitFloor} — Unidad ${expense.unitLabel}`
+    : `Unidad ${expense.unitLabel}`;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center gap-3">
           <Link
-            href="/admin"
-            aria-label="Volver al panel admin"
+            href="/admin/expensas"
+            aria-label="Volver al listado"
             className={cn(
               buttonVariants({ variant: "outline", size: "icon-lg" }),
               "touch-manipulation",
@@ -52,7 +47,7 @@ export default async function NewExpensePage() {
             <ChevronLeft aria-hidden="true" className="size-5" />
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            Nueva expensa
+            Editar expensa
           </h1>
         </div>
 
@@ -63,11 +58,15 @@ export default async function NewExpensePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ExpenseForm
-              consorcios={consorcios}
-              units={adminUnits}
-              defaultPeriod={defaultPeriod()}
-              defaultDueDate={defaultDueDate()}
+            <ExpenseEditForm
+              id={expense.id}
+              unitDisplay={unitDisplay}
+              consorcioName={expense.consorcioName}
+              defaultPeriod={expense.period}
+              defaultDueDate={toDateInputValue(expense.dueDate)}
+              defaultAmountPesos={Math.round(expense.amountCents / 100)}
+              defaultType={expense.type}
+              defaultDescription={expense.description ?? ""}
             />
           </CardContent>
         </Card>

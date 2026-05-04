@@ -12,6 +12,22 @@ import { formatCurrencyCents, formatPeriod } from "./format";
 const resend = new Resend(process.env.AUTH_RESEND_KEY);
 const baseUrl = process.env.AUTH_URL ?? "http://localhost:3000";
 
+const REQUEST_TIME_FORMATTER = new Intl.DateTimeFormat("es-AR", {
+  weekday: "long",
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "America/Argentina/Buenos_Aires",
+});
+
+const SUBJECT_TIME_FORMATTER = new Intl.DateTimeFormat("es-AR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "America/Argentina/Buenos_Aires",
+});
+
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => {
     switch (c) {
@@ -60,6 +76,52 @@ async function getAdminEmails(
     emails.push(r.email);
   }
   return emails;
+}
+
+export type MagicLinkParams = {
+  to: string;
+  url: string;
+};
+
+export async function sendMagicLinkEmail(
+  params: MagicLinkParams,
+): Promise<void> {
+  const from = process.env.AUTH_RESEND_FROM ?? "onboarding@resend.dev";
+  const now = new Date();
+  const requestedAtRaw = REQUEST_TIME_FORMATTER.format(now);
+  const requestedAt =
+    requestedAtRaw.charAt(0).toUpperCase() + requestedAtRaw.slice(1);
+  const timeShort = SUBJECT_TIME_FORMATTER.format(now);
+
+  const subject = `Tu acceso a Mi edificio · ${timeShort}`;
+
+  const text = `Hola,
+
+Acá tenés el link para entrar a Mi edificio:
+${params.url}
+
+El enlace expira en 24 horas.
+Solicitado: ${requestedAt} (hora Buenos Aires)
+
+Si no pediste este acceso, podés ignorar este mensaje.`;
+
+  const html = `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;color:#18181b;background:#ffffff;">
+  <div style="display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:8px;background:#f4f4f5;font-size:13px;font-weight:600;color:#52525b;letter-spacing:0.02em;margin-bottom:24px;">
+    <span style="font-size:16px;line-height:1;">🏢</span>
+    <span>Mi edificio</span>
+  </div>
+  <h1 style="margin:0 0 12px;font-size:24px;font-weight:700;letter-spacing:-0.02em;line-height:1.25;">Tu acceso para entrar</h1>
+  <p style="line-height:1.6;color:#3f3f46;margin:0 0 24px;font-size:15px;">Tocá el botón para entrar a tu cuenta. No necesitás contraseña.</p>
+  <p style="margin:0 0 24px;">
+    <a href="${params.url}" style="display:inline-block;padding:14px 28px;background:#18181b;color:#ffffff;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">Entrar a Mi edificio</a>
+  </p>
+  <p style="line-height:1.6;color:#71717a;font-size:13px;margin:0 0 4px;">El enlace expira en 24 horas.</p>
+  <p style="line-height:1.6;color:#71717a;font-size:13px;margin:0 0 24px;">Solicitado: ${escapeHtml(requestedAt)} (hora Buenos Aires)</p>
+  <hr style="border:0;border-top:1px solid #e4e4e7;margin:24px 0;">
+  <p style="line-height:1.6;color:#a1a1aa;font-size:12px;margin:0;">Si no pediste este acceso, podés ignorar este mensaje sin problema.</p>
+</div>`;
+
+  await resend.emails.send({ from, to: params.to, subject, text, html });
 }
 
 export type ClaimNotificationParams = {

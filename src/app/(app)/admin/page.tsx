@@ -92,9 +92,9 @@ export default async function AdminDashboard() {
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <ActionCard
-              href="/admin/expensas/nueva"
-              title="Crear expensa"
-              description="Cargar una expensa nueva para una unidad."
+              href="/admin/expensas"
+              title="Gestionar expensas"
+              description="Cargar, editar o borrar expensas. Soporta crear para todo un consorcio."
               icon={<Plus className="size-5" />}
             />
             <ActionCard

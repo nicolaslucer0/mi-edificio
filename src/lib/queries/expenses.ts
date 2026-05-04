@@ -1,16 +1,55 @@
 import "server-only";
-import { and, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  notInArray,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm";
 import { db } from "@/lib/db";
 import { expenses, units, type expenseStatusEnum, type expenseTypeEnum } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
 
-function getResidentUnitIds(user: CurrentUser): string[] {
-  return user.memberships
-    .filter(
-      (m) =>
-        (m.role === "owner" || m.role === "tenant") && m.unitId !== null,
-    )
-    .map((m) => m.unitId as string);
+type UnitAccess = {
+  ownerUnits: string[];
+  tenantOnlyUnits: string[];
+};
+
+function getUnitAccess(user: CurrentUser): UnitAccess {
+  const owner = new Set<string>();
+  const tenant = new Set<string>();
+  for (const m of user.memberships) {
+    if (!m.unitId) continue;
+    if (m.role === "owner") owner.add(m.unitId);
+    else if (m.role === "tenant") tenant.add(m.unitId);
+  }
+  for (const u of owner) tenant.delete(u);
+  return {
+    ownerUnits: Array.from(owner),
+    tenantOnlyUnits: Array.from(tenant),
+  };
+}
+
+function buildExpenseAccessCondition(user: CurrentUser): SQL | null {
+  const { ownerUnits, tenantOnlyUnits } = getUnitAccess(user);
+  const parts: SQL[] = [];
+  if (ownerUnits.length > 0) {
+    parts.push(inArray(expenses.unitId, ownerUnits));
+  }
+  if (tenantOnlyUnits.length > 0) {
+    parts.push(
+      and(
+        inArray(expenses.unitId, tenantOnlyUnits),
+        eq(expenses.type, "ordinaria"),
+      )!,
+    );
+  }
+  if (parts.length === 0) return null;
+  if (parts.length === 1) return parts[0];
+  return or(...parts) as SQL;
 }
 
 export type DebtSummary =
@@ -18,19 +57,14 @@ export type DebtSummary =
   | { hasUnit: true; amountCents: number; count: number };
 
 export async function getDebtForUser(user: CurrentUser): Promise<DebtSummary> {
-  const unitIds = getResidentUnitIds(user);
-  if (unitIds.length === 0) {
-    return { hasUnit: false };
-  }
+  const access = buildExpenseAccessCondition(user);
+  if (!access) return { hasUnit: false };
 
   const rows = await db
     .select({ amountCents: expenses.amountCents })
     .from(expenses)
     .where(
-      and(
-        inArray(expenses.unitId, unitIds),
-        notInArray(expenses.status, ["pagado", "en_validacion"]),
-      ),
+      and(access, notInArray(expenses.status, ["pagado", "en_validacion"])),
     );
 
   const amountCents = rows.reduce((sum, r) => sum + r.amountCents, 0);
@@ -61,12 +95,8 @@ export async function getRecentExpensesForUser(
   user: CurrentUser,
   limit: number,
 ): Promise<ExpenseRow[]> {
-  const unitIds = user.memberships
-    .filter(
-      (m) => (m.role === "owner" || m.role === "tenant") && m.unitId !== null,
-    )
-    .map((m) => m.unitId as string);
-  if (unitIds.length === 0) return [];
+  const access = buildExpenseAccessCondition(user);
+  if (!access) return [];
 
   return db
     .select({
@@ -82,7 +112,7 @@ export async function getRecentExpensesForUser(
     })
     .from(expenses)
     .innerJoin(units, eq(units.id, expenses.unitId))
-    .where(inArray(expenses.unitId, unitIds))
+    .where(access)
     .orderBy(desc(expenses.period))
     .limit(limit);
 }
@@ -91,10 +121,10 @@ export async function getExpensesForUser(
   user: CurrentUser,
   options: { page: number; perPage: number },
 ): Promise<PaginatedExpenses> {
-  const unitIds = getResidentUnitIds(user);
+  const access = buildExpenseAccessCondition(user);
   const { page, perPage } = options;
 
-  if (unitIds.length === 0) {
+  if (!access) {
     return { items: [], total: 0, page, perPage, totalPages: 0 };
   }
 
@@ -115,14 +145,15 @@ export async function getExpensesForUser(
       })
       .from(expenses)
       .innerJoin(units, eq(units.id, expenses.unitId))
-      .where(inArray(expenses.unitId, unitIds))
+      .where(access)
       .orderBy(desc(expenses.period))
       .limit(perPage)
       .offset(offset),
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(expenses)
-      .where(inArray(expenses.unitId, unitIds)),
+      .innerJoin(units, eq(units.id, expenses.unitId))
+      .where(access),
   ]);
 
   const total = Number(totalResult[0]?.count ?? 0);

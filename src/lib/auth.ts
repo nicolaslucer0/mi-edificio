@@ -3,6 +3,7 @@ import Resend from "next-auth/providers/resend";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
 import { db } from "./db";
+import { sendMagicLinkEmail } from "./email";
 import { users, accounts, sessions, verificationTokens } from "./db/schema";
 
 declare module "next-auth" {
@@ -23,6 +24,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Resend({
       from: process.env.AUTH_RESEND_FROM,
+      async sendVerificationRequest({ identifier, url }) {
+        await sendMagicLinkEmail({ to: identifier, url });
+      },
     }),
   ],
   pages: {

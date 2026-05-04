@@ -95,9 +95,15 @@ function ExpenseListItem({ expense }: Readonly<{ expense: ExpenseRow }>) {
   const isPaid = expense.status === "pagado";
   const isInValidation = expense.status === "en_validacion";
 
+  const isExtraordinaria = expense.type === "extraordinaria";
+
   return (
     <li>
-      <Card>
+      <Card
+        className={cn(
+          isExtraordinaria && "border-l-4 border-l-primary",
+        )}
+      >
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-col gap-2">
             <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-start sm:gap-3">
@@ -112,6 +118,14 @@ function ExpenseListItem({ expense }: Readonly<{ expense: ExpenseRow }>) {
               </p>
               <p className="text-sm text-muted-foreground">
                 Vence el {formatDate(expense.dueDate)}
+                {expense.type === "extraordinaria" && (
+                  <>
+                    {" · "}
+                    <span className="font-medium text-foreground">
+                      Extraordinaria
+                    </span>
+                  </>
+                )}
               </p>
             </div>
           </div>
