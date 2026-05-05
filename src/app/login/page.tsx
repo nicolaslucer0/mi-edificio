@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Building2 } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
@@ -14,22 +9,41 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader className="gap-3 text-center">
-          <CardTitle className="text-3xl font-semibold tracking-tight text-balance">
+    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+      <div className="flex w-full max-w-md flex-col items-center gap-8">
+        <div className="flex flex-col items-center gap-3">
+          <div
+            aria-hidden="true"
+            className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm"
+          >
+            <Building2 className="size-7" strokeWidth={2} />
+          </div>
+          <span className="text-lg font-semibold tracking-tight">
             Mi edificio
-          </CardTitle>
-          <CardDescription className="text-base leading-relaxed">
-            Ingresá tu email y te enviamos un link para entrar.
-            <br />
-            No hace falta contraseña.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LoginForm />
-        </CardContent>
-      </Card>
+          </span>
+        </div>
+
+        <div className="flex w-full flex-col gap-3 text-center">
+          <h1 className="text-3xl font-semibold tracking-tight text-balance">
+            Hola, vecino
+          </h1>
+          <p className="text-base leading-relaxed text-muted-foreground text-balance">
+            Ingresá tu email y te mandamos un link para entrar.{" "}
+            <span className="font-medium text-foreground">Sin contraseña.</span>
+          </p>
+        </div>
+
+        <Card className="w-full">
+          <CardContent className="p-5 sm:p-6">
+            <LoginForm />
+          </CardContent>
+        </Card>
+
+        <p className="px-4 text-center text-xs leading-relaxed text-muted-foreground">
+          Si tu email no está cargado, pedile al admin de tu consorcio que te
+          agregue.
+        </p>
+      </div>
     </main>
   );
 }
