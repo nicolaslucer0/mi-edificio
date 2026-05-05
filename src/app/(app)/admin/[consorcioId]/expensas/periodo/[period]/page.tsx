@@ -94,9 +94,16 @@ export default async function PeriodDetailPage({
           </Link>
         </div>
 
-        <ul className="flex flex-col gap-3" aria-label="Unidades del período">
-          {groups.map((g) => (
-            <li key={g.unitId}>
+        <ul
+          data-stagger
+          className="flex flex-col gap-3"
+          aria-label="Unidades del período"
+        >
+          {groups.map((g, idx) => (
+            <li
+              key={g.unitId}
+              style={{ "--stagger-index": idx } as React.CSSProperties}
+            >
               <UnitGroupCard group={g} consorcioId={consorcioId} />
             </li>
           ))}

@@ -9,6 +9,7 @@ import {
 import { formatCurrencyCents, formatPeriod } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { InstallPrompt } from "@/components/install-prompt";
 import { cn } from "@/lib/utils";
 
 function getGreeting(): string {
@@ -57,6 +58,10 @@ export default async function Home() {
         </section>
       )}
 
+      <section className="mx-auto w-full max-w-2xl">
+        <InstallPrompt />
+      </section>
+
       {recent.length > 0 && (
         <section className="mx-auto w-full max-w-2xl">
           <header className="flex items-center justify-between mb-3">
@@ -95,9 +100,17 @@ function DebtCard({
   debt: { amountCents: number; count: number };
 }>) {
   return (
-    <Card className="border-destructive/15 bg-card shadow-sm">
+    <Card
+      role="region"
+      aria-labelledby="debt-label"
+      aria-live="polite"
+      className="border-destructive/15 bg-card shadow-sm"
+    >
       <CardContent className="flex flex-col items-center gap-3 p-7 text-center sm:p-8">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <p
+          id="debt-label"
+          className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+        >
           Tu deuda
         </p>
         <p className="text-5xl font-bold tracking-tight tabular-nums text-destructive sm:text-6xl">
@@ -125,7 +138,11 @@ function DebtCard({
 
 function UpToDateCard() {
   return (
-    <Card className="border-success/25 bg-success/5 shadow-sm dark:bg-success/10">
+    <Card
+      role="region"
+      aria-live="polite"
+      className="border-success/25 bg-success/5 shadow-sm dark:bg-success/10"
+    >
       <CardContent className="flex flex-col items-center gap-3 p-7 text-center sm:p-8">
         <div
           aria-hidden="true"

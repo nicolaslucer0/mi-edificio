@@ -63,11 +63,15 @@ export default async function AprobarPagosPage({
           </Card>
         ) : (
           <ul
+            data-stagger
             className="flex flex-col gap-3"
             aria-label="Lista de pagos por validar"
           >
-            {claims.map((claim) => (
-              <li key={claim.claimId}>
+            {claims.map((claim, idx) => (
+              <li
+                key={claim.claimId}
+                style={{ "--stagger-index": idx } as React.CSSProperties}
+              >
                 <ClaimDecisionCard
                   claimId={claim.claimId}
                   period={claim.period}

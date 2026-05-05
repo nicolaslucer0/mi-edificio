@@ -16,8 +16,20 @@ const mono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mi edificio",
-  description: "Administración de consorcio",
+  title: {
+    default: "Mi edificio",
+    template: "%s",
+  },
+  description: "Administración del consorcio en una app",
+  applicationName: "Mi edificio",
+  appleWebApp: {
+    capable: true,
+    title: "Mi edificio",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
 };
 
 export const viewport: Viewport = {
@@ -28,6 +40,8 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

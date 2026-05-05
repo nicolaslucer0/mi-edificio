@@ -75,11 +75,15 @@ export default async function AdminExpensasPage({
         ) : (
           <>
             <ul
+              data-stagger
               className="flex flex-col gap-3"
               aria-label="Lista de períodos"
             >
-              {paginated.items.map((period) => (
-                <li key={period.period}>
+              {paginated.items.map((period, idx) => (
+                <li
+                  key={period.period}
+                  style={{ "--stagger-index": idx } as React.CSSProperties}
+                >
                   <PeriodCard summary={period} consorcioId={consorcioId} />
                 </li>
               ))}

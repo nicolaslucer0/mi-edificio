@@ -103,9 +103,18 @@ export default async function UsuariosPage({
               </CardContent>
             </Card>
           ) : (
-            <ul className="flex flex-col gap-3" aria-label="Lista de vecinos">
-              {usersList.map((u) => (
-                <li key={u.id} id={`user-${u.id}`} className="scroll-mt-24">
+            <ul
+              data-stagger
+              className="flex flex-col gap-3"
+              aria-label="Lista de vecinos"
+            >
+              {usersList.map((u, idx) => (
+                <li
+                  key={u.id}
+                  id={`user-${u.id}`}
+                  className="scroll-mt-24"
+                  style={{ "--stagger-index": idx } as React.CSSProperties}
+                >
                   <UserCard
                     userRow={u}
                     consorcios={consorcios}

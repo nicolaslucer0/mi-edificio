@@ -60,9 +60,17 @@ export default async function ExpensesPage({
           <EmptyState />
         ) : (
           <>
-            <ul className="flex flex-col gap-3" aria-label="Lista de expensas">
-              {paginated.items.map((expense) => (
-                <ExpenseListItem key={expense.id} expense={expense} />
+            <ul
+              data-stagger
+              className="flex flex-col gap-3"
+              aria-label="Lista de expensas"
+            >
+              {paginated.items.map((expense, idx) => (
+                <ExpenseListItem
+                  key={expense.id}
+                  expense={expense}
+                  index={idx}
+                />
               ))}
             </ul>
 
@@ -89,7 +97,10 @@ function EmptyState() {
   );
 }
 
-function ExpenseListItem({ expense }: Readonly<{ expense: ExpenseRow }>) {
+function ExpenseListItem({
+  expense,
+  index,
+}: Readonly<{ expense: ExpenseRow; index: number }>) {
   const isPending =
     expense.status === "pendiente" || expense.status === "rechazado";
   const isPaid = expense.status === "pagado";
@@ -98,7 +109,7 @@ function ExpenseListItem({ expense }: Readonly<{ expense: ExpenseRow }>) {
   const isExtraordinaria = expense.type === "extraordinaria";
 
   return (
-    <li>
+    <li style={{ "--stagger-index": index } as React.CSSProperties}>
       <Card
         className={cn(
           isExtraordinaria && "border-l-4 border-l-primary",

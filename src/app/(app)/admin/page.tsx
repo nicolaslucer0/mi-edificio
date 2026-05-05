@@ -62,9 +62,16 @@ export default async function AdminPickerPage() {
             </CardContent>
           </Card>
         ) : (
-          <ul className="flex flex-col gap-3" aria-label="Consorcios">
-            {consorciosList.map((c) => (
-              <li key={c.id}>
+          <ul
+            data-stagger
+            className="flex flex-col gap-3"
+            aria-label="Consorcios"
+          >
+            {consorciosList.map((c, idx) => (
+              <li
+                key={c.id}
+                style={{ "--stagger-index": idx } as React.CSSProperties}
+              >
                 <Link
                   href={`/admin/${c.id}`}
                   className="group/c block touch-manipulation rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
