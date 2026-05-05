@@ -81,7 +81,7 @@ export function ClaimPaymentButton({
               <Textarea
                 id="note"
                 name="note"
-                placeholder="Ej. transferí por Mercado Pago el 1/5"
+                placeholder="Ej. transferí por XXX el 1/5"
                 rows={3}
                 maxLength={500}
                 disabled={isPending}

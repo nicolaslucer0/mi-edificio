@@ -23,12 +23,19 @@ export function getAccessibleConsorcioIds(
     .map((m) => m.consorcioId as string);
 }
 
-export async function getPendingClaimsForAdmin(user: CurrentUser) {
+export async function getPendingClaimsForAdmin(
+  user: CurrentUser,
+  options: { consorcioId?: string } = {},
+) {
   const ids = getAccessibleConsorcioIds(user);
   if (ids !== "all" && ids.length === 0) return [];
+  const { consorcioId } = options;
+  if (consorcioId && ids !== "all" && !ids.includes(consorcioId)) return [];
 
   const conditions = [eq(paymentClaims.resolution, "pending")];
-  if (ids !== "all") {
+  if (consorcioId) {
+    conditions.push(eq(units.consorcioId, consorcioId));
+  } else if (ids !== "all") {
     conditions.push(inArray(units.consorcioId, ids));
   }
 

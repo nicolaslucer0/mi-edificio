@@ -111,10 +111,15 @@ export default async function ConsorcioDashboard({
               hint={
                 stats.claimsPendingCount === 0
                   ? "Sin pendientes"
-                  : "Click en Expensas para revisar"
+                  : "Tocá para revisar"
               }
               icon={<ShieldAlert aria-hidden="true" className="size-4" />}
               tone={stats.claimsPendingCount > 0 ? "warning" : "neutral"}
+              href={
+                stats.claimsPendingCount > 0
+                  ? `/admin/${consorcioId}/aprobar-pagos`
+                  : undefined
+              }
             />
           </div>
         </section>
@@ -130,6 +135,19 @@ export default async function ConsorcioDashboard({
             Acciones
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
+            {stats.claimsPendingCount > 0 && (
+              <ActionCard
+                href={`/admin/${consorcioId}/aprobar-pagos`}
+                title="Aprobar pagos"
+                description={`${stats.claimsPendingCount} ${
+                  stats.claimsPendingCount === 1
+                    ? "pago esperando"
+                    : "pagos esperando"
+                } tu validación.`}
+                icon={<ShieldAlert className="size-5" />}
+                emphasis
+              />
+            )}
             <ActionCard
               href={`/admin/${consorcioId}/expensas`}
               title="Gestionar expensas"
@@ -210,20 +228,28 @@ function StatCard({
   hint,
   icon,
   tone,
+  href,
 }: Readonly<{
   label: string;
   value: string;
   hint: string;
   icon: React.ReactNode;
   tone: "neutral" | "warning";
+  href?: string;
 }>) {
-  return (
-    <Card>
+  const body = (
+    <Card
+      className={cn(
+        href && "transition-colors hover:bg-muted/40",
+      )}
+    >
       <CardContent className="flex flex-col gap-1 p-4">
         <p
           className={cn(
             "inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide",
-            tone === "warning" ? "text-yellow-700 dark:text-yellow-400" : "text-muted-foreground",
+            tone === "warning"
+              ? "text-yellow-700 dark:text-yellow-400"
+              : "text-muted-foreground",
           )}
         >
           {icon}
@@ -234,6 +260,15 @@ function StatCard({
       </CardContent>
     </Card>
   );
+  if (!href) return body;
+  return (
+    <Link
+      href={href}
+      className="block touch-manipulation rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    >
+      {body}
+    </Link>
+  );
 }
 
 function ActionCard({
@@ -241,22 +276,36 @@ function ActionCard({
   title,
   description,
   icon,
+  emphasis = false,
 }: Readonly<{
   href: string;
   title: string;
   description: string;
   icon: React.ReactNode;
+  emphasis?: boolean;
 }>) {
   return (
     <Link
       href={href}
       className="group/action block touch-manipulation rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <Card className="h-full transition-colors hover:bg-muted/40">
+      <Card
+        className={cn(
+          "h-full transition-colors",
+          emphasis
+            ? "border-l-4 border-l-primary bg-primary/5 hover:bg-primary/10"
+            : "hover:bg-muted/40",
+        )}
+      >
         <CardContent className="flex items-center gap-3 p-4">
           <div
             aria-hidden="true"
-            className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary"
+            className={cn(
+              "flex size-10 shrink-0 items-center justify-center rounded-2xl",
+              emphasis
+                ? "bg-primary text-primary-foreground"
+                : "bg-primary/10 text-primary",
+            )}
           >
             {icon}
           </div>
