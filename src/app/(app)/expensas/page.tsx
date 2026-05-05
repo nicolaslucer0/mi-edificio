@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getExpensesForUser } from "@/lib/queries/expenses";
@@ -8,6 +8,7 @@ import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClaimPaymentButton } from "@/components/claim-payment-button";
+import { EmptyState } from "@/components/empty-state";
 import { ExpenseStatusBadge } from "@/components/expense-status-badge";
 import { PaymentInfoCard } from "@/components/payment-info-card";
 import type { ExpenseRow } from "@/lib/queries/expenses";
@@ -57,7 +58,11 @@ export default async function ExpensesPage({
         ))}
 
         {paginated.items.length === 0 ? (
-          <EmptyState />
+          <EmptyState
+            icon={Wallet}
+            title="Sin expensas todavía"
+            description="Cuando el administrador cargue una expensa para tu unidad, va a aparecer acá."
+          />
         ) : (
           <>
             <ul
@@ -84,16 +89,6 @@ export default async function ExpensesPage({
         )}
       </div>
     </main>
-  );
-}
-
-function EmptyState() {
-  return (
-    <Card>
-      <CardContent className="p-8 text-center text-muted-foreground">
-        Todavía no hay expensas cargadas para tu unidad.
-      </CardContent>
-    </Card>
   );
 }
 

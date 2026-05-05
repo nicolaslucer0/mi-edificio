@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Receipt } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import {
@@ -14,6 +14,7 @@ import {
 } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
 import { ExpenditureFilters } from "@/components/expenditure-filters";
 import { ExpenditureItem } from "@/components/expenditure-item";
 import { cn } from "@/lib/utils";
@@ -52,6 +53,11 @@ export default async function AdminExpendituresPage({
   const isFiltered = Boolean(category || month);
   const periodLabel = month ? formatPeriod(month) : "todos los meses";
   const basePath = `/admin/${consorcioId}/gastos`;
+
+  const emptyStateNode =
+    paginated.items.length === 0
+      ? renderEmptyState(isFiltered, basePath)
+      : null;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
@@ -106,15 +112,7 @@ export default async function AdminExpendituresPage({
           </CardContent>
         </Card>
 
-        {paginated.items.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              {isFiltered
-                ? "No hay gastos con esos filtros."
-                : "Todavía no hay gastos cargados."}
-            </CardContent>
-          </Card>
-        ) : (
+        {emptyStateNode ?? (
           <>
             <ul
               className="flex flex-col gap-3"
@@ -144,6 +142,29 @@ export default async function AdminExpendituresPage({
         )}
       </div>
     </main>
+  );
+}
+
+function renderEmptyState(isFiltered: boolean, basePath: string) {
+  if (isFiltered) {
+    return (
+      <EmptyState
+        icon={Receipt}
+        title="Sin coincidencias"
+        description="Probá cambiando la categoría o el mes."
+      />
+    );
+  }
+  return (
+    <EmptyState
+      icon={Receipt}
+      title="Sin gastos todavía"
+      description="Cargá el primer gasto del consorcio para empezar a llevar el balance."
+      action={{
+        href: `${basePath}/nueva`,
+        label: "Cargar gasto",
+      }}
+    />
   );
 }
 

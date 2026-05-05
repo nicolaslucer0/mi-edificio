@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileText, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import {
@@ -9,6 +9,7 @@ import {
 import { formatCurrencyCents, formatPeriod } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -67,11 +68,15 @@ export default async function AdminExpensasPage({
         </div>
 
         {paginated.items.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              Todavía no hay expensas cargadas.
-            </CardContent>
-          </Card>
+          <EmptyState
+            icon={FileText}
+            title="Sin expensas todavía"
+            description="Cargá la primera y los vecinos van a verla en su panel."
+            action={{
+              href: `/admin/${consorcioId}/expensas/nueva`,
+              label: "Crear primera expensa",
+            }}
+          />
         ) : (
           <>
             <ul

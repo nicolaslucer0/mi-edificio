@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Users } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import {
@@ -20,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
 import { AddAssignmentButton } from "./add-assignment-button";
 import { AddMembershipForm } from "./add-membership-form";
@@ -97,11 +98,11 @@ export default async function UsuariosPage({
             )}
           </h2>
           {usersList.length === 0 ? (
-            <Card>
-              <CardContent className="p-8 text-center text-muted-foreground">
-                Todavía no hay vecinos cargados.
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={Users}
+              title="Sin vecinos todavía"
+              description="Usá el formulario de arriba para sumar al primero."
+            />
           ) : (
             <ul
               data-stagger
