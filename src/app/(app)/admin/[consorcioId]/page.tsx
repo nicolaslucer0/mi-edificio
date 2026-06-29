@@ -6,9 +6,11 @@ import {
   Coins,
   FileSpreadsheet,
   FileWarning,
+  House,
   Plus,
   Receipt,
   ShieldAlert,
+  Trees,
   Users,
   Wallet,
 } from "lucide-react";
@@ -26,6 +28,12 @@ const TYPE_LABELS = {
   edificio: "Edificio",
   ph: "PH",
   barrio_cerrado: "Barrio cerrado",
+} as const;
+
+const TYPE_ICONS = {
+  edificio: Building2,
+  ph: House,
+  barrio_cerrado: Trees,
 } as const;
 
 export async function generateMetadata({
@@ -56,25 +64,41 @@ export default async function ConsorcioDashboard({
   ]);
   if (!consorcio || !stats) notFound();
 
+  const TypeIcon = TYPE_ICONS[consorcio.type];
+
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <header className="flex flex-col gap-1.5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Panel admin
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            {consorcio.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {TYPE_LABELS[consorcio.type]}
-            {consorcio.address ? ` · ${consorcio.address}` : ""}
-            {" · "}
-            {stats.unitCount}{" "}
-            {stats.unitCount === 1 ? "unidad" : "unidades"} ·{" "}
-            {stats.vecinoCount}{" "}
-            {stats.vecinoCount === 1 ? "vecino" : "vecinos"}
-          </p>
+        <header className="relative overflow-hidden rounded-2xl bg-accent px-5 py-5 ring-1 ring-inset ring-primary/10 sm:px-6 sm:py-6 dark:bg-accent/35">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute -right-10 -top-12 size-40 rounded-full bg-spot-violet/20 blur-2xl"
+          />
+          <div className="relative flex items-center gap-4">
+            <span
+              aria-hidden="true"
+              className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-spot-violet text-primary-foreground shadow-sm"
+            >
+              <TypeIcon className="size-6" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-primary">
+                Panel admin
+              </p>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground text-balance">
+                {consorcio.name}
+              </h1>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {TYPE_LABELS[consorcio.type]}
+                {consorcio.address ? ` · ${consorcio.address}` : ""}
+                {" · "}
+                {stats.unitCount}{" "}
+                {stats.unitCount === 1 ? "unidad" : "unidades"} ·{" "}
+                {stats.vecinoCount}{" "}
+                {stats.vecinoCount === 1 ? "vecino" : "vecinos"}
+              </p>
+            </div>
+          </div>
         </header>
 
         <section
