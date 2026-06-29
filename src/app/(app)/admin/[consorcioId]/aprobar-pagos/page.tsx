@@ -81,6 +81,7 @@ export default async function AprobarPagosPage({
                   claimedByName={claim.claimedByName}
                   claimedByEmail={claim.claimedByEmail}
                   note={claim.note}
+                  receiptUrl={claim.receiptUrl}
                   claimedAt={claim.claimedAt}
                 />
               </li>

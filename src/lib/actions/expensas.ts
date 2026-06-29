@@ -12,6 +12,7 @@ import {
   users,
 } from "@/lib/db/schema";
 import { sendClaimNotification } from "@/lib/email";
+import { getReceiptFile, uploadReceipt } from "@/lib/receipts";
 
 export type ClaimResult = { ok: true } | { ok: false; error: string };
 
@@ -72,10 +73,19 @@ export async function claimPayment(
     .where(eq(users.id, userId))
     .limit(1);
 
+  let receiptUrl: string | null = null;
+  const file = getReceiptFile(formData);
+  if (file) {
+    const upload = await uploadReceipt(file);
+    if (!upload.ok) return { ok: false, error: upload.error };
+    receiptUrl = upload.url;
+  }
+
   await db.insert(paymentClaims).values({
     expenseId,
     claimedByUserId: userId,
     note: note || null,
+    receiptUrl,
   });
 
   await db

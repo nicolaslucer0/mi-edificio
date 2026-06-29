@@ -32,6 +32,7 @@ export function Sidebar({
   return (
     <aside
       aria-label="Navegación principal"
+      data-print-hide
       className="hidden lg:flex sticky top-0 h-screen w-64 shrink-0 flex-col border-r border-border/50 bg-background/85 backdrop-blur-md supports-backdrop-filter:bg-background/70"
     >
       <Link

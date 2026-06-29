@@ -16,6 +16,7 @@ export function BottomNav({ isAdmin }: Readonly<Props>) {
   return (
     <nav
       aria-label="Navegación principal"
+      data-print-hide
       className="fixed inset-x-0 bottom-0 z-30 border-t border-border/40 bg-background/85 backdrop-blur-md supports-backdrop-filter:bg-background/70 lg:hidden"
     >
       <ul className="mx-auto flex max-w-2xl items-stretch px-2 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">

@@ -5,8 +5,13 @@ import { requireUser } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import { getExpensesForUser } from "@/lib/queries/expenses";
 import { getPaymentInfoForUser } from "@/lib/queries/consorcios";
-import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
-import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  formatCurrencyCents,
+  formatDate,
+  formatDueUrgency,
+  formatPeriod,
+} from "@/lib/format";
+import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClaimPaymentButton } from "@/components/claim-payment-button";
 import { EmptyState } from "@/components/empty-state";
@@ -104,6 +109,7 @@ function ExpenseListItem({
   const isInValidation = expense.status === "en_validacion";
 
   const isExtraordinaria = expense.type === "extraordinaria";
+  const urgency = isPending ? formatDueUrgency(expense.dueDate) : null;
 
   return (
     <li style={{ "--stagger-index": index } as React.CSSProperties}>
@@ -124,6 +130,18 @@ function ExpenseListItem({
               <p className="text-2xl font-bold tabular-nums">
                 {formatCurrencyCents(expense.amountCents)}
               </p>
+              {urgency && (
+                <span
+                  className={cn(
+                    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+                    urgency.tone === "danger"
+                      ? "bg-destructive/10 text-destructive"
+                      : "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
+                  )}
+                >
+                  {urgency.label}
+                </span>
+              )}
               <p className="text-sm text-muted-foreground">
                 Vence el {formatDate(expense.dueDate)}
                 {expense.type === "extraordinaria" && (
@@ -147,15 +165,16 @@ function ExpenseListItem({
               />
             )}
             {isPaid && (
-              <Button
-                variant="outline"
-                disabled
-                aria-disabled
+              <Link
+                href={`/expensas/${expense.id}/recibo`}
                 aria-label={`Ver comprobante de ${formatPeriod(expense.period)}`}
-                className="h-11 w-full px-5 text-sm sm:w-auto"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "h-11 w-full px-5 text-sm touch-manipulation sm:w-auto",
+                )}
               >
                 Ver comprobante
-              </Button>
+              </Link>
             )}
             {isInValidation && (
               <p className="text-xs text-muted-foreground sm:text-right">

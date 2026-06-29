@@ -34,6 +34,41 @@ export function formatDate(date: Date | string | null | undefined): string {
   return DATE_FORMATTER.format(d);
 }
 
+const MS_PER_DAY = 86_400_000;
+
+function toUtcDay(d: Date): number {
+  return Math.floor(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) / MS_PER_DAY,
+  );
+}
+
+export type DueUrgency = {
+  label: string;
+  tone: "neutral" | "warning" | "danger";
+};
+
+/**
+ * Relative due-date label for an unpaid expense ("Vence en 3 días", "Venció
+ * hace 2 días"). Returns null when the due date is far off (>7 days), so the
+ * plain date is enough.
+ */
+export function formatDueUrgency(date: Date | string): DueUrgency | null {
+  const due = typeof date === "string" ? new Date(date) : date;
+  const diff = toUtcDay(due) - toUtcDay(new Date());
+
+  if (diff < 0) {
+    const n = -diff;
+    return {
+      label: n === 1 ? "Venció ayer" : `Venció hace ${n} días`,
+      tone: "danger",
+    };
+  }
+  if (diff === 0) return { label: "Vence hoy", tone: "danger" };
+  if (diff === 1) return { label: "Vence mañana", tone: "warning" };
+  if (diff <= 7) return { label: `Vence en ${diff} días`, tone: "warning" };
+  return null;
+}
+
 const EXPENDITURE_CATEGORY_LABELS = {
   limpieza: "Limpieza",
   mantenimiento: "Mantenimiento",

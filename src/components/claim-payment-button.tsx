@@ -14,6 +14,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { claimPayment } from "@/lib/actions/expensas";
@@ -90,8 +91,29 @@ export function ClaimPaymentButton({
               validar el pago contra el extracto bancario.
             </DrawerDescription>
           </DrawerHeader>
-          <form action={handleSubmit} className="contents">
-            <DrawerBody>
+          <form
+            action={handleSubmit}
+            encType="multipart/form-data"
+            className="contents"
+          >
+            <DrawerBody className="gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="receipt" className="text-sm">
+                  Comprobante (opcional)
+                </Label>
+                <Input
+                  id="receipt"
+                  name="receipt"
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="h-12 text-base file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-muted/80"
+                  disabled={isPending}
+                />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Sacale una foto o subí el comprobante de la transferencia.
+                  Imagen o PDF, hasta 4MB.
+                </p>
+              </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="note" className="text-sm">
                   Notas o referencia (opcional)

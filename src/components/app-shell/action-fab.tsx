@@ -42,6 +42,7 @@ export function ActionFab({ consorcioId }: Readonly<Props>) {
     <Drawer open={open} onOpenChange={setOpen}>
       <DrawerTrigger
         aria-label="Agregar expensa o gasto"
+        data-print-hide
         className="fixed right-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation lg:right-8 lg:bottom-8"
       >
         <Plus aria-hidden="true" className="size-7" strokeWidth={2.4} />

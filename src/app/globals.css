@@ -220,3 +220,13 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* Print: hide the app shell so receipts print clean (save-as-PDF on mobile) */
+@media print {
+  [data-print-hide] {
+    display: none !important;
+  }
+  #main-content {
+    padding-bottom: 0 !important;
+  }
+}

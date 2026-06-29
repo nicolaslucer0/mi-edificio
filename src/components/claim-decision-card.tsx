@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import {
   Drawer,
@@ -32,6 +33,7 @@ type Props = {
   claimedByName: string | null;
   claimedByEmail: string | null;
   note: string | null;
+  receiptUrl: string | null;
   claimedAt: Date;
 };
 
@@ -44,6 +46,7 @@ export function ClaimDecisionCard({
   claimedByName,
   claimedByEmail,
   note,
+  receiptUrl,
   claimedAt,
 }: Readonly<Props>) {
   const router = useRouter();
@@ -109,6 +112,17 @@ export function ClaimDecisionCard({
             </p>
             <p className="text-sm leading-relaxed">{note}</p>
           </div>
+        )}
+        {receiptUrl && (
+          <a
+            href={receiptUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded touch-manipulation"
+          >
+            <Paperclip aria-hidden="true" className="size-4" />
+            Ver comprobante adjunto
+          </a>
         )}
         <p className="text-xs text-muted-foreground">
           Avisó el {claimedAt.toLocaleString("es-AR")}

@@ -10,7 +10,14 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { expenses, units, type expenseStatusEnum, type expenseTypeEnum } from "@/lib/db/schema";
+import {
+  consorcios,
+  expenses,
+  paymentClaims,
+  units,
+  type expenseStatusEnum,
+  type expenseTypeEnum,
+} from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
 
 type UnitAccess = {
@@ -171,4 +178,80 @@ export async function getExpensesForUser(
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   return { items, total, page, perPage, totalPages };
+}
+
+export type ReceiptData = {
+  expenseId: string;
+  consorcioName: string;
+  holderName: string | null;
+  unitLabel: string;
+  period: string;
+  amountCents: number;
+  type: (typeof expenseTypeEnum.enumValues)[number];
+  description: string | null;
+  paidAt: Date | null;
+  receiptUrl: string | null;
+};
+
+/**
+ * Data for a payment receipt: only for a `pagado` expense that belongs to a
+ * unit the current user is assigned to. Returns null otherwise.
+ */
+export async function getReceiptData(
+  user: CurrentUser,
+  expenseId: string,
+): Promise<ReceiptData | null> {
+  const unitIds = Array.from(
+    new Set(
+      user.memberships
+        .filter((m) => m.unitId !== null)
+        .map((m) => m.unitId as string),
+    ),
+  );
+  if (unitIds.length === 0) return null;
+
+  const [row] = await db
+    .select({
+      expenseId: expenses.id,
+      consorcioName: consorcios.name,
+      holderName: consorcios.paymentHolderName,
+      unitLabel: units.label,
+      period: expenses.period,
+      amountCents: expenses.amountCents,
+      type: expenses.type,
+      description: expenses.description,
+    })
+    .from(expenses)
+    .innerJoin(units, eq(units.id, expenses.unitId))
+    .innerJoin(consorcios, eq(consorcios.id, units.consorcioId))
+    .where(
+      and(
+        eq(expenses.id, expenseId),
+        inArray(expenses.unitId, unitIds),
+        eq(expenses.status, "pagado"),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+
+  const [claim] = await db
+    .select({
+      resolvedAt: paymentClaims.resolvedAt,
+      receiptUrl: paymentClaims.receiptUrl,
+    })
+    .from(paymentClaims)
+    .where(
+      and(
+        eq(paymentClaims.expenseId, expenseId),
+        eq(paymentClaims.resolution, "approved"),
+      ),
+    )
+    .orderBy(desc(paymentClaims.resolvedAt))
+    .limit(1);
+
+  return {
+    ...row,
+    paidAt: claim?.resolvedAt ?? null,
+    receiptUrl: claim?.receiptUrl ?? null,
+  };
 }

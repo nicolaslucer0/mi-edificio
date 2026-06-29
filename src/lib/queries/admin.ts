@@ -44,6 +44,7 @@ export async function getPendingClaimsForAdmin(
       claimId: paymentClaims.id,
       claimedAt: paymentClaims.claimedAt,
       note: paymentClaims.note,
+      receiptUrl: paymentClaims.receiptUrl,
       expenseId: expenses.id,
       period: expenses.period,
       amountCents: expenses.amountCents,

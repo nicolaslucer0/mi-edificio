@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { put, del } from "@vercel/blob";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -19,6 +18,7 @@ import {
   sendPaymentConfirmedEmail,
   sendPaymentRejectedEmail,
 } from "@/lib/email";
+import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -552,49 +552,6 @@ const expenditurePayloadSchema = z.object({
   vendor: z.string().max(120).optional(),
   notes: z.string().max(500).optional(),
 });
-
-const MAX_RECEIPT_SIZE = 4 * 1024 * 1024;
-
-async function uploadReceipt(
-  file: File,
-): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
-  if (file.size > MAX_RECEIPT_SIZE) {
-    return { ok: false, error: "El comprobante supera los 4MB." };
-  }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return {
-      ok: false,
-      error:
-        "Falta configurar Vercel Blob (BLOB_READ_WRITE_TOKEN) para subir archivos.",
-    };
-  }
-  try {
-    const safeName = file.name.replaceAll(/[^\w.-]/g, "_");
-    const blob = await put(`receipts/${crypto.randomUUID()}-${safeName}`, file, {
-      access: "public",
-      addRandomSuffix: false,
-    });
-    return { ok: true, url: blob.url };
-  } catch (e) {
-    console.error("Failed to upload receipt:", e);
-    return { ok: false, error: "No pudimos subir el comprobante. Probá de nuevo." };
-  }
-}
-
-async function deleteReceipt(url: string | null): Promise<void> {
-  if (!url || !process.env.BLOB_READ_WRITE_TOKEN) return;
-  try {
-    await del(url);
-  } catch (e) {
-    console.error("Failed to delete blob:", e);
-  }
-}
-
-function getReceiptFile(formData: FormData): File | null {
-  const raw = formData.get("receipt");
-  if (raw instanceof File && raw.size > 0) return raw;
-  return null;
-}
 
 export async function createExpenditure(
   _prev: ActionResult | null,
