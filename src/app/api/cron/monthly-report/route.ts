@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   let sent = 0;
   for (const c of all) {
     const report = await buildMonthlyReport(c.id, period, c.name);
-    if (report.rows.length === 0) continue; // nothing billed that month
+    if (!report.hasData) continue; // no expensas ni gastos ese mes
     const to = await getConsorcioAdminEmails(c.id);
     if (to.length === 0) continue;
     try {
