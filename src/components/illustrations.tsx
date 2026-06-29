@@ -248,6 +248,57 @@ export function CelebrateScene({ className }: IllustrationProps) {
   );
 }
 
+/** Sello "PAGADO" para el comprobante (imprime bien en blanco y negro). */
+export function PaidStamp({ className }: IllustrationProps) {
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      fill="none"
+      aria-hidden="true"
+      className={className}
+    >
+      <g transform="rotate(-8 60 60)">
+        <circle
+          cx="60"
+          cy="60"
+          r="52"
+          fill="oklch(0.63 0.15 158 / 0.08)"
+          stroke="oklch(0.58 0.14 158)"
+          strokeWidth="3"
+        />
+        <circle
+          cx="60"
+          cy="60"
+          r="43"
+          fill="none"
+          stroke="oklch(0.58 0.14 158)"
+          strokeWidth="1.5"
+          strokeDasharray="2 3.5"
+          opacity="0.7"
+        />
+        <path
+          d="M45 54l10 10 21-23"
+          stroke="oklch(0.58 0.14 158)"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <text
+          x="60"
+          y="90"
+          textAnchor="middle"
+          fontSize="15"
+          fontWeight="800"
+          letterSpacing="2.5"
+          fill="oklch(0.55 0.14 158)"
+        >
+          PAGADO
+        </text>
+      </g>
+    </svg>
+  );
+}
+
 /** Grilla de ventanitas reutilizable para los edificios. */
 function Windows({
   x,

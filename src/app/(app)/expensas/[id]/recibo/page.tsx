@@ -1,12 +1,13 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Building2, Check, ChevronLeft, Paperclip } from "lucide-react";
+import { Building2, Check, Paperclip, Receipt } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getReceiptData } from "@/lib/queries/expenses";
 import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
+import { PaidStamp } from "@/components/illustrations";
 import { cn } from "@/lib/utils";
 import { PrintButton } from "./print-button";
 
@@ -25,31 +26,20 @@ export default async function ReceiptPage({
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-md flex-col gap-6">
-        <div className="flex items-center gap-3 print:hidden">
-          <Link
-            href="/expensas"
-            aria-label="Volver a tus expensas"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            Comprobante
-          </h1>
+        <div className="print:hidden">
+          <PageHeader
+            backHref="/expensas"
+            backLabel="Volver a tus expensas"
+            icon={Receipt}
+            tone="green"
+            title="Comprobante"
+          />
         </div>
 
         <Card className="overflow-hidden">
           <CardContent className="flex flex-col gap-6 p-6 sm:p-8">
             <div className="flex flex-col items-center gap-3 text-center">
-              <span
-                aria-hidden="true"
-                className="flex size-12 items-center justify-center rounded-2xl bg-success/15 text-success"
-              >
-                <Check className="size-6" strokeWidth={2.5} />
-              </span>
+              <PaidStamp className="size-24" />
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                   Comprobante de pago
