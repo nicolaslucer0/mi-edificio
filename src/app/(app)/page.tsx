@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Check, Clock } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, Clock } from "lucide-react";
 import { requireUser, roleLabel } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import {
@@ -13,6 +13,7 @@ import {
   formatDate,
   formatDueUrgency,
   formatPeriod,
+  isFuturePeriod,
 } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -216,11 +217,20 @@ const STATUS_DISPLAY = {
   },
 } as const;
 
+// Expensa de un mes que todavía no llegó: neutro, no rojo.
+const FUTURE_DISPLAY = {
+  label: "Próxima · podés adelantarla",
+  classes: "bg-spot-blue-soft text-spot-blue",
+  icon: CalendarClock,
+} as const;
+
 function RecentRow({
   expense,
   isLast,
 }: Readonly<{ expense: ExpenseRow; isLast: boolean }>) {
-  const display = STATUS_DISPLAY[expense.status];
+  const isFuture =
+    expense.status === "pendiente" && isFuturePeriod(expense.period);
+  const display = isFuture ? FUTURE_DISPLAY : STATUS_DISPLAY[expense.status];
   const Icon = display.icon;
   return (
     <li

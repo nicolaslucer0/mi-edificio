@@ -1,13 +1,21 @@
-import { AlertCircle, Check, Clock, X } from "lucide-react";
+import { AlertCircle, CalendarClock, Check, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isFuturePeriod } from "@/lib/format";
 import type { expenseStatusEnum } from "@/lib/db/schema";
 
 type Status = (typeof expenseStatusEnum.enumValues)[number];
 
-const STATUS_CONFIG: Record<
-  Status,
-  { label: string; icon: typeof Check; classes: string }
-> = {
+type BadgeConfig = { label: string; icon: typeof Check; classes: string };
+
+// Expensa de un mes que todavía no llegó: no es deuda, se puede adelantar.
+const FUTURE_CONFIG: BadgeConfig = {
+  label: "Próxima",
+  icon: CalendarClock,
+  classes:
+    "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/40 dark:text-sky-300 dark:border-sky-800/60",
+};
+
+const STATUS_CONFIG: Record<Status, BadgeConfig> = {
   pagado: {
     label: "Pagada",
     icon: Check,
@@ -34,8 +42,14 @@ const STATUS_CONFIG: Record<
   },
 };
 
-export function ExpenseStatusBadge({ status }: Readonly<{ status: Status }>) {
-  const config = STATUS_CONFIG[status];
+export function ExpenseStatusBadge({
+  status,
+  period,
+}: Readonly<{ status: Status; period?: string }>) {
+  const config =
+    status === "pendiente" && period && isFuturePeriod(period)
+      ? FUTURE_CONFIG
+      : STATUS_CONFIG[status];
   const Icon = config.icon;
   return (
     <span

@@ -10,6 +10,7 @@ import {
   formatDate,
   formatDueUrgency,
   formatPeriod,
+  isFuturePeriod,
 } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -101,9 +102,11 @@ function ExpenseListItem({
     expense.status === "pendiente" || expense.status === "rechazado";
   const isPaid = expense.status === "pagado";
   const isInValidation = expense.status === "en_validacion";
+  const isFuture = isFuturePeriod(expense.period);
 
   const isExtraordinaria = expense.type === "extraordinaria";
-  const urgency = isPending ? formatDueUrgency(expense.dueDate) : null;
+  // Una expensa a futuro todavía no vence: no mostramos urgencia.
+  const urgency = isPending && !isFuture ? formatDueUrgency(expense.dueDate) : null;
 
   return (
     <li style={{ "--stagger-index": index } as React.CSSProperties}>
@@ -118,7 +121,7 @@ function ExpenseListItem({
               <p className="text-lg font-semibold text-balance">
                 {formatPeriod(expense.period)}
               </p>
-              <ExpenseStatusBadge status={expense.status} />
+              <ExpenseStatusBadge status={expense.status} period={expense.period} />
             </div>
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <p className="text-2xl font-bold tabular-nums">
@@ -156,6 +159,7 @@ function ExpenseListItem({
                 expenseId={expense.id}
                 period={expense.period}
                 amountCents={expense.amountCents}
+                isFuture={isFuture}
               />
             )}
             {isPaid && (

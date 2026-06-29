@@ -24,12 +24,14 @@ type Props = {
   expenseId: string;
   period: string;
   amountCents: number;
+  isFuture?: boolean;
 };
 
 export function ClaimPaymentButton({
   expenseId,
   period,
   amountCents,
+  isFuture = false,
 }: Readonly<Props>) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -69,15 +71,22 @@ export function ClaimPaymentButton({
     <>
       <Button
         onClick={() => setOpen(true)}
-        aria-label={`Marcar como pagada la expensa de ${formatPeriod(period)}`}
+        variant={isFuture ? "outline" : "default"}
+        aria-label={
+          isFuture
+            ? `Adelantar el pago de la expensa de ${formatPeriod(period)}`
+            : `Marcar como pagada la expensa de ${formatPeriod(period)}`
+        }
         className="h-11 w-full px-5 text-sm touch-manipulation sm:w-auto"
       >
-        Ya pagué
+        {isFuture ? "Adelantar expensa" : "Ya pagué"}
       </Button>
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerContent>
           <DrawerHeader>
-            <DrawerTitle>¿Marcar como pagada?</DrawerTitle>
+            <DrawerTitle>
+              {isFuture ? "¿Adelantar el pago?" : "¿Marcar como pagada?"}
+            </DrawerTitle>
             <DrawerDescription>
               <span className="font-semibold text-foreground">
                 {formatPeriod(period)}
@@ -130,7 +139,10 @@ export function ClaimPaymentButton({
                 disabled={isPending}
                 className="h-12 text-base touch-manipulation"
               >
-                {isPending ? "Confirmando…" : "Sí, ya pagué"}
+                {(() => {
+                  if (isPending) return "Confirmando…";
+                  return isFuture ? "Sí, adelantar" : "Sí, ya pagué";
+                })()}
               </Button>
               <Button
                 type="button"

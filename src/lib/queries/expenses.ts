@@ -4,12 +4,14 @@ import {
   desc,
   eq,
   inArray,
+  lte,
   notInArray,
   or,
   sql,
   type SQL,
 } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { currentPeriod } from "@/lib/format";
 import {
   consorcios,
   expenses,
@@ -86,7 +88,12 @@ export async function getDebtForUser(
     .select({ amountCents: expenses.amountCents, dueDate: expenses.dueDate })
     .from(expenses)
     .where(
-      and(access, notInArray(expenses.status, ["pagado", "en_validacion"])),
+      and(
+        access,
+        notInArray(expenses.status, ["pagado", "en_validacion"]),
+        // Las expensas de meses futuros todavía no son deuda.
+        lte(expenses.period, currentPeriod()),
+      ),
     );
 
   const amountCents = rows.reduce((sum, r) => sum + r.amountCents, 0);

@@ -22,6 +22,26 @@ export function formatPeriod(period: string): string {
   return formatted.charAt(0).toUpperCase() + formatted.slice(1);
 }
 
+/** Mes en curso como "YYYY-MM" en horario de Argentina. */
+export function currentPeriod(): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find((p) => p.type === "year")?.value ?? "0000";
+  const month = parts.find((p) => p.type === "month")?.value ?? "01";
+  return `${year}-${month}`;
+}
+
+/**
+ * Una expensa es "a futuro" cuando su período (YYYY-MM) es posterior al mes
+ * en curso: todavía no es deuda, pero se puede adelantar el pago.
+ */
+export function isFuturePeriod(period: string): boolean {
+  return period > currentPeriod();
+}
+
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
   month: "2-digit",

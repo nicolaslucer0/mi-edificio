@@ -115,7 +115,12 @@ function MovementRow({
           <span className="text-xs text-muted-foreground">
             {formatDate(movement.date)}
           </span>
-          {movement.status && <ExpenseStatusBadge status={movement.status} />}
+          {movement.status && (
+            <ExpenseStatusBadge
+              status={movement.status}
+              period={movement.period}
+            />
+          )}
         </div>
       </div>
       <p

@@ -8,7 +8,7 @@ import {
   type expenseStatusEnum,
 } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
-import { formatPeriod } from "@/lib/format";
+import { formatPeriod, isFuturePeriod } from "@/lib/format";
 
 export type StatementMovement = {
   id: string;
@@ -17,6 +17,7 @@ export type StatementMovement = {
   concept: string;
   amountCents: number;
   status?: (typeof expenseStatusEnum.enumValues)[number];
+  period?: string;
 };
 
 export type UnitStatement = {
@@ -103,8 +104,12 @@ export async function getAccountStatement(
       }`,
       amountCents: e.amountCents,
       status: e.status,
+      period: e.period,
     });
-    if (e.status !== "pagado") unit.balanceCents += e.amountCents;
+    // Las expensas de meses futuros se listan, pero no suman al saldo aún.
+    if (e.status !== "pagado" && !isFuturePeriod(e.period)) {
+      unit.balanceCents += e.amountCents;
+    }
   }
 
   for (const p of paymentRows) {
