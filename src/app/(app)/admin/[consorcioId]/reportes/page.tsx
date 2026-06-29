@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getConsorcioForAdmin } from "@/lib/queries/admin";
@@ -8,6 +7,7 @@ import { previousPeriod } from "@/lib/reports";
 import { formatPeriod } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -45,24 +45,14 @@ export default async function ReportesPage({
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/admin/${consorcioId}`}
-            aria-label="Volver al panel del consorcio"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <div className="flex flex-col">
-            <h1 className="text-2xl font-semibold tracking-tight text-balance">
-              Reportes
-            </h1>
-            <p className="text-xs text-muted-foreground">{consorcio.name}</p>
-          </div>
-        </div>
+        <PageHeader
+          backHref={`/admin/${consorcioId}`}
+          backLabel="Volver al panel del consorcio"
+          icon={FileSpreadsheet}
+          tone="coral"
+          title="Reportes"
+          subtitle={consorcio.name}
+        />
 
         <p className="text-sm leading-relaxed text-muted-foreground">
           Descargá el detalle de cobranzas de un mes: quién pagó las expensas

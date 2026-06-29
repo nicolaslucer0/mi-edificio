@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Pencil, Plus } from "lucide-react";
+import { FileText, Pencil, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import {
@@ -11,6 +11,7 @@ import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExpenseStatusBadge } from "@/components/expense-status-badge";
+import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 import { DeleteExpenseButton } from "../../delete-expense-button";
 
@@ -55,44 +56,32 @@ export default async function PeriodDetailPage({
   );
 
   const groups = groupByUnit(paginated.items);
+  const expenseWord = paginated.items.length === 1 ? "expensa" : "expensas";
+  const headerSubtitle = `${paginated.items.length} ${expenseWord} · ${formatCurrencyCents(totalAmount)}`;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <PageHeader
+          backHref={`/admin/${consorcioId}/expensas`}
+          backLabel="Volver al listado de períodos"
+          icon={FileText}
+          tone="violet"
+          title={periodLabel}
+          subtitle={headerSubtitle}
+          action={
             <Link
-              href={`/admin/${consorcioId}/expensas`}
-              aria-label="Volver al listado de períodos"
+              href={`/admin/${consorcioId}/expensas/nueva`}
               className={cn(
-                buttonVariants({ variant: "outline", size: "icon-lg" }),
-                "touch-manipulation",
+                buttonVariants(),
+                "h-11 px-4 text-sm touch-manipulation",
               )}
             >
-              <ChevronLeft aria-hidden="true" className="size-5" />
+              <Plus aria-hidden="true" className="size-4" />
+              Nueva
             </Link>
-            <div className="flex flex-col">
-              <h1 className="text-2xl font-semibold tracking-tight text-balance">
-                {periodLabel}
-              </h1>
-              <p className="text-xs text-muted-foreground">
-                {paginated.items.length}{" "}
-                {paginated.items.length === 1 ? "expensa" : "expensas"} ·{" "}
-                {formatCurrencyCents(totalAmount)}
-              </p>
-            </div>
-          </div>
-          <Link
-            href={`/admin/${consorcioId}/expensas/nueva`}
-            className={cn(
-              buttonVariants(),
-              "h-11 px-4 text-sm touch-manipulation",
-            )}
-          >
-            <Plus aria-hidden="true" className="size-4" />
-            Nueva
-          </Link>
-        </div>
+          }
+        />
 
         <ul
           data-stagger

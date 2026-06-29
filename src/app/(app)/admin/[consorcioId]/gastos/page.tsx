@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { ExpenditureFilters } from "@/components/expenditure-filters";
 import { ExpenditureItem } from "@/components/expenditure-item";
+import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -62,21 +63,13 @@ export default async function AdminExpendituresPage({
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/admin/${consorcioId}`}
-            aria-label="Volver al panel del consorcio"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            Gestionar gastos
-          </h1>
-        </div>
+        <PageHeader
+          backHref={`/admin/${consorcioId}`}
+          backLabel="Volver al panel del consorcio"
+          icon={Receipt}
+          tone="amber"
+          title="Gestionar gastos"
+        />
 
         <Link
           href={`${basePath}/nueva`}

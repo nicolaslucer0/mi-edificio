@@ -1,12 +1,10 @@
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getPendingClaimsForAdmin } from "@/lib/queries/admin";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClaimDecisionCard } from "@/components/claim-decision-card";
-import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 
 export const metadata: Metadata = {
   title: "Aprobar pagos — Mi edificio",
@@ -21,34 +19,24 @@ export default async function AprobarPagosPage({
   const { consorcioId } = await params;
   const claims = await getPendingClaimsForAdmin(user, { consorcioId });
 
+  const pendingLabel =
+    claims.length === 1
+      ? "pago esperando revisión"
+      : "pagos esperando revisión";
+  const headerSubtitle =
+    claims.length > 0 ? `${claims.length} ${pendingLabel}` : undefined;
+
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/admin/${consorcioId}`}
-            aria-label="Volver al panel del consorcio"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <div className="flex flex-col">
-            <h1 className="text-2xl font-semibold tracking-tight text-balance">
-              Aprobar pagos
-            </h1>
-            {claims.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                {claims.length}{" "}
-                {claims.length === 1
-                  ? "pago esperando revisión"
-                  : "pagos esperando revisión"}
-              </p>
-            )}
-          </div>
-        </div>
+        <PageHeader
+          backHref={`/admin/${consorcioId}`}
+          backLabel="Volver al panel del consorcio"
+          icon={ShieldAlert}
+          tone="amber"
+          title="Aprobar pagos"
+          subtitle={headerSubtitle}
+        />
 
         {claims.length === 0 ? (
           <Card>

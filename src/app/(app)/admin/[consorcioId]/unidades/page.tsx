@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { Building2 } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { roleLabel } from "@/lib/roles";
@@ -8,14 +8,13 @@ import {
   getConsorcioWithUnitsForAdmin,
   type AdminConsorcioWithUnits,
 } from "@/lib/queries/consorcio-admin";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 import { CreateUnitForm } from "./create-unit-form";
 import { DeleteUnitButton } from "./delete-unit-button";
 
@@ -38,21 +37,13 @@ export default async function UnidadesPage({
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/admin/${consorcioId}`}
-            aria-label="Volver al panel del consorcio"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            Unidades
-          </h1>
-        </div>
+        <PageHeader
+          backHref={`/admin/${consorcioId}`}
+          backLabel="Volver al panel del consorcio"
+          icon={Building2}
+          tone="blue"
+          title="Unidades"
+        />
 
         <Card>
           <CardHeader>

@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import {
@@ -13,7 +12,6 @@ import {
   getUsersForAdmin,
   type UserWithMemberships,
 } from "@/lib/queries/users";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -21,7 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
-import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/page-header";
 import { AddAssignmentButton } from "./add-assignment-button";
 import { AddMembershipForm } from "./add-membership-form";
 import { MembershipRow } from "./membership-row";
@@ -51,21 +49,13 @@ export default async function UsuariosPage({
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/admin/${consorcioId}`}
-            aria-label="Volver al panel del consorcio"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            Vecinos
-          </h1>
-        </div>
+        <PageHeader
+          backHref={`/admin/${consorcioId}`}
+          backLabel="Volver al panel del consorcio"
+          icon={Users}
+          tone="teal"
+          title="Vecinos"
+        />
 
         <Card>
           <CardHeader>

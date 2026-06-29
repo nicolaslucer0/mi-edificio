@@ -1,21 +1,19 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import {
   getConsorcioForAdmin,
   getUnitsForAdmin,
 } from "@/lib/queries/admin";
-import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PageHeader } from "@/components/page-header";
 import { ExpenseForm } from "./expense-form";
-import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Nueva expensa — Mi edificio",
@@ -51,21 +49,13 @@ export default async function NewExpensePage({
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href={`/admin/${consorcioId}/expensas`}
-            aria-label="Volver al listado"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            Nueva expensa
-          </h1>
-        </div>
+        <PageHeader
+          backHref={`/admin/${consorcioId}/expensas`}
+          backLabel="Volver al listado"
+          icon={Plus}
+          tone="violet"
+          title="Nueva expensa"
+        />
 
         <Card>
           <CardHeader>
