@@ -17,6 +17,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InstallPrompt } from "@/components/install-prompt";
+import { CelebrateScene } from "@/components/illustrations";
 import { cn } from "@/lib/utils";
 
 function getGreeting(): string {
@@ -179,12 +180,7 @@ function UpToDateCard() {
       className="border-success/25 bg-success/5 shadow-sm dark:bg-success/10"
     >
       <CardContent className="flex flex-col items-center gap-3 p-7 text-center sm:p-8">
-        <div
-          aria-hidden="true"
-          className="flex size-14 items-center justify-center rounded-2xl bg-success/15 text-success"
-        >
-          <Check className="size-7" strokeWidth={2.5} />
-        </div>
+        <CelebrateScene className="h-auto w-36" />
         <p className="text-3xl font-bold tracking-tight text-success text-balance sm:text-4xl">
           Estás al día 🎉
         </p>

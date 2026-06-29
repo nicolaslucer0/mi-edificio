@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Building2, Home } from "lucide-react";
+import { Home } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { BuildingScene } from "@/components/illustrations";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -10,14 +11,9 @@ export const metadata: Metadata = {
 
 export default function NotFound() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+    <main className="auth-aurora flex flex-1 flex-col items-center justify-center px-6 py-12">
       <div className="flex w-full max-w-md flex-col items-center gap-6 text-center">
-        <div
-          aria-hidden="true"
-          className="flex size-16 items-center justify-center rounded-2xl bg-primary/10 text-primary"
-        >
-          <Building2 className="size-8" />
-        </div>
+        <BuildingScene className="h-auto w-full max-w-56" />
         <div className="flex flex-col gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             404

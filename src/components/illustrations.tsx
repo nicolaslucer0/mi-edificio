@@ -201,6 +201,53 @@ export function EnvelopeScene({ className }: IllustrationProps) {
   );
 }
 
+/** Medalla con check + papelitos: momento "estás al día". */
+export function CelebrateScene({ className }: IllustrationProps) {
+  return (
+    <svg
+      viewBox="0 0 160 140"
+      fill="none"
+      aria-hidden="true"
+      className={className}
+    >
+      <defs>
+        <linearGradient id="cs-badge" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="oklch(0.72 0.15 158)" />
+          <stop offset="1" stopColor="oklch(0.58 0.14 160)" />
+        </linearGradient>
+        <filter id="cs-shadow" x="-30%" y="-30%" width="160%" height="170%">
+          <feGaussianBlur stdDeviation="4" />
+        </filter>
+      </defs>
+
+      {/* papelitos de colores */}
+      <g>
+        <rect x="22" y="30" width="9" height="9" rx="2" fill="oklch(0.6 0.17 274)" transform="rotate(-18 26 34)" />
+        <rect x="128" y="36" width="9" height="9" rx="2" fill="oklch(0.7 0.13 75)" transform="rotate(22 132 40)" />
+        <circle cx="34" cy="74" r="4.5" fill="oklch(0.64 0.18 25)" />
+        <circle cx="126" cy="80" r="4.5" fill="oklch(0.57 0.16 255)" />
+        <rect x="40" y="14" width="7" height="7" rx="2" fill="oklch(0.55 0.19 300)" transform="rotate(30 43 17)" />
+        <path d="M118 18l1.8 4.2 4.2 1.8-4.2 1.8-1.8 4.2-1.8-4.2-4.2-1.8 4.2-1.8z" fill="oklch(0.7 0.13 75)" />
+      </g>
+
+      {/* sombra */}
+      <ellipse cx="80" cy="118" rx="38" ry="7" fill="oklch(0.5 0.1 160)" opacity="0.2" filter="url(#cs-shadow)" />
+
+      {/* medalla */}
+      <circle cx="80" cy="68" r="40" fill="url(#cs-badge)" />
+      <circle cx="80" cy="68" r="40" fill="#fff" opacity="0.12" />
+      <circle cx="80" cy="62" r="30" fill="#fff" opacity="0.16" />
+      <path
+        d="M67 69l9 9 18-19"
+        stroke="#fff"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 /** Grilla de ventanitas reutilizable para los edificios. */
 function Windows({
   x,
