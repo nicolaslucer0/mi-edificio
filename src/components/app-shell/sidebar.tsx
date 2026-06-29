@@ -6,7 +6,9 @@ import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./user-menu";
 import { ConsorcioSelector } from "./consorcio-selector";
+import { NotificationsBell } from "./notifications-bell";
 import { getNavItems } from "./nav-items";
+import type { NotificationView } from "@/components/notification-row";
 
 type Props = {
   name: string | null;
@@ -15,6 +17,8 @@ type Props = {
   isSuperAdmin: boolean;
   consorcios: Array<{ id: string; name: string }>;
   currentConsorcioId: string | null;
+  notifications: NotificationView[];
+  unreadCount: number;
 };
 
 export function Sidebar({
@@ -24,6 +28,8 @@ export function Sidebar({
   isSuperAdmin,
   consorcios,
   currentConsorcioId,
+  notifications,
+  unreadCount,
 }: Readonly<Props>) {
   const pathname = usePathname();
   const items = getNavItems(isAdmin);
@@ -107,6 +113,7 @@ export function Sidebar({
             <p className="truncate text-xs text-muted-foreground">{email}</p>
           )}
         </div>
+        <NotificationsBell unreadCount={unreadCount} items={notifications} />
       </div>
     </aside>
   );

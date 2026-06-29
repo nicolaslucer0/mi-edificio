@@ -53,6 +53,13 @@ export const expenditureCategoryEnum = pgEnum("expenditure_category", [
   "otros",
 ]);
 
+export const notificationTypeEnum = pgEnum("notification_type", [
+  "claim_to_validate",
+  "payment_confirmed",
+  "payment_rejected",
+  "new_expense",
+]);
+
 export type NotificationPrefs = {
   newExpense: boolean;
   dueDateReminder: boolean;
@@ -228,4 +235,21 @@ export const paymentClaims = pgTable(
     index("claim_expense_idx").on(t.expenseId),
     index("claim_resolution_idx").on(t.resolution),
   ],
+);
+
+export const notifications = pgTable(
+  "notification",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: notificationTypeEnum().notNull(),
+    title: text().notNull(),
+    body: text(),
+    href: text(),
+    readAt: timestamp({ mode: "date" }),
+    createdAt: timestamp().defaultNow().notNull(),
+  },
+  (t) => [index("notification_user_idx").on(t.userId)],
 );

@@ -4,6 +4,10 @@ import {
   getCurrentConsorcioId,
 } from "@/lib/consorcio-context";
 import { getAccessibleConsorcioIds } from "@/lib/queries/admin";
+import {
+  getRecentNotifications,
+  getUnreadCount,
+} from "@/lib/notifications";
 import { TopBar } from "@/components/app-shell/top-bar";
 import { BottomNav } from "@/components/app-shell/bottom-nav";
 import { Sidebar } from "@/components/app-shell/sidebar";
@@ -14,10 +18,13 @@ export default async function AppLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireUser();
   const isAdmin = user.isAdmin || user.isSuperAdmin;
-  const [consorcios, currentConsorcioId] = await Promise.all([
-    getAvailableConsorcios(user),
-    getCurrentConsorcioId(user),
-  ]);
+  const [consorcios, currentConsorcioId, recentNotifications, unreadCount] =
+    await Promise.all([
+      getAvailableConsorcios(user),
+      getCurrentConsorcioId(user),
+      getRecentNotifications(user.id),
+      getUnreadCount(user.id),
+    ]);
 
   // The "+" acts on the selected consorcio when the user administers it,
   // otherwise on the first one they administer.
@@ -48,6 +55,8 @@ export default async function AppLayout({
         isSuperAdmin={user.isSuperAdmin}
         consorcios={consorcios}
         currentConsorcioId={currentConsorcioId}
+        notifications={recentNotifications}
+        unreadCount={unreadCount}
       />
       <div className="flex min-w-0 flex-1 flex-col">
         <TopBar
@@ -57,6 +66,8 @@ export default async function AppLayout({
           isSuperAdmin={user.isSuperAdmin}
           consorcios={consorcios}
           currentConsorcioId={currentConsorcioId}
+          notifications={recentNotifications}
+          unreadCount={unreadCount}
         />
         <div
           id="main-content"

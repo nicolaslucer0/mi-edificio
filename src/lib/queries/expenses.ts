@@ -68,7 +68,12 @@ function buildExpenseAccessCondition(
 
 export type DebtSummary =
   | { hasUnit: false }
-  | { hasUnit: true; amountCents: number; count: number };
+  | {
+      hasUnit: true;
+      amountCents: number;
+      count: number;
+      nextDueDate: Date | null;
+    };
 
 export async function getDebtForUser(
   user: CurrentUser,
@@ -78,14 +83,18 @@ export async function getDebtForUser(
   if (!access) return { hasUnit: false };
 
   const rows = await db
-    .select({ amountCents: expenses.amountCents })
+    .select({ amountCents: expenses.amountCents, dueDate: expenses.dueDate })
     .from(expenses)
     .where(
       and(access, notInArray(expenses.status, ["pagado", "en_validacion"])),
     );
 
   const amountCents = rows.reduce((sum, r) => sum + r.amountCents, 0);
-  return { hasUnit: true, amountCents, count: rows.length };
+  const nextDueDate = rows.reduce<Date | null>(
+    (min, r) => (!min || r.dueDate < min ? r.dueDate : min),
+    null,
+  );
+  return { hasUnit: true, amountCents, count: rows.length, nextDueDate };
 }
 
 export type ExpenseRow = {

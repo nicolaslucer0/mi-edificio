@@ -69,6 +69,20 @@ export function formatDueUrgency(date: Date | string): DueUrgency | null {
   return null;
 }
 
+export function formatRelativeTime(date: Date | string): string {
+  const d = typeof date === "string" ? new Date(date) : date;
+  const seconds = Math.round((Date.now() - d.getTime()) / 1000);
+  if (seconds < 60) return "recién";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `hace ${minutes} min`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return "ayer";
+  if (days < 7) return `hace ${days} días`;
+  return formatDate(d);
+}
+
 const EXPENDITURE_CATEGORY_LABELS = {
   limpieza: "Limpieza",
   mantenimiento: "Mantenimiento",

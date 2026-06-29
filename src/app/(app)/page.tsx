@@ -5,9 +5,15 @@ import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import {
   getDebtForUser,
   getRecentExpensesForUser,
+  type DebtSummary,
   type ExpenseRow,
 } from "@/lib/queries/expenses";
-import { formatCurrencyCents, formatPeriod } from "@/lib/format";
+import {
+  formatCurrencyCents,
+  formatDate,
+  formatDueUrgency,
+  formatPeriod,
+} from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { InstallPrompt } from "@/components/install-prompt";
@@ -32,6 +38,21 @@ function getFirstName(name: string | null, email: string): string {
   return email.split("@")[0];
 }
 
+function buildStatusSummary(debt: DebtSummary): string | null {
+  if (!debt.hasUnit) return null;
+  if (debt.amountCents === 0) return "Estás al día con las expensas.";
+  const plural =
+    debt.count === 1 ? "expensa pendiente" : "expensas pendientes";
+  let summary = `Debés ${formatCurrencyCents(debt.amountCents)} en ${debt.count} ${plural}.`;
+  if (debt.nextDueDate) {
+    const urgency = formatDueUrgency(debt.nextDueDate);
+    summary += urgency
+      ? ` La próxima ${urgency.label.toLowerCase()}.`
+      : ` La próxima vence el ${formatDate(debt.nextDueDate)}.`;
+  }
+  return summary;
+}
+
 export default async function Home() {
   const user = await requireUser();
   const consorcioId = await getCurrentConsorcioId(user);
@@ -41,6 +62,7 @@ export default async function Home() {
   ]);
 
   const firstName = getFirstName(user.name, user.email);
+  const summary = buildStatusSummary(debt);
 
   return (
     <main className="flex flex-1 flex-col gap-7 px-4 pt-6 pb-10 sm:px-6">
@@ -52,11 +74,22 @@ export default async function Home() {
         <p className="mt-1 text-sm text-muted-foreground">
           {roleLabel(user.primaryRole)}
         </p>
+        {summary && (
+          <p className="mt-3 text-base leading-relaxed text-foreground/90 text-balance">
+            {summary}
+          </p>
+        )}
       </section>
 
       {debt.hasUnit && (
-        <section className="mx-auto w-full max-w-2xl">
+        <section className="mx-auto flex w-full max-w-2xl flex-col gap-3">
           {debt.amountCents === 0 ? <UpToDateCard /> : <DebtCard debt={debt} />}
+          <Link
+            href="/cuenta"
+            className="text-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground touch-manipulation"
+          >
+            Ver estado de cuenta
+          </Link>
         </section>
       )}
 

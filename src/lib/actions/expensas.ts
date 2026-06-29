@@ -13,6 +13,7 @@ import {
 } from "@/lib/db/schema";
 import { sendClaimNotification } from "@/lib/email";
 import { getReceiptFile, uploadReceipt } from "@/lib/receipts";
+import { notifyClaimToValidate } from "@/lib/notifications";
 
 export type ClaimResult = { ok: true } | { ok: false; error: string };
 
@@ -105,6 +106,14 @@ export async function claimPayment(
   } catch (err) {
     console.error("Failed to send claim notification:", err);
   }
+
+  await notifyClaimToValidate({
+    consorcioId: expense.consorcioId,
+    unitLabel: expense.unitLabel,
+    period: expense.period,
+    amountCents: expense.amountCents,
+    claimedBy: actor?.name ?? actor?.email ?? "Un vecino",
+  });
 
   revalidatePath("/expensas");
   revalidatePath("/");

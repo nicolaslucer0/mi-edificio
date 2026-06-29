@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Building2 } from "lucide-react";
 import { UserMenu } from "./user-menu";
 import { ConsorcioSelector } from "./consorcio-selector";
+import { NotificationsBell } from "./notifications-bell";
+import type { NotificationView } from "@/components/notification-row";
 
 type Props = {
   name: string | null;
@@ -10,6 +12,8 @@ type Props = {
   isSuperAdmin: boolean;
   consorcios: Array<{ id: string; name: string }>;
   currentConsorcioId: string | null;
+  notifications: NotificationView[];
+  unreadCount: number;
 };
 
 export function TopBar({
@@ -19,6 +23,8 @@ export function TopBar({
   isSuperAdmin,
   consorcios,
   currentConsorcioId,
+  notifications,
+  unreadCount,
 }: Readonly<Props>) {
   const hasConsorcios = consorcios.length > 0;
 
@@ -52,7 +58,13 @@ export function TopBar({
             />
           )}
         </div>
-        <UserMenu name={name} email={email} isAdmin={isAdmin} />
+        <div className="flex shrink-0 items-center gap-1">
+          <NotificationsBell
+            unreadCount={unreadCount}
+            items={notifications}
+          />
+          <UserMenu name={name} email={email} isAdmin={isAdmin} />
+        </div>
       </div>
     </header>
   );

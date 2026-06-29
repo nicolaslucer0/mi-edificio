@@ -19,6 +19,7 @@ import {
   sendPaymentRejectedEmail,
 } from "@/lib/email";
 import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
+import { notifyNewExpense, notifyPaymentResolved } from "@/lib/notifications";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -65,6 +66,7 @@ async function loadClaimContext(claimId: string) {
       amountCents: expenses.amountCents,
       unitLabel: units.label,
       consorcioId: units.consorcioId,
+      claimerUserId: paymentClaims.claimedByUserId,
       claimerEmail: users.email,
       claimerPrefs: users.notificationPrefs,
     })
@@ -117,6 +119,15 @@ export async function approveClaim(claimId: string): Promise<ActionResult> {
       console.error("Failed to send confirmation email:", e);
     }
   }
+
+  await notifyPaymentResolved({
+    userId: claim.claimerUserId,
+    prefs: claim.claimerPrefs,
+    resolution: "approved",
+    period: claim.period,
+    amountCents: claim.amountCents,
+    unitLabel: claim.unitLabel,
+  });
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
@@ -185,6 +196,16 @@ export async function rejectClaim(
       console.error("Failed to send rejection email:", e);
     }
   }
+
+  await notifyPaymentResolved({
+    userId: claim.claimerUserId,
+    prefs: claim.claimerPrefs,
+    resolution: "rejected",
+    period: claim.period,
+    amountCents: claim.amountCents,
+    unitLabel: claim.unitLabel,
+    reason: parsed.data.reason,
+  });
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
@@ -399,6 +420,12 @@ export async function createExpense(
       description,
     })),
   );
+
+  await notifyNewExpense({
+    unitIds: toInsert,
+    period: parsed.data.period,
+    amountCents,
+  });
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
