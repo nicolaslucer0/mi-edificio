@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Receipt } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
@@ -17,6 +17,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExpenditureFilters } from "@/components/expenditure-filters";
 import { ExpenditureItem } from "@/components/expenditure-item";
+import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -64,21 +65,13 @@ export default async function ExpendituresPage({
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            aria-label="Volver al inicio"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            Gastos del consorcio
-          </h1>
-        </div>
+        <PageHeader
+          backHref="/"
+          backLabel="Volver al inicio"
+          icon={Receipt}
+          tone="amber"
+          title="Gastos del consorcio"
+        />
 
         <p className="text-sm text-muted-foreground leading-relaxed">
           Acá podés ver en qué se está gastando la plata del consorcio.

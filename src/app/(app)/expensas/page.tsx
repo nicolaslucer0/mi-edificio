@@ -15,6 +15,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClaimPaymentButton } from "@/components/claim-payment-button";
 import { EmptyState } from "@/components/empty-state";
+import { PageHeader } from "@/components/page-header";
 import { ExpenseStatusBadge } from "@/components/expense-status-badge";
 import { PaymentInfoCard } from "@/components/payment-info-card";
 import type { ExpenseRow } from "@/lib/queries/expenses";
@@ -44,21 +45,13 @@ export default async function ExpensesPage({
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            aria-label="Volver al inicio"
-            className={cn(
-              buttonVariants({ variant: "outline", size: "icon-lg" }),
-              "touch-manipulation",
-            )}
-          >
-            <ChevronLeft aria-hidden="true" className="size-5" />
-          </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">
-            Tus expensas
-          </h1>
-        </div>
+        <PageHeader
+          backHref="/"
+          backLabel="Volver al inicio"
+          icon={Wallet}
+          tone="violet"
+          title="Tus expensas"
+        />
 
         {paymentInfos.map((info) => (
           <PaymentInfoCard key={info.consorcioId} consorcio={info} />
