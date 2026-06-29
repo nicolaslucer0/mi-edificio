@@ -256,7 +256,19 @@ function RecentRow({
             </span>
           )}
         </p>
-        <p className="text-xs text-muted-foreground mt-0.5">{display.label}</p>
+        {isFuture ? (
+          <Link
+            href="/expensas"
+            className="mt-0.5 inline-flex items-center gap-0.5 text-xs font-semibold text-primary transition-colors hover:underline touch-manipulation"
+          >
+            Adelantar expensa
+            <ArrowRight aria-hidden="true" className="size-3" />
+          </Link>
+        ) : (
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {display.label}
+          </p>
+        )}
       </div>
       <p className="text-sm font-bold tabular-nums">
         {formatCurrencyCents(expense.amountCents)}
