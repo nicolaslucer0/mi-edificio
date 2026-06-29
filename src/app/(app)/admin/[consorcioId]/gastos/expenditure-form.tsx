@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -9,6 +9,7 @@ import {
   type ActionResult,
 } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,6 +26,15 @@ import {
   type ExpenditureCategory,
 } from "@/lib/format";
 import type { AdminConsorcio } from "@/lib/queries/admin";
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const FIELD_ORDER = ["description", "date", "amountPesos"] as const;
+type FieldErrors = Partial<Record<(typeof FIELD_ORDER)[number], string>>;
+
+function fieldValue(formData: FormData, name: string): string {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : "";
+}
 
 function getButtonLabel({
   pending,
@@ -73,6 +83,11 @@ export function ExpenditureForm({
     FormData
   >(action, null);
 
+  const [amount, setAmount] = useState<string>(
+    initialValues?.amountPesos ? String(initialValues.amountPesos) : "",
+  );
+  const [errors, setErrors] = useState<FieldErrors>({});
+
   const consorcioItems = useMemo(
     () => consorciosList.map((c) => ({ label: c.name, value: c.id })),
     [consorciosList],
@@ -107,15 +122,37 @@ export function ExpenditureForm({
   const defaultConsorcioId =
     initialValues?.consorcioId ?? consorciosList[0].id;
 
+  function handleSubmit(event: React.SyntheticEvent<HTMLFormElement>) {
+    const formData = new FormData(event.currentTarget);
+    const next: FieldErrors = {};
+    const description = fieldValue(formData, "description").trim();
+    const date = fieldValue(formData, "date");
+    const amountPesos = fieldValue(formData, "amountPesos");
+    if (description.length < 3)
+      next.description = "Contá en pocas palabras qué se gastó.";
+    if (!DATE_RE.test(date)) next.date = "Elegí la fecha del gasto.";
+    if (!amountPesos || Number(amountPesos) <= 0)
+      next.amountPesos = "Ingresá un monto mayor a 0.";
+
+    if (Object.keys(next).length > 0) {
+      event.preventDefault();
+      setErrors(next);
+      const firstId = FIELD_ORDER.find((id) => next[id]);
+      if (firstId) document.getElementById(firstId)?.focus();
+      return;
+    }
+    setErrors({});
+  }
+
   return (
     <form
       action={formAction}
+      onSubmit={handleSubmit}
+      noValidate
       className="flex flex-col gap-5"
       encType="multipart/form-data"
     >
-      {isEdit && (
-        <input type="hidden" name="id" value={initialValues.id} />
-      )}
+      {isEdit && <input type="hidden" name="id" value={initialValues.id} />}
       {showConsorcioSelect ? (
         <div className="flex flex-col gap-2">
           <Label htmlFor="consorcioId" className="text-base">
@@ -154,7 +191,6 @@ export function ExpenditureForm({
         <Input
           id="description"
           name="description"
-          required
           minLength={3}
           maxLength={200}
           defaultValue={initialValues?.description ?? ""}
@@ -162,7 +198,20 @@ export function ExpenditureForm({
           autoComplete="off"
           className="h-12 text-base"
           disabled={pending}
+          aria-invalid={errors.description ? true : undefined}
+          aria-describedby={
+            errors.description ? "description-error" : undefined
+          }
         />
+        {errors.description && (
+          <p
+            id="description-error"
+            role="alert"
+            className="text-sm text-destructive leading-relaxed"
+          >
+            {errors.description}
+          </p>
+        )}
       </div>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -174,29 +223,48 @@ export function ExpenditureForm({
             id="date"
             name="date"
             type="date"
-            required
             defaultValue={initialValues?.date ?? defaultDate}
             className="h-12 text-base"
             disabled={pending}
+            aria-invalid={errors.date ? true : undefined}
+            aria-describedby={errors.date ? "date-error" : undefined}
           />
+          {errors.date && (
+            <p
+              id="date-error"
+              role="alert"
+              className="text-sm text-destructive leading-relaxed"
+            >
+              {errors.date}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="amountPesos" className="text-base">
             Monto (en pesos)
           </Label>
-          <Input
+          <CurrencyInput
             id="amountPesos"
             name="amountPesos"
-            type="number"
-            required
-            min={1}
-            step={1}
-            defaultValue={initialValues?.amountPesos ?? ""}
-            placeholder="50000"
-            className="h-12 text-base tabular-nums"
+            value={amount}
+            onValueChange={setAmount}
+            placeholder="50.000"
             disabled={pending}
+            invalid={Boolean(errors.amountPesos)}
+            describedById={
+              errors.amountPesos ? "amountPesos-error" : undefined
+            }
           />
+          {errors.amountPesos && (
+            <p
+              id="amountPesos-error"
+              role="alert"
+              className="text-sm text-destructive leading-relaxed"
+            >
+              {errors.amountPesos}
+            </p>
+          )}
         </div>
       </div>
 
