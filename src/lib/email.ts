@@ -78,6 +78,34 @@ async function getAdminEmails(
   return emails;
 }
 
+/** Admin + super-admin emails for a consorcio, without pref filtering. */
+export async function getConsorcioAdminEmails(
+  consorcioId: string,
+): Promise<string[]> {
+  const rows = await db
+    .select({ id: users.id, email: users.email })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(
+      or(
+        eq(memberships.role, "super_admin"),
+        and(
+          eq(memberships.role, "admin"),
+          eq(memberships.consorcioId, consorcioId),
+        ),
+      ),
+    );
+
+  const seen = new Set<string>();
+  const emails: string[] = [];
+  for (const r of rows) {
+    if (!r.email || seen.has(r.id)) continue;
+    seen.add(r.id);
+    emails.push(r.email);
+  }
+  return emails;
+}
+
 export type MagicLinkParams = {
   to: string;
   url: string;
@@ -206,6 +234,54 @@ export async function sendPaymentConfirmedEmail(
     subject,
     text,
     html,
+  });
+}
+
+export type MonthlyReportEmailParams = {
+  to: string[];
+  consorcioName: string;
+  period: string;
+  summaryText: string;
+  csv: string;
+  filename: string;
+};
+
+export async function sendMonthlyReportEmail(
+  params: MonthlyReportEmailParams,
+): Promise<void> {
+  if (params.to.length === 0) return;
+
+  const from = process.env.AUTH_RESEND_FROM ?? "onboarding@resend.dev";
+  const periodLabel = formatPeriod(params.period);
+  const subject = `Reporte de cobranzas · ${params.consorcioName} · ${periodLabel}`;
+
+  const text = `Reporte de expensas de ${params.consorcioName} — ${periodLabel}.
+
+${params.summaryText}
+
+Adjuntamos el detalle en CSV (se abre con Excel o Google Sheets).`;
+
+  const summaryHtml = params.summaryText
+    .split("\n")
+    .map((line) => `<p style="margin:0 0 4px;line-height:1.6;">${escapeHtml(line)}</p>`)
+    .join("");
+
+  const html = `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#18181b;">
+<h2 style="margin:0 0 16px;font-size:20px;">Reporte de cobranzas</h2>
+<p style="line-height:1.6;"><strong>${escapeHtml(params.consorcioName)}</strong> — ${periodLabel}</p>
+<div style="margin:16px 0;padding:16px;border-radius:8px;background:#f4f4f5;font-size:14px;">${summaryHtml}</div>
+<p style="color:#71717a;font-size:13px;line-height:1.5;">El detalle completo va adjunto en CSV (Excel / Google Sheets).</p>
+</div>`;
+
+  await resend.emails.send({
+    from,
+    to: params.to,
+    subject,
+    text,
+    html,
+    attachments: [
+      { filename: params.filename, content: Buffer.from(params.csv, "utf-8") },
+    ],
   });
 }
 

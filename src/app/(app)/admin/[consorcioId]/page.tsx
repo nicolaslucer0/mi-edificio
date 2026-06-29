@@ -4,6 +4,7 @@ import {
   Building2,
   ChevronRight,
   Coins,
+  FileSpreadsheet,
   FileWarning,
   Plus,
   Receipt,
@@ -177,6 +178,12 @@ export default async function ConsorcioDashboard({
               title="Datos de pago y saldo"
               description="Alias, CBU, titular y saldo inicial."
               icon={<Wallet className="size-5" />}
+            />
+            <ActionCard
+              href={`/admin/${consorcioId}/reportes`}
+              title="Reportes"
+              description="Descargar el detalle de cobranzas del mes para auditoría."
+              icon={<FileSpreadsheet className="size-5" />}
             />
           </div>
         </section>
