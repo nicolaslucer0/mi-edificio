@@ -46,6 +46,7 @@ export default async function AccountStatementPage() {
         {statements.length === 0 ? (
           <EmptyState
             icon={Wallet}
+            tone="green"
             title="Todavía no tenés movimientos"
             description="Cuando el administrador cargue expensas para tu unidad, vas a ver acá tus cargos y pagos."
           />

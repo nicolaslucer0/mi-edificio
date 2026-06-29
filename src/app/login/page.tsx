@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Building2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { BrandMark, BuildingScene } from "@/components/illustrations";
 import { LoginForm } from "./login-form";
 
 export const metadata: Metadata = {
@@ -9,19 +9,16 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-      <div className="flex w-full max-w-md flex-col items-center gap-8">
+    <main className="auth-aurora flex flex-1 flex-col items-center justify-center px-6 py-10">
+      <div className="flex w-full max-w-md flex-col items-center gap-7">
         <div className="flex flex-col items-center gap-3">
-          <div
-            aria-hidden="true"
-            className="flex size-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm"
-          >
-            <Building2 className="size-7" strokeWidth={2} />
-          </div>
+          <BrandMark className="size-14 drop-shadow-sm" />
           <span className="text-lg font-semibold tracking-tight">
             Mi edificio
           </span>
         </div>
+
+        <BuildingScene className="h-auto w-full max-w-xs" />
 
         <div className="flex w-full flex-col gap-3 text-center">
           <h1 className="text-3xl font-semibold tracking-tight text-balance">

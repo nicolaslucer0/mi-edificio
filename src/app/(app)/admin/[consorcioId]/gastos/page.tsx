@@ -150,6 +150,7 @@ function renderEmptyState(isFiltered: boolean, basePath: string) {
     return (
       <EmptyState
         icon={Receipt}
+        tone="amber"
         title="Sin coincidencias"
         description="Probá cambiando la categoría o el mes."
       />
@@ -158,6 +159,7 @@ function renderEmptyState(isFiltered: boolean, basePath: string) {
   return (
     <EmptyState
       icon={Receipt}
+      tone="amber"
       title="Sin gastos todavía"
       description="Cargá el primer gasto del consorcio para empezar a llevar el balance."
       action={{

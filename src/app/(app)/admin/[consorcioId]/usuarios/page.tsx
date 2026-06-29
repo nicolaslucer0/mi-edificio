@@ -100,6 +100,7 @@ export default async function UsuariosPage({
           {usersList.length === 0 ? (
             <EmptyState
               icon={Users}
+              tone="teal"
               title="Sin vecinos todavía"
               description="Usá el formulario de arriba para sumar al primero."
             />

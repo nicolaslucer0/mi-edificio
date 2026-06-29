@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2 } from "lucide-react";
+import { BrandMark } from "@/components/illustrations";
 import { UserMenu } from "./user-menu";
 import { ConsorcioSelector } from "./consorcio-selector";
 import { NotificationsBell } from "./notifications-bell";
@@ -40,12 +40,7 @@ export function TopBar({
             aria-label="Ir al inicio"
             className="inline-flex items-center gap-2 text-base font-semibold tracking-tight transition-opacity hover:opacity-80 touch-manipulation"
           >
-            <span
-              aria-hidden="true"
-              className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
-            >
-              <Building2 className="size-4" />
-            </span>
+            <BrandMark className="size-8 shrink-0" />
             {!hasConsorcios && <span>Mi edificio</span>}
           </Link>
           {hasConsorcios && (

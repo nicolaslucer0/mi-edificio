@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ArrowLeft, Mail } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { EnvelopeScene } from "@/components/illustrations";
 
 export const metadata: Metadata = {
   title: "Revisá tu email — Mi edificio",
@@ -8,23 +9,9 @@ export const metadata: Metadata = {
 
 export default function VerifyRequestPage() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
-      <div className="flex w-full max-w-md flex-col items-center gap-8">
-        <div className="relative flex items-center justify-center">
-          <span
-            aria-hidden="true"
-            className="absolute inline-flex size-24 animate-ping rounded-full bg-primary/20 opacity-60 motion-reduce:hidden"
-          />
-          <span
-            aria-hidden="true"
-            className="relative flex size-20 items-center justify-center rounded-full bg-primary/15 text-primary"
-          >
-            <Mail
-              className="size-9 -translate-y-px block"
-              strokeWidth={1.75}
-            />
-          </span>
-        </div>
+    <main className="auth-aurora flex flex-1 flex-col items-center justify-center px-6 py-12">
+      <div className="flex w-full max-w-md flex-col items-center gap-7">
+        <EnvelopeScene className="h-auto w-full max-w-56" />
 
         <div className="flex flex-col gap-3 text-center">
           <h1 className="text-3xl font-semibold tracking-tight text-balance">

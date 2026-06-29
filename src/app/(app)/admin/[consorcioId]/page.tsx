@@ -154,36 +154,42 @@ export default async function ConsorcioDashboard({
               title="Gestionar expensas"
               description="Crear, editar o borrar. Soporta crear para todo el consorcio."
               icon={<Plus className="size-5" />}
+              tone="violet"
             />
             <ActionCard
               href={`/admin/${consorcioId}/gastos`}
               title="Gestionar gastos"
               description="Cargar gastos del consorcio con comprobante."
               icon={<Receipt className="size-5" />}
+              tone="amber"
             />
             <ActionCard
               href={`/admin/${consorcioId}/usuarios`}
               title="Vecinos"
               description="Agregar vecinos y asignarlos a unidades."
               icon={<Users className="size-5" />}
+              tone="teal"
             />
             <ActionCard
               href={`/admin/${consorcioId}/unidades`}
               title="Unidades"
               description="Agregar o quitar unidades por piso."
               icon={<Building2 className="size-5" />}
+              tone="blue"
             />
             <ActionCard
               href={`/admin/${consorcioId}/datos-de-pago`}
               title="Datos de pago y saldo"
               description="Alias, CBU, titular y saldo inicial."
               icon={<Wallet className="size-5" />}
+              tone="green"
             />
             <ActionCard
               href={`/admin/${consorcioId}/reportes`}
               title="Reportes"
               description="Descargar el detalle de cobranzas del mes para auditoría."
               icon={<FileSpreadsheet className="size-5" />}
+              tone="coral"
             />
           </div>
         </section>
@@ -278,18 +284,29 @@ function StatCard({
   );
 }
 
+const ACTION_TONES = {
+  violet: "bg-spot-violet-soft text-spot-violet",
+  blue: "bg-spot-blue-soft text-spot-blue",
+  green: "bg-spot-green-soft text-spot-green",
+  amber: "bg-spot-amber-soft text-spot-amber",
+  coral: "bg-spot-coral-soft text-spot-coral",
+  teal: "bg-spot-teal-soft text-spot-teal",
+} as const;
+
 function ActionCard({
   href,
   title,
   description,
   icon,
   emphasis = false,
+  tone = "violet",
 }: Readonly<{
   href: string;
   title: string;
   description: string;
   icon: React.ReactNode;
   emphasis?: boolean;
+  tone?: keyof typeof ACTION_TONES;
 }>) {
   return (
     <Link
@@ -311,7 +328,7 @@ function ActionCard({
               "flex size-10 shrink-0 items-center justify-center rounded-2xl",
               emphasis
                 ? "bg-primary text-primary-foreground"
-                : "bg-primary/10 text-primary",
+                : ACTION_TONES[tone],
             )}
           >
             {icon}

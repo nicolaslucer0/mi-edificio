@@ -23,6 +23,18 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-spot-blue: var(--spot-blue);
+  --color-spot-blue-soft: var(--spot-blue-soft);
+  --color-spot-green: var(--spot-green);
+  --color-spot-green-soft: var(--spot-green-soft);
+  --color-spot-amber: var(--spot-amber);
+  --color-spot-amber-soft: var(--spot-amber-soft);
+  --color-spot-coral: var(--spot-coral);
+  --color-spot-coral-soft: var(--spot-coral-soft);
+  --color-spot-violet: var(--spot-violet);
+  --color-spot-violet-soft: var(--spot-violet-soft);
+  --color-spot-teal: var(--spot-teal);
+  --color-spot-teal-soft: var(--spot-teal-soft);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -51,31 +63,43 @@
 }
 
 :root {
-  --background: oklch(0.975 0.003 240);
-  --foreground: oklch(0.18 0.005 240);
+  --background: oklch(0.985 0.006 90);
+  --foreground: oklch(0.22 0.018 280);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.005 240);
+  --card-foreground: oklch(0.22 0.018 280);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.005 240);
-  --primary: oklch(0.22 0.02 245);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.96 0.003 240);
-  --secondary-foreground: oklch(0.22 0.02 245);
-  --muted: oklch(0.96 0.003 240);
-  --muted-foreground: oklch(0.48 0.005 240);
-  --accent: oklch(0.93 0.05 165);
-  --accent-foreground: oklch(0.32 0.08 165);
-  --success: oklch(0.6 0.13 165);
-  --success-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.6 0.2 25);
-  --border: oklch(0.91 0.003 240);
-  --input: oklch(0.91 0.003 240);
-  --ring: oklch(0.55 0.06 245);
-  --chart-1: oklch(0.6 0.13 165);
-  --chart-2: oklch(0.6 0.18 245);
-  --chart-3: oklch(0.65 0.18 50);
-  --chart-4: oklch(0.65 0.18 320);
-  --chart-5: oklch(0.55 0.16 25);
+  --popover-foreground: oklch(0.22 0.018 280);
+  --primary: oklch(0.485 0.19 274);
+  --primary-foreground: oklch(0.99 0.012 274);
+  --secondary: oklch(0.955 0.014 274);
+  --secondary-foreground: oklch(0.36 0.1 274);
+  --muted: oklch(0.965 0.009 274);
+  --muted-foreground: oklch(0.505 0.025 274);
+  --accent: oklch(0.94 0.05 274);
+  --accent-foreground: oklch(0.42 0.14 274);
+  --success: oklch(0.63 0.15 158);
+  --success-foreground: oklch(0.99 0.012 158);
+  --destructive: oklch(0.6 0.21 25);
+  --border: oklch(0.9 0.013 274);
+  --input: oklch(0.9 0.013 274);
+  --ring: oklch(0.55 0.16 274);
+  --chart-1: oklch(0.6 0.17 274);
+  --chart-2: oklch(0.63 0.15 158);
+  --chart-3: oklch(0.72 0.14 75);
+  --chart-4: oklch(0.6 0.19 25);
+  --chart-5: oklch(0.56 0.2 300);
+  --spot-blue: oklch(0.57 0.16 255);
+  --spot-blue-soft: oklch(0.95 0.038 255);
+  --spot-green: oklch(0.6 0.14 158);
+  --spot-green-soft: oklch(0.945 0.048 158);
+  --spot-amber: oklch(0.68 0.13 72);
+  --spot-amber-soft: oklch(0.95 0.052 80);
+  --spot-coral: oklch(0.62 0.19 25);
+  --spot-coral-soft: oklch(0.95 0.046 25);
+  --spot-violet: oklch(0.55 0.19 300);
+  --spot-violet-soft: oklch(0.95 0.046 300);
+  --spot-teal: oklch(0.58 0.11 200);
+  --spot-teal-soft: oklch(0.945 0.042 200);
   --radius: 1rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -88,31 +112,43 @@
 }
 
 .dark {
-  --background: oklch(0.14 0.005 240);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.2 0.008 240);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.2 0.008 240);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.005 240);
-  --primary-foreground: oklch(0.2 0.02 245);
-  --secondary: oklch(0.26 0.008 240);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.26 0.008 240);
-  --muted-foreground: oklch(0.7 0.01 240);
-  --accent: oklch(0.32 0.06 165);
-  --accent-foreground: oklch(0.92 0.05 165);
-  --success: oklch(0.65 0.13 165);
-  --success-foreground: oklch(0.14 0.01 165);
-  --destructive: oklch(0.68 0.19 25);
-  --border: oklch(1 0 0 / 10%);
+  --background: oklch(0.16 0.014 280);
+  --foreground: oklch(0.97 0.006 280);
+  --card: oklch(0.21 0.016 280);
+  --card-foreground: oklch(0.97 0.006 280);
+  --popover: oklch(0.21 0.016 280);
+  --popover-foreground: oklch(0.97 0.006 280);
+  --primary: oklch(0.72 0.16 274);
+  --primary-foreground: oklch(0.17 0.05 274);
+  --secondary: oklch(0.27 0.022 280);
+  --secondary-foreground: oklch(0.97 0.006 280);
+  --muted: oklch(0.27 0.022 280);
+  --muted-foreground: oklch(0.73 0.022 280);
+  --accent: oklch(0.33 0.08 274);
+  --accent-foreground: oklch(0.9 0.07 274);
+  --success: oklch(0.72 0.15 158);
+  --success-foreground: oklch(0.16 0.02 158);
+  --destructive: oklch(0.7 0.19 25);
+  --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.55 0.06 245);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --ring: oklch(0.72 0.16 274);
+  --chart-1: oklch(0.72 0.16 274);
+  --chart-2: oklch(0.72 0.15 158);
+  --chart-3: oklch(0.78 0.14 75);
+  --chart-4: oklch(0.7 0.18 25);
+  --chart-5: oklch(0.68 0.18 300);
+  --spot-blue: oklch(0.72 0.15 255);
+  --spot-blue-soft: oklch(0.32 0.07 255);
+  --spot-green: oklch(0.72 0.14 158);
+  --spot-green-soft: oklch(0.31 0.06 158);
+  --spot-amber: oklch(0.78 0.13 72);
+  --spot-amber-soft: oklch(0.33 0.06 72);
+  --spot-coral: oklch(0.72 0.18 25);
+  --spot-coral-soft: oklch(0.33 0.08 25);
+  --spot-violet: oklch(0.7 0.18 300);
+  --spot-violet-soft: oklch(0.33 0.08 300);
+  --spot-teal: oklch(0.72 0.11 200);
+  --spot-teal-soft: oklch(0.31 0.05 200);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -219,6 +255,47 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* Soft, friendly color wash for auth screens (login / verificar).
+   Layered radial gradients fade to transparent so the page background
+   still shows through; gentle enough to keep text crisp for everyone. */
+.auth-aurora {
+  background-image:
+    radial-gradient(
+      60% 55% at 12% -5%,
+      oklch(0.62 0.17 274 / 0.16),
+      transparent 70%
+    ),
+    radial-gradient(
+      55% 50% at 105% 8%,
+      oklch(0.6 0.11 200 / 0.14),
+      transparent 70%
+    ),
+    radial-gradient(
+      60% 55% at 90% 108%,
+      oklch(0.7 0.13 75 / 0.13),
+      transparent 72%
+    );
+}
+
+.dark .auth-aurora {
+  background-image:
+    radial-gradient(
+      60% 55% at 12% -5%,
+      oklch(0.62 0.17 274 / 0.22),
+      transparent 70%
+    ),
+    radial-gradient(
+      55% 50% at 105% 8%,
+      oklch(0.6 0.13 200 / 0.18),
+      transparent 70%
+    ),
+    radial-gradient(
+      60% 55% at 90% 108%,
+      oklch(0.65 0.15 75 / 0.16),
+      transparent 72%
+    );
 }
 
 /* Print: hide the app shell so receipts print clean (save-as-PDF on mobile) */

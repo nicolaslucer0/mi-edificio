@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/illustrations";
 import { UserMenu } from "./user-menu";
 import { ConsorcioSelector } from "./consorcio-selector";
 import { NotificationsBell } from "./notifications-bell";
@@ -45,12 +45,7 @@ export function Sidebar({
         href="/"
         className="flex items-center gap-2 px-5 py-5 text-base font-semibold tracking-tight transition-opacity hover:opacity-80"
       >
-        <span
-          aria-hidden="true"
-          className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary"
-        >
-          <Building2 className="size-4" />
-        </span>
+        <BrandMark className="size-8 shrink-0" />
         <span>Mi edificio</span>
       </Link>
 

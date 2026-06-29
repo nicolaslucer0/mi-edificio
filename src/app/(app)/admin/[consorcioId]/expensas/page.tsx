@@ -70,6 +70,7 @@ export default async function AdminExpensasPage({
         {paginated.items.length === 0 ? (
           <EmptyState
             icon={FileText}
+            tone="violet"
             title="Sin expensas todavía"
             description="Cargá la primera y los vecinos van a verla en su panel."
             action={{

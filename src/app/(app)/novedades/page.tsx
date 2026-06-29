@@ -38,6 +38,7 @@ export default async function NovedadesPage() {
         {items.length === 0 ? (
           <EmptyState
             icon={Bell}
+            tone="blue"
             title="Sin novedades todavía"
             description="Acá vas a ver los avisos de pagos, expensas nuevas y validaciones."
           />

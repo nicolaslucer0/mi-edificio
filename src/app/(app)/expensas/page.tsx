@@ -67,6 +67,7 @@ export default async function ExpensesPage({
         {paginated.items.length === 0 ? (
           <EmptyState
             icon={Wallet}
+            tone="green"
             title="Sin expensas todavía"
             description="Cuando el administrador cargue una expensa para tu unidad, va a aparecer acá."
           />
