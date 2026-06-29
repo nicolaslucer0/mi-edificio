@@ -91,11 +91,7 @@ export function ClaimPaymentButton({
               validar el pago contra el extracto bancario.
             </DrawerDescription>
           </DrawerHeader>
-          <form
-            action={handleSubmit}
-            encType="multipart/form-data"
-            className="contents"
-          >
+          <form action={handleSubmit} className="contents">
             <DrawerBody className="gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="receipt" className="text-sm">

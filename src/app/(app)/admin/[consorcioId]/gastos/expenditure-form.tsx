@@ -150,7 +150,6 @@ export function ExpenditureForm({
       onSubmit={handleSubmit}
       noValidate
       className="flex flex-col gap-5"
-      encType="multipart/form-data"
     >
       {isEdit && <input type="hidden" name="id" value={initialValues.id} />}
       {showConsorcioSelect ? (
