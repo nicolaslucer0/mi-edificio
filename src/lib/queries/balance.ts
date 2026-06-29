@@ -5,6 +5,20 @@ import { consorcios, expenditures, expenses, units } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
 import { getViewableConsorcioIds } from "./expenditures";
 
+/**
+ * Narrow the viewable consorcios down to a single one when the user has it in
+ * scope. Never widens access: if `consorcioId` is not viewable, the original
+ * guard is kept.
+ */
+function narrowToConsorcio(
+  ids: "all" | string[],
+  consorcioId?: string | null,
+): "all" | string[] {
+  if (!consorcioId) return ids;
+  if (ids === "all" || ids.includes(consorcioId)) return [consorcioId];
+  return ids;
+}
+
 export type MonthlyBalance = {
   period: string;
   collectedCents: number;
@@ -19,8 +33,9 @@ export type OpeningBalanceSummary = {
 
 export async function getOpeningBalanceForUser(
   user: CurrentUser,
+  consorcioId?: string | null,
 ): Promise<OpeningBalanceSummary> {
-  const ids = getViewableConsorcioIds(user);
+  const ids = narrowToConsorcio(getViewableConsorcioIds(user), consorcioId);
   if (ids !== "all" && ids.length === 0) {
     return { totalCents: 0, earliestDate: null };
   }
@@ -48,8 +63,9 @@ export async function getOpeningBalanceForUser(
 export async function getMonthlyBalance(
   user: CurrentUser,
   monthsBack = 12,
+  consorcioId?: string | null,
 ): Promise<MonthlyBalance[]> {
-  const ids = getViewableConsorcioIds(user);
+  const ids = narrowToConsorcio(getViewableConsorcioIds(user), consorcioId);
   if (ids !== "all" && ids.length === 0) return [];
 
   const now = new Date();

@@ -1,10 +1,6 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session";
-import {
-  getConsorcioForAdmin,
-  getConsorciosForAdmin,
-} from "@/lib/queries/admin";
-import { ConsorcioSwitcher } from "./consorcio-switcher";
+import { getConsorcioForAdmin } from "@/lib/queries/admin";
 
 export default async function ConsorcioAdminLayout({
   children,
@@ -15,28 +11,10 @@ export default async function ConsorcioAdminLayout({
 }>) {
   const user = await requireUser();
   const { consorcioId } = await params;
-  const [consorcio, allConsorcios] = await Promise.all([
-    getConsorcioForAdmin(user, consorcioId),
-    getConsorciosForAdmin(user),
-  ]);
+  // Gate every admin sub-page on access to this consorcio. Switching consorcio
+  // now lives in the app-bar selector (see components/app-shell).
+  const consorcio = await getConsorcioForAdmin(user, consorcioId);
   if (!consorcio) notFound();
 
-  const showSwitcher = allConsorcios.length > 1 || user.isSuperAdmin;
-
-  return (
-    <div className="flex flex-1 flex-col">
-      {showSwitcher && (
-        <div className="border-b border-border/40 bg-background/60 px-4 py-3 sm:px-6">
-          <div className="mx-auto w-full max-w-2xl">
-            <ConsorcioSwitcher
-              current={{ id: consorcio.id, name: consorcio.name }}
-              options={allConsorcios.map((c) => ({ id: c.id, name: c.name }))}
-              isSuperAdmin={user.isSuperAdmin}
-            />
-          </div>
-        </div>
-      )}
-      {children}
-    </div>
-  );
+  return <div className="flex flex-1 flex-col">{children}</div>;
 }

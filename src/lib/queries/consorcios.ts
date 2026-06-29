@@ -14,14 +14,20 @@ export type PaymentInfo = {
 
 export async function getPaymentInfoForUser(
   user: CurrentUser,
+  consorcioId?: string | null,
 ): Promise<PaymentInfo[]> {
-  const consorcioIds = Array.from(
+  const memberIds = Array.from(
     new Set(
       user.memberships
         .filter((m) => m.consorcioId !== null)
         .map((m) => m.consorcioId as string),
     ),
   );
+
+  // Scope to the selected consorcio when it's one the user belongs to.
+  const consorcioIds = consorcioId
+    ? memberIds.filter((id) => id === consorcioId)
+    : memberIds;
 
   if (consorcioIds.length === 0) return [];
 

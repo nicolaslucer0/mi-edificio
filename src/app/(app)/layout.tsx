@@ -1,13 +1,37 @@
 import { requireUser } from "@/lib/session";
+import {
+  getAvailableConsorcios,
+  getCurrentConsorcioId,
+} from "@/lib/consorcio-context";
+import { getAccessibleConsorcioIds } from "@/lib/queries/admin";
 import { TopBar } from "@/components/app-shell/top-bar";
 import { BottomNav } from "@/components/app-shell/bottom-nav";
 import { Sidebar } from "@/components/app-shell/sidebar";
+import { ActionFab } from "@/components/app-shell/action-fab";
 
 export default async function AppLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const user = await requireUser();
   const isAdmin = user.isAdmin || user.isSuperAdmin;
+  const [consorcios, currentConsorcioId] = await Promise.all([
+    getAvailableConsorcios(user),
+    getCurrentConsorcioId(user),
+  ]);
+
+  // The "+" acts on the selected consorcio when the user administers it,
+  // otherwise on the first one they administer.
+  let fabConsorcioId: string | null = null;
+  if (isAdmin) {
+    const adminIds = getAccessibleConsorcioIds(user);
+    if (adminIds === "all") {
+      fabConsorcioId = currentConsorcioId ?? consorcios[0]?.id ?? null;
+    } else if (currentConsorcioId && adminIds.includes(currentConsorcioId)) {
+      fabConsorcioId = currentConsorcioId;
+    } else {
+      fabConsorcioId = adminIds[0] ?? null;
+    }
+  }
 
   return (
     <div className="flex min-h-full lg:flex-row flex-col">
@@ -17,9 +41,23 @@ export default async function AppLayout({
       >
         Saltar al contenido
       </a>
-      <Sidebar name={user.name} email={user.email} isAdmin={isAdmin} />
+      <Sidebar
+        name={user.name}
+        email={user.email}
+        isAdmin={isAdmin}
+        isSuperAdmin={user.isSuperAdmin}
+        consorcios={consorcios}
+        currentConsorcioId={currentConsorcioId}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
-        <TopBar name={user.name} email={user.email} isAdmin={isAdmin} />
+        <TopBar
+          name={user.name}
+          email={user.email}
+          isAdmin={isAdmin}
+          isSuperAdmin={user.isSuperAdmin}
+          consorcios={consorcios}
+          currentConsorcioId={currentConsorcioId}
+        />
         <div
           id="main-content"
           tabIndex={-1}
@@ -29,6 +67,7 @@ export default async function AppLayout({
         </div>
         <BottomNav isAdmin={isAdmin} />
       </div>
+      {isAdmin && <ActionFab consorcioId={fabConsorcioId} />}
     </div>
   );
 }

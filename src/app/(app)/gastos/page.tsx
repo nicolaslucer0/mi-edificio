@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
+import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import {
   getExpendituresForUser,
   isValidCategory,
@@ -49,11 +50,12 @@ export default async function ExpendituresPage({
   if (params.month) url.set("month", params.month);
   const { category, month } = parseFilters(url);
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const consorcioId = await getCurrentConsorcioId(user);
 
   const paginated = await getExpendituresForUser(user, {
     page,
     perPage: PER_PAGE,
-    filters: { category, month },
+    filters: { category, month, consorcioId: consorcioId ?? undefined },
   });
 
   const isFiltered = Boolean(category || month);

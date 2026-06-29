@@ -5,15 +5,26 @@ import { usePathname } from "next/navigation";
 import { Building2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UserMenu } from "./user-menu";
+import { ConsorcioSelector } from "./consorcio-selector";
 import { getNavItems } from "./nav-items";
 
 type Props = {
   name: string | null;
   email: string;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  consorcios: Array<{ id: string; name: string }>;
+  currentConsorcioId: string | null;
 };
 
-export function Sidebar({ name, email, isAdmin }: Readonly<Props>) {
+export function Sidebar({
+  name,
+  email,
+  isAdmin,
+  isSuperAdmin,
+  consorcios,
+  currentConsorcioId,
+}: Readonly<Props>) {
   const pathname = usePathname();
   const items = getNavItems(isAdmin);
   const display = name ?? email;
@@ -35,6 +46,18 @@ export function Sidebar({ name, email, isAdmin }: Readonly<Props>) {
         </span>
         <span>Mi edificio</span>
       </Link>
+
+      {consorcios.length > 0 && (
+        <div className="px-3 pb-3">
+          <ConsorcioSelector
+            variant="sidebar"
+            options={consorcios}
+            currentId={currentConsorcioId}
+            isAdmin={isAdmin}
+            isSuperAdmin={isSuperAdmin}
+          />
+        </div>
+      )}
 
       <nav className="flex-1 px-3">
         <ul className="flex flex-col gap-1">

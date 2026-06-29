@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, Coins, TrendingDown, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
+import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import {
   getMonthlyBalance,
   getOpeningBalanceForUser,
@@ -22,9 +23,10 @@ export const metadata: Metadata = {
 
 export default async function BalancePage() {
   const user = await requireUser();
+  const consorcioId = await getCurrentConsorcioId(user);
   const [months, opening] = await Promise.all([
-    getMonthlyBalance(user, 12),
-    getOpeningBalanceForUser(user),
+    getMonthlyBalance(user, 12, consorcioId),
+    getOpeningBalanceForUser(user, consorcioId),
   ]);
 
   const totals = months.reduce(

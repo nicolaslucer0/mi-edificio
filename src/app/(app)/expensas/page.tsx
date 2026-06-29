@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
+import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import { getExpensesForUser } from "@/lib/queries/expenses";
 import { getPaymentInfoForUser } from "@/lib/queries/consorcios";
 import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
@@ -28,10 +29,11 @@ export default async function ExpensesPage({
   const user = await requireUser();
   const params = await searchParams;
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const consorcioId = await getCurrentConsorcioId(user);
 
   const [paginated, paymentInfos] = await Promise.all([
-    getExpensesForUser(user, { page, perPage: PER_PAGE }),
-    getPaymentInfoForUser(user),
+    getExpensesForUser(user, { page, perPage: PER_PAGE, consorcioId }),
+    getPaymentInfoForUser(user, consorcioId),
   ]);
 
   return (

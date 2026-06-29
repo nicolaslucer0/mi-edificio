@@ -18,11 +18,15 @@ type UnitAccess = {
   tenantOnlyUnits: string[];
 };
 
-function getUnitAccess(user: CurrentUser): UnitAccess {
+function getUnitAccess(
+  user: CurrentUser,
+  consorcioId?: string | null,
+): UnitAccess {
   const owner = new Set<string>();
   const tenant = new Set<string>();
   for (const m of user.memberships) {
     if (!m.unitId) continue;
+    if (consorcioId && m.consorcioId !== consorcioId) continue;
     if (m.role === "owner") owner.add(m.unitId);
     else if (m.role === "tenant") tenant.add(m.unitId);
   }
@@ -33,8 +37,11 @@ function getUnitAccess(user: CurrentUser): UnitAccess {
   };
 }
 
-function buildExpenseAccessCondition(user: CurrentUser): SQL | null {
-  const { ownerUnits, tenantOnlyUnits } = getUnitAccess(user);
+function buildExpenseAccessCondition(
+  user: CurrentUser,
+  consorcioId?: string | null,
+): SQL | null {
+  const { ownerUnits, tenantOnlyUnits } = getUnitAccess(user, consorcioId);
   const parts: SQL[] = [];
   if (ownerUnits.length > 0) {
     parts.push(inArray(expenses.unitId, ownerUnits));
@@ -56,8 +63,11 @@ export type DebtSummary =
   | { hasUnit: false }
   | { hasUnit: true; amountCents: number; count: number };
 
-export async function getDebtForUser(user: CurrentUser): Promise<DebtSummary> {
-  const access = buildExpenseAccessCondition(user);
+export async function getDebtForUser(
+  user: CurrentUser,
+  consorcioId?: string | null,
+): Promise<DebtSummary> {
+  const access = buildExpenseAccessCondition(user, consorcioId);
   if (!access) return { hasUnit: false };
 
   const rows = await db
@@ -94,8 +104,9 @@ export type PaginatedExpenses = {
 export async function getRecentExpensesForUser(
   user: CurrentUser,
   limit: number,
+  consorcioId?: string | null,
 ): Promise<ExpenseRow[]> {
-  const access = buildExpenseAccessCondition(user);
+  const access = buildExpenseAccessCondition(user, consorcioId);
   if (!access) return [];
 
   return db
@@ -119,10 +130,10 @@ export async function getRecentExpensesForUser(
 
 export async function getExpensesForUser(
   user: CurrentUser,
-  options: { page: number; perPage: number },
+  options: { page: number; perPage: number; consorcioId?: string | null },
 ): Promise<PaginatedExpenses> {
-  const access = buildExpenseAccessCondition(user);
-  const { page, perPage } = options;
+  const { page, perPage, consorcioId } = options;
+  const access = buildExpenseAccessCondition(user, consorcioId);
 
   if (!access) {
     return { items: [], total: 0, page, perPage, totalPages: 0 };

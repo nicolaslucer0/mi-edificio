@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Check, Clock } from "lucide-react";
 import { requireUser, roleLabel } from "@/lib/session";
+import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import {
   getDebtForUser,
   getRecentExpensesForUser,
@@ -33,9 +34,10 @@ function getFirstName(name: string | null, email: string): string {
 
 export default async function Home() {
   const user = await requireUser();
+  const consorcioId = await getCurrentConsorcioId(user);
   const [debt, recent] = await Promise.all([
-    getDebtForUser(user),
-    getRecentExpensesForUser(user, 3),
+    getDebtForUser(user, consorcioId),
+    getRecentExpensesForUser(user, 3, consorcioId),
   ]);
 
   const firstName = getFirstName(user.name, user.email);
