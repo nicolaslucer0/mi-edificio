@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { Download, FileSpreadsheet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
-import { getConsorcioForAdmin } from "@/lib/queries/admin";
+import {
+  getConsorcioForAdmin,
+  getUnitCreditsForConsorcio,
+} from "@/lib/queries/admin";
 import {
   getMonthlyExpenseReportRows,
   isValidPeriod,
@@ -60,7 +63,10 @@ export default async function ReportesPage({
     sp.period && isValidPeriod(sp.period) ? sp.period : currentMonth;
   const months = recentPeriods(6);
 
-  const rows = await getMonthlyExpenseReportRows(consorcioId, period);
+  const [rows, unitCredits] = await Promise.all([
+    getMonthlyExpenseReportRows(consorcioId, period),
+    getUnitCreditsForConsorcio(consorcioId),
+  ]);
   const summary = summarizeReport(rows, []);
   const hasData = rows.length > 0;
   const downloadHref = `/api/reportes?consorcioId=${consorcioId}&period=${period}`;
@@ -211,6 +217,28 @@ export default async function ReportesPage({
             </Card>
           )}
         </section>
+
+        {/* Saldo a favor por unidad */}
+        {unitCredits.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-base font-semibold">Saldo a favor</h2>
+            <Card>
+              <CardContent className="flex flex-col divide-y divide-border/60 p-0">
+                {unitCredits.map((u) => (
+                  <div
+                    key={u.unitId}
+                    className="flex items-center justify-between px-5 py-3"
+                  >
+                    <span className="text-sm">Unidad {u.unitLabel}</span>
+                    <span className="text-sm font-semibold tabular-nums text-success">
+                      {formatCurrencyCents(u.creditCents)}
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {/* Descarga del reporte completo */}
         <div className="flex flex-col gap-3 border-t border-border/60 pt-6">

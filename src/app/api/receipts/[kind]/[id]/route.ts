@@ -1,5 +1,8 @@
 import { requireUser } from "@/lib/session";
-import { getClaimReceiptUrl } from "@/lib/queries/expenses";
+import {
+  getClaimReceiptUrl,
+  getDepositReceiptUrl,
+} from "@/lib/queries/expenses";
 import { getExpenditureById } from "@/lib/queries/expenditures";
 import { getPrivateReceipt } from "@/lib/receipts";
 
@@ -21,6 +24,8 @@ export async function GET(
   let url: string | null = null;
   if (kind === "claim") {
     url = await getClaimReceiptUrl(user, id);
+  } else if (kind === "deposit") {
+    url = await getDepositReceiptUrl(user, id);
   } else if (kind === "expenditure") {
     const expenditure = await getExpenditureById(user, id);
     url = expenditure?.receiptUrl ?? null;

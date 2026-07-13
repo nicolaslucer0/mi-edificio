@@ -1,8 +1,9 @@
 import "server-only";
-import { and, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, notInArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   consorcios,
+  creditDeposits,
   expenditures,
   expenses,
   memberships,
@@ -63,6 +64,56 @@ export async function getPendingClaimsForAdmin(
     .innerJoin(users, eq(users.id, paymentClaims.claimedByUserId))
     .where(and(...conditions))
     .orderBy(desc(paymentClaims.claimedAt));
+}
+
+export async function getPendingCreditDepositsForAdmin(
+  user: CurrentUser,
+  options: { consorcioId?: string } = {},
+) {
+  const ids = getAccessibleConsorcioIds(user);
+  if (ids !== "all" && ids.length === 0) return [];
+  const { consorcioId } = options;
+  if (consorcioId && ids !== "all" && !ids.includes(consorcioId)) return [];
+
+  const conditions = [eq(creditDeposits.status, "pending")];
+  if (consorcioId) {
+    conditions.push(eq(units.consorcioId, consorcioId));
+  } else if (ids !== "all") {
+    conditions.push(inArray(units.consorcioId, ids));
+  }
+
+  return db
+    .select({
+      depositId: creditDeposits.id,
+      amountCents: creditDeposits.amountCents,
+      note: creditDeposits.note,
+      receiptUrl: creditDeposits.receiptUrl,
+      createdAt: creditDeposits.createdAt,
+      unitLabel: units.label,
+      consorcioId: consorcios.id,
+      consorcioName: consorcios.name,
+      requestedByName: users.name,
+      requestedByEmail: users.email,
+    })
+    .from(creditDeposits)
+    .innerJoin(units, eq(units.id, creditDeposits.unitId))
+    .innerJoin(consorcios, eq(consorcios.id, units.consorcioId))
+    .innerJoin(users, eq(users.id, creditDeposits.requestedByUserId))
+    .where(and(...conditions))
+    .orderBy(desc(creditDeposits.createdAt));
+}
+
+/** Unidades del consorcio con saldo a favor (> 0). Para reportes. */
+export async function getUnitCreditsForConsorcio(consorcioId: string) {
+  return db
+    .select({
+      unitId: units.id,
+      unitLabel: units.label,
+      creditCents: units.creditCents,
+    })
+    .from(units)
+    .where(and(eq(units.consorcioId, consorcioId), gt(units.creditCents, 0)))
+    .orderBy(units.label);
 }
 
 export type AdminConsorcio = {

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
+  creditDeposits,
   expenses,
   memberships,
   paymentClaims,
@@ -137,5 +138,57 @@ export async function claimPayment(
   revalidatePath("/expensas");
   revalidatePath("/");
 
+  return { ok: true };
+}
+
+/**
+ * Un vecino informa un adelanto de saldo a favor (sin expensa puntual). Queda
+ * pendiente hasta que el admin lo valide; recién ahí se acredita a la unidad.
+ */
+export async function requestCreditDeposit(
+  unitId: string,
+  formData: FormData,
+): Promise<ClaimResult> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "No tenés sesión activa." };
+  }
+  const userId = session.user.id;
+
+  const membership = await db
+    .select({ id: memberships.id })
+    .from(memberships)
+    .where(and(eq(memberships.userId, userId), eq(memberships.unitId, unitId)))
+    .limit(1);
+  if (membership.length === 0) {
+    return { ok: false, error: "No tenés acceso a esa unidad." };
+  }
+
+  const rawAmount = Number.parseInt(
+    formData.get("amountCents")?.toString() ?? "",
+    10,
+  );
+  if (!Number.isFinite(rawAmount) || rawAmount <= 0) {
+    return { ok: false, error: "Ingresá un monto válido." };
+  }
+  const note = (formData.get("note")?.toString() ?? "").trim();
+
+  let receiptUrl: string | null = null;
+  const file = getReceiptFile(formData);
+  if (file) {
+    const upload = await uploadReceipt(file);
+    if (!upload.ok) return { ok: false, error: upload.error };
+    receiptUrl = upload.url;
+  }
+
+  await db.insert(creditDeposits).values({
+    unitId,
+    requestedByUserId: userId,
+    amountCents: rawAmount,
+    note: note || null,
+    receiptUrl,
+  });
+
+  revalidatePath("/expensas");
   return { ok: true };
 }

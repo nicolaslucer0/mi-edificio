@@ -43,6 +43,13 @@ export const claimResolutionEnum = pgEnum("claim_resolution", [
   "rejected",
 ]);
 
+export const creditReasonEnum = pgEnum("credit_reason", [
+  "overpayment",
+  "deposit",
+  "application",
+  "adjustment",
+]);
+
 export const expenditureCategoryEnum = pgEnum("expenditure_category", [
   "limpieza",
   "mantenimiento",
@@ -142,6 +149,9 @@ export const units = pgTable(
       .references(() => consorcios.id, { onDelete: "cascade" }),
     label: text().notNull(),
     floor: text(),
+    // Saldo a favor de la unidad (cacheado). Se recalcula desde el ledger
+    // unitCredits tras cada movimiento (ver src/lib/credits.ts).
+    creditCents: integer().notNull().default(0),
     createdAt: timestamp().defaultNow().notNull(),
   },
   (t) => [index("unit_consorcio_idx").on(t.consorcioId)],
@@ -243,6 +253,56 @@ export const paymentClaims = pgTable(
   (t) => [
     index("claim_expense_idx").on(t.expenseId),
     index("claim_resolution_idx").on(t.resolution),
+  ],
+);
+
+// Ledger de saldo a favor por unidad. Con signo: + ingreso (sobrepago o
+// depósito validado), − aplicación a una expensa. Balance = sum(amountCents).
+export const unitCredits = pgTable(
+  "unit_credit",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    unitId: uuid()
+      .notNull()
+      .references(() => units.id, { onDelete: "cascade" }),
+    amountCents: integer().notNull(),
+    reason: creditReasonEnum().notNull(),
+    relatedExpenseId: uuid().references(() => expenses.id, {
+      onDelete: "set null",
+    }),
+    relatedClaimId: uuid().references(() => paymentClaims.id, {
+      onDelete: "set null",
+    }),
+    // Null cuando lo genera el sistema (aplicación automática).
+    createdByUserId: text().references(() => users.id),
+    createdAt: timestamp().defaultNow().notNull(),
+  },
+  (t) => [index("unit_credit_unit_idx").on(t.unitId)],
+);
+
+// Adelantos de saldo informados por el vecino, a validar por el admin.
+export const creditDeposits = pgTable(
+  "credit_deposit",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    unitId: uuid()
+      .notNull()
+      .references(() => units.id, { onDelete: "cascade" }),
+    requestedByUserId: text()
+      .notNull()
+      .references(() => users.id),
+    amountCents: integer().notNull(),
+    receiptUrl: text(),
+    note: text(),
+    status: claimResolutionEnum().notNull().default("pending"),
+    resolvedByUserId: text().references(() => users.id),
+    resolvedAt: timestamp(),
+    rejectionReason: text(),
+    createdAt: timestamp().defaultNow().notNull(),
+  },
+  (t) => [
+    index("credit_deposit_unit_idx").on(t.unitId),
+    index("credit_deposit_status_idx").on(t.status),
   ],
 );
 

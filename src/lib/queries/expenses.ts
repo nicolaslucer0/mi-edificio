@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { currentPeriod } from "@/lib/format";
 import {
   consorcios,
+  creditDeposits,
   expenses,
   paymentClaims,
   units,
@@ -360,6 +361,70 @@ export async function getClaimReceiptUrl(
       .map((m) => m.consorcioId),
   );
 
+  const canView =
+    memberUnitIds.has(row.unitId) || adminConsorcioIds.has(row.consorcioId);
+  return canView ? row.receiptUrl : null;
+}
+
+export type UnitCredit = {
+  unitId: string;
+  unitLabel: string;
+  creditCents: number;
+};
+
+/** Saldo a favor de las unidades del usuario (en el consorcio si se pasa). */
+export async function getCreditForUser(
+  user: CurrentUser,
+  consorcioId?: string | null,
+): Promise<UnitCredit[]> {
+  const { ownerUnits, tenantOnlyUnits } = getUnitAccess(user, consorcioId);
+  const unitIds = Array.from(new Set([...ownerUnits, ...tenantOnlyUnits]));
+  if (unitIds.length === 0) return [];
+  return db
+    .select({
+      unitId: units.id,
+      unitLabel: units.label,
+      creditCents: units.creditCents,
+    })
+    .from(units)
+    .where(inArray(units.id, unitIds));
+}
+
+/**
+ * Receipt URL de un adelanto de saldo, solo si el usuario puede verlo: quien lo
+ * pidió, un miembro de la unidad, o un admin del consorcio. Igual que
+ * getClaimReceiptUrl, para la ruta autenticada de comprobantes.
+ */
+export async function getDepositReceiptUrl(
+  user: CurrentUser,
+  depositId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({
+      receiptUrl: creditDeposits.receiptUrl,
+      requestedByUserId: creditDeposits.requestedByUserId,
+      unitId: creditDeposits.unitId,
+      consorcioId: units.consorcioId,
+    })
+    .from(creditDeposits)
+    .innerJoin(units, eq(units.id, creditDeposits.unitId))
+    .where(eq(creditDeposits.id, depositId))
+    .limit(1);
+
+  if (!row?.receiptUrl) return null;
+
+  if (user.isSuperAdmin || row.requestedByUserId === user.id) {
+    return row.receiptUrl;
+  }
+
+  const memberUnitIds = new Set(
+    user.memberships.filter((m) => m.unitId).map((m) => m.unitId),
+  );
+  const adminConsorcioIds = new Set(
+    user.memberships
+      .filter((m) => m.role === "admin" && m.consorcioId)
+      .map((m) => m.consorcioId),
+  );
   const canView =
     memberUnitIds.has(row.unitId) || adminConsorcioIds.has(row.consorcioId);
   return canView ? row.receiptUrl : null;

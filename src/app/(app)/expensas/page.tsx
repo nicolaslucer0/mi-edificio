@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
-import { getExpensesForUser } from "@/lib/queries/expenses";
+import { getCreditForUser, getExpensesForUser } from "@/lib/queries/expenses";
 import { getPaymentInfoForUser } from "@/lib/queries/consorcios";
 import {
   formatCurrencyCents,
@@ -15,6 +15,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ClaimPaymentButton } from "@/components/claim-payment-button";
+import { CreditPanel } from "@/components/credit-panel";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { ExpenseStatusBadge } from "@/components/expense-status-badge";
@@ -38,9 +39,10 @@ export default async function ExpensesPage({
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
   const consorcioId = await getCurrentConsorcioId(user);
 
-  const [paginated, paymentInfos] = await Promise.all([
+  const [paginated, paymentInfos, credits] = await Promise.all([
     getExpensesForUser(user, { page, perPage: PER_PAGE, consorcioId }),
     getPaymentInfoForUser(user, consorcioId),
+    getCreditForUser(user, consorcioId),
   ]);
 
   return (
@@ -57,6 +59,8 @@ export default async function ExpensesPage({
         {paymentInfos.map((info) => (
           <PaymentInfoCard key={info.consorcioId} consorcio={info} />
         ))}
+
+        <CreditPanel units={credits} />
 
         {paginated.items.length === 0 ? (
           <EmptyState

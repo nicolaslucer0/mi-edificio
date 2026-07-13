@@ -7,10 +7,12 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   consorcios,
+  creditDeposits,
   expenditures,
   expenses,
   memberships,
   paymentClaims,
+  unitCredits,
   units,
   users,
 } from "@/lib/db/schema";
@@ -20,12 +22,8 @@ import {
 } from "@/lib/email";
 import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
 import { notifyNewExpense, notifyPaymentResolved } from "@/lib/notifications";
-import {
-  claimValidatedCents,
-  computeExpenseStatus,
-  remainingCents,
-  type ExpenseStatus,
-} from "@/lib/payments";
+import { remainingCents } from "@/lib/payments";
+import { applyCreditToUnit, recomputeExpensePaid } from "@/lib/credits";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -69,6 +67,7 @@ async function loadClaimContext(claimId: string) {
       resolution: paymentClaims.resolution,
       claimAmountCents: paymentClaims.amountCents,
       expenseId: expenses.id,
+      unitId: expenses.unitId,
       period: expenses.period,
       amountCents: expenses.amountCents,
       paidCents: expenses.paidCents,
@@ -87,49 +86,6 @@ async function loadClaimContext(claimId: string) {
   return row ?? null;
 }
 
-/**
- * Recalcula el total pagado y el estado de una expensa a partir de sus claims.
- * Fuente de verdad = los claims aprobados; se llama tras aprobar/rechazar uno.
- */
-async function recomputeExpenseStatus(
-  expenseId: string,
-  expenseAmountCents: number,
-): Promise<{ paidCents: number; status: ExpenseStatus }> {
-  const claims = await db
-    .select({
-      resolution: paymentClaims.resolution,
-      amountCents: paymentClaims.amountCents,
-      confirmedAmountCents: paymentClaims.confirmedAmountCents,
-    })
-    .from(paymentClaims)
-    .where(eq(paymentClaims.expenseId, expenseId));
-
-  let paidCents = 0;
-  let hasPendingClaim = false;
-  let hasRejectedClaim = false;
-  for (const c of claims) {
-    if (c.resolution === "approved") {
-      paidCents += claimValidatedCents(c, expenseAmountCents);
-    } else if (c.resolution === "pending") {
-      hasPendingClaim = true;
-    } else if (c.resolution === "rejected") {
-      hasRejectedClaim = true;
-    }
-  }
-
-  const status = computeExpenseStatus({
-    amountCents: expenseAmountCents,
-    paidCents,
-    hasPendingClaim,
-    hasRejectedClaim,
-  });
-  await db
-    .update(expenses)
-    .set({ paidCents, status })
-    .where(eq(expenses.id, expenseId));
-  return { paidCents, status };
-}
-
 export async function approveClaim(
   claimId: string,
   confirmedAmountCents?: number,
@@ -146,34 +102,43 @@ export async function approveClaim(
     return { ok: false, error: "Este pago ya fue resuelto." };
   }
 
-  // Saldo disponible antes de este pago (la expensa aún no lo cuenta).
-  const maxForThis = remainingCents(claim.amountCents, claim.paidCents);
-  if (maxForThis <= 0) {
-    return { ok: false, error: "Esta expensa ya está saldada." };
-  }
-  // El admin puede corregir el monto informado; se capa al saldo restante.
   const informed = claim.claimAmountCents ?? claim.amountCents;
-  const requested = confirmedAmountCents ?? informed;
-  const confirmed = Math.min(Math.max(1, requested), maxForThis);
+  const requested = Math.max(1, confirmedAmountCents ?? informed);
+  // Lo que cabe en la expensa; el excedente (sobrepago) va a saldo a favor.
+  const maxForThis = remainingCents(claim.amountCents, claim.paidCents);
+  const appliedToExpense = Math.min(requested, maxForThis);
+  const excess = requested - appliedToExpense;
 
   await db
     .update(paymentClaims)
     .set({
       resolution: "approved",
-      confirmedAmountCents: confirmed,
+      confirmedAmountCents: appliedToExpense,
       resolvedByUserId: ctx.userId,
       resolvedAt: new Date(),
     })
     .where(eq(paymentClaims.id, claim.claimId));
 
-  await recomputeExpenseStatus(claim.expenseId, claim.amountCents);
+  await recomputeExpensePaid(claim.expenseId);
+
+  if (excess > 0) {
+    await db.insert(unitCredits).values({
+      unitId: claim.unitId,
+      amountCents: excess,
+      reason: "overpayment",
+      relatedClaimId: claim.claimId,
+      createdByUserId: ctx.userId,
+    });
+  }
+  // Aplica saldo a favor (el excedente recién creado y/o el preexistente).
+  await applyCreditToUnit(claim.unitId);
 
   if (claim.claimerEmail) {
     try {
       await sendPaymentConfirmedEmail({
         to: claim.claimerEmail,
         period: claim.period,
-        amountCents: confirmed,
+        amountCents: appliedToExpense,
         unitLabel: claim.unitLabel,
         notificationPrefs: claim.claimerPrefs,
       });
@@ -187,7 +152,7 @@ export async function approveClaim(
     prefs: claim.claimerPrefs,
     resolution: "approved",
     period: claim.period,
-    amountCents: confirmed,
+    amountCents: appliedToExpense,
     unitLabel: claim.unitLabel,
   });
 
@@ -241,7 +206,9 @@ export async function rejectClaim(
 
   // Rechazar un pago no borra lo ya pagado: se recalcula el estado desde los
   // claims restantes (puede quedar parcial, pendiente o rechazado).
-  await recomputeExpenseStatus(claim.expenseId, claim.amountCents);
+  await recomputeExpensePaid(claim.expenseId);
+  // La deuda que reabre el rechazo puede cubrirse con saldo a favor existente.
+  await applyCreditToUnit(claim.unitId);
 
   if (claim.claimerEmail) {
     try {
@@ -263,7 +230,7 @@ export async function rejectClaim(
     prefs: claim.claimerPrefs,
     resolution: "rejected",
     period: claim.period,
-    amountCents: claim.amountCents,
+    amountCents: claim.claimAmountCents ?? claim.amountCents,
     unitLabel: claim.unitLabel,
     reason: parsed.data.reason,
   });
@@ -271,6 +238,99 @@ export async function rejectClaim(
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
   revalidatePath("/");
+  return { ok: true };
+}
+
+export async function approveCreditDeposit(
+  depositId: string,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const [deposit] = await db
+    .select({
+      unitId: creditDeposits.unitId,
+      amountCents: creditDeposits.amountCents,
+      status: creditDeposits.status,
+      consorcioId: units.consorcioId,
+    })
+    .from(creditDeposits)
+    .innerJoin(units, eq(units.id, creditDeposits.unitId))
+    .where(eq(creditDeposits.id, depositId))
+    .limit(1);
+  if (!deposit) return { ok: false, error: "El adelanto no existe." };
+  if (!canAccessConsorcio(ctx, deposit.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+  if (deposit.status !== "pending") {
+    return { ok: false, error: "Este adelanto ya fue resuelto." };
+  }
+
+  await db
+    .update(creditDeposits)
+    .set({
+      status: "approved",
+      resolvedByUserId: ctx.userId,
+      resolvedAt: new Date(),
+    })
+    .where(eq(creditDeposits.id, depositId));
+
+  await db.insert(unitCredits).values({
+    unitId: deposit.unitId,
+    amountCents: deposit.amountCents,
+    reason: "deposit",
+    createdByUserId: ctx.userId,
+  });
+  // El adelanto validado se aplica a las deudas de la unidad (si las hay).
+  await applyCreditToUnit(deposit.unitId);
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/expensas");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+export async function rejectCreditDeposit(
+  depositId: string,
+  reason: string,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const trimmed = reason.trim();
+  if (trimmed.length < 3) {
+    return { ok: false, error: "Contanos por qué rechazás el adelanto." };
+  }
+
+  const [deposit] = await db
+    .select({
+      status: creditDeposits.status,
+      consorcioId: units.consorcioId,
+    })
+    .from(creditDeposits)
+    .innerJoin(units, eq(units.id, creditDeposits.unitId))
+    .where(eq(creditDeposits.id, depositId))
+    .limit(1);
+  if (!deposit) return { ok: false, error: "El adelanto no existe." };
+  if (!canAccessConsorcio(ctx, deposit.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+  if (deposit.status !== "pending") {
+    return { ok: false, error: "Este adelanto ya fue resuelto." };
+  }
+
+  await db
+    .update(creditDeposits)
+    .set({
+      status: "rejected",
+      resolvedByUserId: ctx.userId,
+      resolvedAt: new Date(),
+      rejectionReason: trimmed.slice(0, 500),
+    })
+    .where(eq(creditDeposits.id, depositId));
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/expensas");
   return { ok: true };
 }
 
@@ -481,6 +541,11 @@ export async function createExpense(
       description,
     })),
   );
+
+  // Si la unidad tiene saldo a favor, se aplica a la expensa recién creada.
+  for (const unitId of toInsert) {
+    await applyCreditToUnit(unitId);
+  }
 
   await notifyNewExpense({
     unitIds: toInsert,
