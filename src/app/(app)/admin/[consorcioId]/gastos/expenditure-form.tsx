@@ -316,7 +316,7 @@ export function ExpenditureForm({
         </Label>
         {initialValues?.receiptUrl && (
           <a
-            href={initialValues.receiptUrl}
+            href={`/api/receipts/expenditure/${initialValues.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="text-sm underline underline-offset-2 hover:text-foreground text-muted-foreground"

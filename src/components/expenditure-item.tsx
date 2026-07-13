@@ -50,7 +50,7 @@ export function ExpenditureItem({
           <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3">
             {item.receiptUrl ? (
               <a
-                href={item.receiptUrl}
+                href={`/api/receipts/expenditure/${item.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-primary underline-offset-2 hover:underline touch-manipulation"

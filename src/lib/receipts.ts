@@ -1,5 +1,5 @@
 import "server-only";
-import { put, del } from "@vercel/blob";
+import { put, del, get } from "@vercel/blob";
 
 const MAX_RECEIPT_SIZE = 4 * 1024 * 1024;
 
@@ -21,7 +21,7 @@ export async function uploadReceipt(file: File): Promise<UploadReceiptResult> {
   try {
     const safeName = file.name.replaceAll(/[^\w.-]/g, "_");
     const blob = await put(`receipts/${crypto.randomUUID()}-${safeName}`, file, {
-      access: "public",
+      access: "private",
       addRandomSuffix: false,
     });
     return { ok: true, url: blob.url };
@@ -47,4 +47,28 @@ export function getReceiptFile(formData: FormData): File | null {
   const raw = formData.get("receipt");
   if (raw instanceof File && raw.size > 0) return raw;
   return null;
+}
+
+export type PrivateReceipt = {
+  stream: ReadableStream<Uint8Array>;
+  contentType: string;
+};
+
+/**
+ * Fetches a private receipt blob for streaming back to an authorized user.
+ * Returns null if the token is missing or the blob can't be fetched. The
+ * caller is responsible for authorizing access before calling this.
+ */
+export async function getPrivateReceipt(
+  url: string,
+): Promise<PrivateReceipt | null> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return null;
+  try {
+    const result = await get(url, { access: "private" });
+    if (!result || result.statusCode !== 200) return null;
+    return { stream: result.stream, contentType: result.blob.contentType };
+  } catch (e) {
+    console.error("Failed to fetch receipt:", e);
+    return null;
+  }
 }

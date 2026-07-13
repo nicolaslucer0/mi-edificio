@@ -115,7 +115,7 @@ export function ClaimDecisionCard({
         )}
         {receiptUrl && (
           <a
-            href={receiptUrl}
+            href={`/api/receipts/claim/${claimId}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded touch-manipulation"

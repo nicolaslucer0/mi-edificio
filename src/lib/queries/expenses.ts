@@ -206,6 +206,7 @@ export type ReceiptData = {
   type: (typeof expenseTypeEnum.enumValues)[number];
   description: string | null;
   paidAt: Date | null;
+  claimId: string | null;
   receiptUrl: string | null;
 };
 
@@ -252,6 +253,7 @@ export async function getReceiptData(
 
   const [claim] = await db
     .select({
+      id: paymentClaims.id,
       resolvedAt: paymentClaims.resolvedAt,
       receiptUrl: paymentClaims.receiptUrl,
     })
@@ -268,6 +270,50 @@ export async function getReceiptData(
   return {
     ...row,
     paidAt: claim?.resolvedAt ?? null,
+    claimId: claim?.id ?? null,
     receiptUrl: claim?.receiptUrl ?? null,
   };
+}
+
+/**
+ * Returns the receipt URL of a payment claim only if the current user is
+ * authorized to view it: the claimant, a member (owner/tenant) of the
+ * expense's unit, or an admin of the unit's consorcio. Returns null otherwise
+ * (or if the claim has no receipt). Used by the authenticated receipt route.
+ */
+export async function getClaimReceiptUrl(
+  user: CurrentUser,
+  claimId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({
+      receiptUrl: paymentClaims.receiptUrl,
+      claimedByUserId: paymentClaims.claimedByUserId,
+      unitId: expenses.unitId,
+      consorcioId: units.consorcioId,
+    })
+    .from(paymentClaims)
+    .innerJoin(expenses, eq(expenses.id, paymentClaims.expenseId))
+    .innerJoin(units, eq(units.id, expenses.unitId))
+    .where(eq(paymentClaims.id, claimId))
+    .limit(1);
+
+  if (!row?.receiptUrl) return null;
+
+  if (user.isSuperAdmin || row.claimedByUserId === user.id) {
+    return row.receiptUrl;
+  }
+
+  const memberUnitIds = new Set(
+    user.memberships.filter((m) => m.unitId).map((m) => m.unitId),
+  );
+  const adminConsorcioIds = new Set(
+    user.memberships
+      .filter((m) => m.role === "admin" && m.consorcioId)
+      .map((m) => m.consorcioId),
+  );
+
+  const canView =
+    memberUnitIds.has(row.unitId) || adminConsorcioIds.has(row.consorcioId);
+  return canView ? row.receiptUrl : null;
 }

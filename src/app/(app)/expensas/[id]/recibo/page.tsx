@@ -95,9 +95,9 @@ export default async function ReceiptPage({
 
         <div className="flex flex-col gap-3 print:hidden">
           <PrintButton />
-          {receipt.receiptUrl && (
+          {receipt.receiptUrl && receipt.claimId && (
             <a
-              href={receipt.receiptUrl}
+              href={`/api/receipts/claim/${receipt.claimId}`}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(
