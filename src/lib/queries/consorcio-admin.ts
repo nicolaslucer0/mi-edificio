@@ -17,6 +17,7 @@ export type AdminUnitRow = {
   id: string;
   label: string;
   floor: string | null;
+  coefficient: string | null;
   vecinos: UnitVecino[];
 };
 
@@ -75,6 +76,7 @@ export async function getConsorciosWithUnitsForAdmin(
         consorcioId: units.consorcioId,
         label: units.label,
         floor: units.floor,
+        coefficient: units.coefficient,
       })
       .from(units)
       .where(inArray(units.consorcioId, consorcioIds))
@@ -115,6 +117,7 @@ export async function getConsorciosWithUnitsForAdmin(
       id: u.id,
       label: u.label,
       floor: u.floor,
+      coefficient: u.coefficient,
       vecinos: vecinosByUnit.get(u.id) ?? [],
     });
     unitsByConsorcio.set(u.consorcioId, list);

@@ -294,6 +294,7 @@ export type AdminUnit = {
   id: string;
   label: string;
   floor: string | null;
+  coefficient: string | null;
   consorcioId: string;
   consorcioName: string;
 };
@@ -309,6 +310,7 @@ export async function getUnitsForAdmin(
       id: units.id,
       label: units.label,
       floor: units.floor,
+      coefficient: units.coefficient,
       consorcioId: consorcios.id,
       consorcioName: consorcios.name,
     })

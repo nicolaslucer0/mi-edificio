@@ -24,6 +24,7 @@ import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
 import { notifyNewExpense, notifyPaymentResolved } from "@/lib/notifications";
 import { remainingCents } from "@/lib/payments";
 import { applyCreditToUnit, recomputeExpensePaid } from "@/lib/credits";
+import { splitAmount } from "@/lib/expenses-split";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -427,23 +428,21 @@ export async function updateOpeningBalance(
   return { ok: true };
 }
 
-const createExpenseSchema = z
-  .object({
-    target: z
-      .string()
-      .regex(/^(unit|consorcio):[0-9a-f-]{36}$/i, {
-        message: "Elegí una unidad o todas las unidades del consorcio.",
-      }),
-    period: z
-      .string()
-      .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "Formato YYYY-MM." }),
-    dueDate: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Formato YYYY-MM-DD." }),
-    amountPesos: z.coerce.number().int().positive("El monto debe ser mayor a 0."),
-    type: z.enum(["ordinaria", "extraordinaria"]),
-    description: z.string().max(500).optional(),
-  });
+const createExpenseSchema = z.object({
+  consorcioId: z.uuid(),
+  mode: z.enum(["fixed", "split", "single"]),
+  unitId: z.string().optional(),
+  amountPesos: z.coerce.number().int().positive().optional(),
+  totalPesos: z.coerce.number().int().positive().optional(),
+  period: z
+    .string()
+    .regex(/^\d{4}-(0[1-9]|1[0-2])$/, { message: "Formato YYYY-MM." }),
+  dueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, { message: "Formato YYYY-MM-DD." }),
+  type: z.enum(["ordinaria", "extraordinaria"]),
+  description: z.string().max(500).optional(),
+});
 
 export type CreateExpenseResult =
   | { ok: true; created: number; skipped: number }
@@ -457,10 +456,13 @@ export async function createExpense(
   if (!ctx) return { ok: false, error: "Sin permisos." };
 
   const parsed = createExpenseSchema.safeParse({
-    target: formData.get("target"),
+    consorcioId: formData.get("consorcioId"),
+    mode: formData.get("mode"),
+    unitId: formData.get("unitId") || undefined,
+    amountPesos: formData.get("amountPesos") || undefined,
+    totalPesos: formData.get("totalPesos") || undefined,
     period: formData.get("period"),
     dueDate: formData.get("dueDate"),
-    amountPesos: formData.get("amountPesos"),
     type: formData.get("type"),
     description: formData.get("description") || undefined,
   });
@@ -470,98 +472,135 @@ export async function createExpense(
       error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
     };
   }
+  const d = parsed.data;
 
-  const [scope, scopeId] = parsed.data.target.split(":");
-  const description = parsed.data.description?.trim() || null;
-  const dueDate = new Date(parsed.data.dueDate);
-  const amountCents = parsed.data.amountPesos * 100;
+  if (!canAccessConsorcio(ctx, d.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
 
-  let targetUnitIds: string[];
+  const description = d.description?.trim() || null;
+  const dueDate = new Date(d.dueDate);
 
-  if (scope === "unit") {
+  // Monto por unidad según el modo de cobro.
+  let targets: { unitId: string; amountCents: number }[] = [];
+
+  if (d.mode === "single") {
+    if (!d.unitId) return { ok: false, error: "Elegí un departamento." };
+    if (!d.amountPesos) return { ok: false, error: "Ingresá el monto." };
     const [unitRow] = await db
       .select({ consorcioId: units.consorcioId })
       .from(units)
-      .where(eq(units.id, scopeId))
+      .where(eq(units.id, d.unitId))
       .limit(1);
-    if (!unitRow) return { ok: false, error: "La unidad no existe." };
-    if (!canAccessConsorcio(ctx, unitRow.consorcioId)) {
-      return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+    if (!unitRow || unitRow.consorcioId !== d.consorcioId) {
+      return { ok: false, error: "La unidad no existe." };
     }
-    targetUnitIds = [scopeId];
+    targets = [{ unitId: d.unitId, amountCents: d.amountPesos * 100 }];
   } else {
-    if (!canAccessConsorcio(ctx, scopeId)) {
-      return { ok: false, error: "No tenés permisos sobre ese consorcio." };
-    }
-    const rows = await db
-      .select({ id: units.id })
+    const unitRows = await db
+      .select({ id: units.id, coefficient: units.coefficient })
       .from(units)
-      .where(eq(units.consorcioId, scopeId));
-    if (rows.length === 0) {
+      .where(eq(units.consorcioId, d.consorcioId));
+    if (unitRows.length === 0) {
       return {
         ok: false,
         error: "Este consorcio todavía no tiene unidades cargadas.",
       };
     }
-    targetUnitIds = rows.map((r) => r.id);
+
+    if (d.mode === "fixed") {
+      if (!d.amountPesos) {
+        return { ok: false, error: "Ingresá el monto por departamento." };
+      }
+      const cents = d.amountPesos * 100;
+      targets = unitRows.map((u) => ({ unitId: u.id, amountCents: cents }));
+    } else {
+      if (!d.totalPesos) {
+        return { ok: false, error: "Ingresá el monto total a repartir." };
+      }
+      const totalCents = d.totalPesos * 100;
+      // Proporcional solo si TODAS las unidades tienen coeficiente; si no,
+      // partes iguales.
+      const allHaveCoef = unitRows.every(
+        (u) => u.coefficient != null && Number(u.coefficient) > 0,
+      );
+      const weights = allHaveCoef
+        ? unitRows.map((u) => Number(u.coefficient))
+        : unitRows.map(() => 1);
+      const shares = splitAmount(totalCents, weights);
+      targets = unitRows.map((u, i) => ({
+        unitId: u.id,
+        amountCents: shares[i],
+      }));
+    }
   }
 
+  const targetUnitIds = targets.map((t) => t.unitId);
   const existing = await db
     .select({ unitId: expenses.unitId })
     .from(expenses)
     .where(
       and(
         inArray(expenses.unitId, targetUnitIds),
-        eq(expenses.period, parsed.data.period),
-        eq(expenses.type, parsed.data.type),
+        eq(expenses.period, d.period),
+        eq(expenses.type, d.type),
       ),
     );
   const existingSet = new Set(existing.map((e) => e.unitId));
-  const toInsert = targetUnitIds.filter((id) => !existingSet.has(id));
 
-  if (toInsert.length === 0) {
-    const typeLabel =
-      parsed.data.type === "ordinaria" ? "ordinaria" : "extraordinaria";
+  if (d.mode === "split" && existingSet.size > 0) {
     return {
       ok: false,
       error:
-        scope === "unit"
-          ? `Ya hay una expensa ${typeLabel} para esa unidad y período.`
+        "Algunas unidades ya tienen una expensa de ese período y tipo. Para repartir un total, ninguna debe tenerla.",
+    };
+  }
+
+  const toInsert = targets.filter((t) => !existingSet.has(t.unitId));
+  if (toInsert.length === 0) {
+    const typeLabel =
+      d.type === "ordinaria" ? "ordinaria" : "extraordinaria";
+    return {
+      ok: false,
+      error:
+        d.mode === "single"
+          ? `Esa unidad ya tiene una expensa ${typeLabel} para ese período.`
           : `Todas las unidades ya tienen una expensa ${typeLabel} para ese período.`,
     };
   }
 
   await db.insert(expenses).values(
-    toInsert.map((unitId) => ({
-      unitId,
-      period: parsed.data.period,
+    toInsert.map((t) => ({
+      unitId: t.unitId,
+      period: d.period,
       dueDate,
-      amountCents,
-      type: parsed.data.type,
+      amountCents: t.amountCents,
+      type: d.type,
       description,
     })),
   );
 
   // Si la unidad tiene saldo a favor, se aplica a la expensa recién creada.
-  for (const unitId of toInsert) {
-    await applyCreditToUnit(unitId);
+  for (const t of toInsert) {
+    await applyCreditToUnit(t.unitId);
   }
 
-  await notifyNewExpense({
-    unitIds: toInsert,
-    period: parsed.data.period,
-    amountCents,
-  });
+  // Notificar agrupando por monto (para reflejar el importe correcto).
+  const unitIdsByAmount = new Map<number, string[]>();
+  for (const t of toInsert) {
+    const list = unitIdsByAmount.get(t.amountCents) ?? [];
+    list.push(t.unitId);
+    unitIdsByAmount.set(t.amountCents, list);
+  }
+  for (const [amountCents, unitIds] of unitIdsByAmount) {
+    await notifyNewExpense({ unitIds, period: d.period, amountCents });
+  }
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
   revalidatePath("/");
 
-  return {
-    ok: true,
-    created: toInsert.length,
-    skipped: existingSet.size,
-  };
+  return { ok: true, created: toInsert.length, skipped: existingSet.size };
 }
 
 const updateExpenseSchema = z.object({
@@ -1154,6 +1193,20 @@ const createUnitSchema = z.object({
   floor: z.string().max(20).optional(),
 });
 
+/**
+ * Parsea el coeficiente (%) de una unidad. Acepta coma o punto decimal.
+ * Devuelve el valor como string "10.30", null si viene vacío, o "invalid".
+ */
+function parseCoefficient(
+  raw: FormDataEntryValue | null,
+): string | null | "invalid" {
+  const s = raw?.toString().trim().replace(",", ".") ?? "";
+  if (s === "") return null;
+  const n = Number(s);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return "invalid";
+  return (Math.round(n * 100) / 100).toFixed(2);
+}
+
 export async function createUnit(
   _prev: ActionResult | null,
   formData: FormData,
@@ -1175,6 +1228,11 @@ export async function createUnit(
 
   if (!canAccessConsorcio(ctx, parsed.data.consorcioId)) {
     return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  const coefficient = parseCoefficient(formData.get("coefficient"));
+  if (coefficient === "invalid") {
+    return { ok: false, error: "El coeficiente debe ser un número de 0 a 100." };
   }
 
   const cleanLabel = parsed.data.label.trim();
@@ -1200,7 +1258,39 @@ export async function createUnit(
     consorcioId: parsed.data.consorcioId,
     label: cleanLabel,
     floor: cleanFloor,
+    coefficient,
   });
+
+  revalidatePath("/admin", "layout");
+  return { ok: true };
+}
+
+export async function setUnitCoefficient(
+  unitId: string,
+  rawCoefficient: string,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const [unit] = await db
+    .select({ consorcioId: units.consorcioId })
+    .from(units)
+    .where(eq(units.id, unitId))
+    .limit(1);
+  if (!unit) return { ok: false, error: "La unidad no existe." };
+  if (!canAccessConsorcio(ctx, unit.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  const coefficient = parseCoefficient(rawCoefficient);
+  if (coefficient === "invalid") {
+    return { ok: false, error: "El coeficiente debe ser un número de 0 a 100." };
+  }
+
+  await db
+    .update(units)
+    .set({ coefficient })
+    .where(eq(units.id, unitId));
 
   revalidatePath("/admin", "layout");
   return { ok: true };

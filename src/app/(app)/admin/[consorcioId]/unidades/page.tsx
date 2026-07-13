@@ -17,6 +17,7 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { CreateUnitForm } from "./create-unit-form";
 import { DeleteUnitButton } from "./delete-unit-button";
+import { UnitCoefficientField } from "./unit-coefficient-field";
 
 export const metadata: Metadata = {
   title: "Unidades — Mi edificio",
@@ -85,6 +86,10 @@ export default async function UnidadesPage({
                           </span>
                           <DeleteUnitButton unitId={u.id} label={u.label} />
                         </div>
+                        <UnitCoefficientField
+                          unitId={u.id}
+                          coefficient={u.coefficient}
+                        />
                         {u.vecinos.length > 0 && (
                           <ul className="mt-1.5 flex flex-col gap-0.5">
                             {u.vecinos.map((v) => (

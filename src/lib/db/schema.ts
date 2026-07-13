@@ -3,6 +3,7 @@ import {
   text,
   timestamp,
   integer,
+  numeric,
   boolean,
   primaryKey,
   uuid,
@@ -150,6 +151,9 @@ export const units = pgTable(
       .references(() => consorcios.id, { onDelete: "cascade" }),
     label: text().notNull(),
     floor: text(),
+    // Coeficiente/porcentaje de la unidad para prorratear expensas (ej. 10.30).
+    // Null = sin cargar → el reparto de un total va en partes iguales.
+    coefficient: numeric({ precision: 5, scale: 2 }),
     // Saldo a favor de la unidad (cacheado). Se recalcula desde el ledger
     // unitCredits tras cada movimiento (ver src/lib/credits.ts).
     creditCents: integer().notNull().default(0),
