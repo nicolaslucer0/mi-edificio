@@ -40,13 +40,14 @@ const BASE_ITEMS: NavItem[] = [
     icon: BarChart3,
     isActive: (p) => p.startsWith("/balance"),
   },
-  {
-    href: "/amenities",
-    label: "Amenities",
-    icon: CalendarDays,
-    isActive: (p) => p.startsWith("/amenities"),
-  },
 ];
+
+const AMENITIES_ITEM: NavItem = {
+  href: "/amenities",
+  label: "Amenities",
+  icon: CalendarDays,
+  isActive: (p) => p.startsWith("/amenities"),
+};
 
 const ADMIN_ITEM: NavItem = {
   href: "/admin",
@@ -55,6 +56,12 @@ const ADMIN_ITEM: NavItem = {
   isActive: (p) => p.startsWith("/admin"),
 };
 
-export function getNavItems(isAdmin: boolean): NavItem[] {
-  return isAdmin ? [...BASE_ITEMS, ADMIN_ITEM] : BASE_ITEMS;
+export function getNavItems(
+  isAdmin: boolean,
+  hasAmenities: boolean,
+): NavItem[] {
+  const items = [...BASE_ITEMS];
+  if (hasAmenities) items.push(AMENITIES_ITEM);
+  if (isAdmin) items.push(ADMIN_ITEM);
+  return items;
 }

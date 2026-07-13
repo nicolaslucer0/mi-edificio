@@ -15,6 +15,7 @@ type Props = {
   email: string;
   isAdmin: boolean;
   isSuperAdmin: boolean;
+  hasAmenities: boolean;
   consorcios: Array<{ id: string; name: string }>;
   currentConsorcioId: string | null;
   notifications: NotificationView[];
@@ -26,13 +27,14 @@ export function Sidebar({
   email,
   isAdmin,
   isSuperAdmin,
+  hasAmenities,
   consorcios,
   currentConsorcioId,
   notifications,
   unreadCount,
 }: Readonly<Props>) {
   const pathname = usePathname();
-  const items = getNavItems(isAdmin);
+  const items = getNavItems(isAdmin, hasAmenities);
   const display = name ?? email;
 
   return (

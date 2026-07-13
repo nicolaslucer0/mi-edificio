@@ -7,11 +7,12 @@ import { getNavItems } from "./nav-items";
 
 type Props = {
   isAdmin: boolean;
+  hasAmenities: boolean;
 };
 
-export function BottomNav({ isAdmin }: Readonly<Props>) {
+export function BottomNav({ isAdmin, hasAmenities }: Readonly<Props>) {
   const pathname = usePathname();
-  const items = getNavItems(isAdmin);
+  const items = getNavItems(isAdmin, hasAmenities);
 
   return (
     <nav

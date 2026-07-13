@@ -32,6 +32,24 @@ function isConsorcioMember(user: CurrentUser, consorcioId: string): boolean {
   return user.memberships.some((m) => m.consorcioId === consorcioId);
 }
 
+/** ¿El consorcio tiene al menos una amenity reservable? Para mostrar la nav. */
+export async function hasReservableAmenities(
+  consorcioId: string | null,
+): Promise<boolean> {
+  if (!consorcioId) return false;
+  const [row] = await db
+    .select({ id: amenities.id })
+    .from(amenities)
+    .where(
+      and(
+        eq(amenities.consorcioId, consorcioId),
+        eq(amenities.reservable, true),
+      ),
+    )
+    .limit(1);
+  return row != null;
+}
+
 /** Todas las amenities de un consorcio. El caller valida acceso al consorcio. */
 export async function getAmenitiesForConsorcio(
   consorcioId: string,

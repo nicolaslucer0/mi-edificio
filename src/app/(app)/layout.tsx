@@ -4,6 +4,7 @@ import {
   getCurrentConsorcioId,
 } from "@/lib/consorcio-context";
 import { getAccessibleConsorcioIds } from "@/lib/queries/admin";
+import { hasReservableAmenities } from "@/lib/queries/amenities";
 import {
   getRecentNotifications,
   getUnreadCount,
@@ -25,6 +26,7 @@ export default async function AppLayout({
       getRecentNotifications(user.id),
       getUnreadCount(user.id),
     ]);
+  const hasAmenities = await hasReservableAmenities(currentConsorcioId);
 
   // The "+" acts on the selected consorcio when the user administers it,
   // otherwise on the first one they administer.
@@ -53,6 +55,7 @@ export default async function AppLayout({
         email={user.email}
         isAdmin={isAdmin}
         isSuperAdmin={user.isSuperAdmin}
+        hasAmenities={hasAmenities}
         consorcios={consorcios}
         currentConsorcioId={currentConsorcioId}
         notifications={recentNotifications}
@@ -76,7 +79,7 @@ export default async function AppLayout({
         >
           {children}
         </div>
-        <BottomNav isAdmin={isAdmin} />
+        <BottomNav isAdmin={isAdmin} hasAmenities={hasAmenities} />
       </div>
       {isAdmin && <ActionFab consorcioId={fabConsorcioId} />}
     </div>
