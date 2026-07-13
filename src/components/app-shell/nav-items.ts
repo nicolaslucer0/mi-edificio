@@ -1,5 +1,6 @@
 import {
   BarChart3,
+  CalendarDays,
   Home,
   Receipt,
   ShieldCheck,
@@ -38,6 +39,12 @@ const BASE_ITEMS: NavItem[] = [
     label: "Balance",
     icon: BarChart3,
     isActive: (p) => p.startsWith("/balance"),
+  },
+  {
+    href: "/amenities",
+    label: "Amenities",
+    icon: CalendarDays,
+    isActive: (p) => p.startsWith("/amenities"),
   },
 ];
 

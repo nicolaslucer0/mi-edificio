@@ -3,6 +3,7 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
   primaryKey,
   uuid,
   jsonb,
@@ -321,4 +322,45 @@ export const notifications = pgTable(
     createdAt: timestamp().defaultNow().notNull(),
   },
   (t) => [index("notification_user_idx").on(t.userId)],
+);
+
+// Espacios comunes reservables del consorcio (pileta, terraza, SUM).
+export const amenities = pgTable(
+  "amenity",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    consorcioId: uuid()
+      .notNull()
+      .references(() => consorcios.id, { onDelete: "cascade" }),
+    name: text().notNull(),
+    description: text(),
+    reservable: boolean().notNull().default(true),
+    // Franja horaria disponible (horas enteras; closeHour es fin exclusivo).
+    openHour: integer().notNull().default(8),
+    closeHour: integer().notNull().default(23),
+    maxHours: integer().notNull().default(4),
+    createdAt: timestamp().defaultNow().notNull(),
+  },
+  (t) => [index("amenity_consorcio_idx").on(t.consorcioId)],
+);
+
+// Reservas por rango de horas. `day` como texto "YYYY-MM-DD" + horas enteras
+// para evitar zona horaria; el solape se chequea sobre (amenityId, day).
+export const amenityReservations = pgTable(
+  "amenity_reservation",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    amenityId: uuid()
+      .notNull()
+      .references(() => amenities.id, { onDelete: "cascade" }),
+    reservedByUserId: text()
+      .notNull()
+      .references(() => users.id),
+    unitId: uuid().references(() => units.id, { onDelete: "set null" }),
+    day: text().notNull(),
+    startHour: integer().notNull(),
+    endHour: integer().notNull(),
+    createdAt: timestamp().defaultNow().notNull(),
+  },
+  (t) => [index("amenity_reservation_amenity_day_idx").on(t.amenityId, t.day)],
 );

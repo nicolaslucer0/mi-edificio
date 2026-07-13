@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   Building2,
+  CalendarDays,
   ChevronRight,
   Coins,
   FileSpreadsheet,
@@ -214,6 +215,13 @@ export default async function ConsorcioDashboard({
               description="Descargar el detalle de cobranzas del mes para auditoría."
               icon={<FileSpreadsheet className="size-5" />}
               tone="coral"
+            />
+            <ActionCard
+              href={`/admin/${consorcioId}/amenities`}
+              title="Amenities"
+              description="Cargar espacios comunes y habilitarlos para reservar."
+              icon={<CalendarDays className="size-5" />}
+              tone="teal"
             />
           </div>
         </section>
