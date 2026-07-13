@@ -3,7 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { amenities, amenityReservations, units, users } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
-import { isUpcoming } from "@/lib/amenities";
+import { argNow, isUpcoming } from "@/lib/amenities";
 
 export type Amenity = {
   id: string;
@@ -129,4 +129,28 @@ export async function getUpcomingReservationsForUser(
     .orderBy(asc(amenityReservations.day), asc(amenityReservations.startHour));
 
   return rows.filter((r) => isUpcoming(r.day, r.endHour));
+}
+
+/** Cantidad de reservas futuras por amenity, para avisar antes de borrar. */
+export async function getUpcomingReservationCounts(
+  consorcioId: string,
+): Promise<Record<string, number>> {
+  const rows = await db
+    .select({
+      amenityId: amenityReservations.amenityId,
+      day: amenityReservations.day,
+      endHour: amenityReservations.endHour,
+    })
+    .from(amenityReservations)
+    .innerJoin(amenities, eq(amenities.id, amenityReservations.amenityId))
+    .where(eq(amenities.consorcioId, consorcioId));
+
+  const now = argNow();
+  const counts: Record<string, number> = {};
+  for (const r of rows) {
+    if (isUpcoming(r.day, r.endHour, now)) {
+      counts[r.amenityId] = (counts[r.amenityId] ?? 0) + 1;
+    }
+  }
+  return counts;
 }

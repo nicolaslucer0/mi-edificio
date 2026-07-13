@@ -13,6 +13,14 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,12 +40,17 @@ const CLOSE_HOURS = Array.from({ length: 24 }, (_, i) => i + 1); // 1..24
 export function AmenitiesManager({
   consorcioId,
   amenities,
-}: Readonly<{ consorcioId: string; amenities: Amenity[] }>) {
+  upcomingCounts,
+}: Readonly<{
+  consorcioId: string;
+  amenities: Amenity[];
+  upcomingCounts: Record<string, number>;
+}>) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Amenity | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Amenity | null>(null);
   const [delPending, startDelete] = useTransition();
 
   function handleSubmit(formData: FormData) {
@@ -55,17 +68,18 @@ export function AmenitiesManager({
     });
   }
 
-  function handleDelete(id: string) {
-    setDeletingId(id);
+  function handleConfirmDelete() {
+    if (!confirmDelete) return;
+    const id = confirmDelete.id;
     startDelete(async () => {
       const result = await deleteAmenity(id);
       if (result.ok) {
         toast.success("Amenity eliminada.");
+        setConfirmDelete(null);
         router.refresh();
       } else {
         toast.error(result.error);
       }
-      setDeletingId(null);
     });
   }
 
@@ -121,8 +135,7 @@ export function AmenitiesManager({
                     </Button>
                     <Button
                       variant="ghost"
-                      onClick={() => handleDelete(a.id)}
-                      disabled={delPending && deletingId === a.id}
+                      onClick={() => setConfirmDelete(a)}
                       aria-label={`Eliminar ${a.name}`}
                       className="h-9 px-2 text-destructive hover:text-destructive touch-manipulation"
                     >
@@ -271,6 +284,61 @@ export function AmenitiesManager({
           </form>
         </DrawerContent>
       </Drawer>
+
+      <Dialog
+        open={confirmDelete !== null}
+        onOpenChange={(o) => {
+          if (!o) setConfirmDelete(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader className="gap-3">
+            <DialogTitle className="text-lg">¿Borrar esta amenity?</DialogTitle>
+            <DialogDescription className="leading-relaxed">
+              Vas a borrar{" "}
+              <span className="font-semibold text-foreground">
+                {confirmDelete?.name}
+              </span>
+              .
+              {confirmDelete &&
+                (upcomingCounts[confirmDelete.id] ?? 0) > 0 && (
+                  <>
+                    {" "}
+                    Tiene{" "}
+                    <span className="font-semibold text-foreground">
+                      {upcomingCounts[confirmDelete.id]} reserva
+                      {upcomingCounts[confirmDelete.id] === 1 ? "" : "s"} futura
+                      {upcomingCounts[confirmDelete.id] === 1 ? "" : "s"}
+                    </span>{" "}
+                    que también se van a cancelar.
+                  </>
+                )}
+              <br />
+              Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmDelete(null)}
+              disabled={delPending}
+              className="h-11"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={delPending}
+              className="h-11"
+            >
+              {delPending ? "Borrando…" : "Sí, borrar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -3,7 +3,10 @@ import { CalendarDays } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getConsorcioForAdmin } from "@/lib/queries/admin";
-import { getAmenitiesForConsorcio } from "@/lib/queries/amenities";
+import {
+  getAmenitiesForConsorcio,
+  getUpcomingReservationCounts,
+} from "@/lib/queries/amenities";
 import { PageHeader } from "@/components/page-header";
 import { AmenitiesManager } from "@/components/amenities-manager";
 
@@ -19,7 +22,10 @@ export default async function AdminAmenitiesPage({
   const consorcio = await getConsorcioForAdmin(user, consorcioId);
   if (!consorcio) notFound();
 
-  const amenities = await getAmenitiesForConsorcio(consorcioId);
+  const [amenities, upcomingCounts] = await Promise.all([
+    getAmenitiesForConsorcio(consorcioId),
+    getUpcomingReservationCounts(consorcioId),
+  ]);
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
@@ -36,7 +42,11 @@ export default async function AdminAmenitiesPage({
           Cargá los espacios comunes y marcá cuáles se pueden reservar. Los
           vecinos reservan por hora dentro del horario que definas.
         </p>
-        <AmenitiesManager consorcioId={consorcioId} amenities={amenities} />
+        <AmenitiesManager
+          consorcioId={consorcioId}
+          amenities={amenities}
+          upcomingCounts={upcomingCounts}
+        />
       </div>
     </main>
   );
