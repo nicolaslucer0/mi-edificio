@@ -14,6 +14,7 @@ import {
 import { sendClaimNotification } from "@/lib/email";
 import { getReceiptFile, uploadReceipt } from "@/lib/receipts";
 import { notifyClaimToValidate } from "@/lib/notifications";
+import { remainingCents } from "@/lib/payments";
 
 export type ClaimResult = { ok: true } | { ok: false; error: string };
 
@@ -27,6 +28,12 @@ export async function claimPayment(
   }
   const userId = session.user.id;
   const note = (formData.get("note")?.toString() ?? "").trim();
+  const rawAmount = Number.parseInt(
+    formData.get("amountCents")?.toString() ?? "",
+    10,
+  );
+  const requestedCents =
+    Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : null;
 
   const [expense] = await db
     .select({
@@ -36,6 +43,7 @@ export async function claimPayment(
       consorcioId: units.consorcioId,
       period: expenses.period,
       amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
       status: expenses.status,
     })
     .from(expenses)
@@ -61,12 +69,22 @@ export async function claimPayment(
     return { ok: false, error: "No tenés acceso a esa unidad." };
   }
 
-  if (expense.status !== "pendiente" && expense.status !== "rechazado") {
+  if (expense.status === "en_validacion") {
     return {
       ok: false,
-      error: "Esta expensa ya no se puede marcar como pagada en su estado actual.",
+      error: "Ya tenés un pago en validación para esta expensa.",
     };
   }
+  if (expense.status === "pagado") {
+    return { ok: false, error: "Esta expensa ya está paga." };
+  }
+
+  const remaining = remainingCents(expense.amountCents, expense.paidCents);
+  if (remaining <= 0) {
+    return { ok: false, error: "Esta expensa ya está saldada." };
+  }
+  // Se capa al saldo restante: no se puede informar de más (v1).
+  const amountCents = Math.min(requestedCents ?? remaining, remaining);
 
   const [actor] = await db
     .select({ name: users.name, email: users.email })
@@ -85,6 +103,7 @@ export async function claimPayment(
   await db.insert(paymentClaims).values({
     expenseId,
     claimedByUserId: userId,
+    amountCents,
     note: note || null,
     receiptUrl,
   });
@@ -99,7 +118,7 @@ export async function claimPayment(
       consorcioId: expense.consorcioId,
       unitLabel: expense.unitLabel,
       period: expense.period,
-      amountCents: expense.amountCents,
+      amountCents,
       claimedBy: actor?.name ?? actor?.email ?? "Un vecino",
       note: note || null,
     });

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,6 +29,8 @@ type Props = {
   claimId: string;
   period: string;
   amountCents: number;
+  claimAmountCents: number | null;
+  paidCents: number;
   unitLabel: string;
   consorcioName: string;
   claimedByName: string | null;
@@ -41,6 +44,8 @@ export function ClaimDecisionCard({
   claimId,
   period,
   amountCents,
+  claimAmountCents,
+  paidCents,
   unitLabel,
   consorcioName,
   claimedByName,
@@ -53,15 +58,26 @@ export function ClaimDecisionCard({
   const [approvePending, startApprove] = useTransition();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [hidden, setHidden] = useState(false);
+  // Monto informado por el vecino (legacy sin monto = expensa completa).
+  const informedCents = claimAmountCents ?? amountCents;
+  const maxForThis = Math.max(0, amountCents - paidCents);
+  const [confirmedPesos, setConfirmedPesos] = useState(
+    String(Math.round(informedCents / 100)),
+  );
   const [rejectState, rejectAction, rejectPending] = useActionState<
     ActionResult | null,
     FormData
   >(rejectClaim, null);
 
   function handleApprove() {
+    const cents = Math.round(Number(confirmedPesos) * 100);
+    if (!Number.isFinite(cents) || cents <= 0) {
+      toast.error("Ingresá un monto válido para confirmar.");
+      return;
+    }
     setHidden(true);
     startApprove(async () => {
-      const result = await approveClaim(claimId);
+      const result = await approveClaim(claimId, Math.min(cents, maxForThis));
       if (result.ok) {
         toast.success("Pago confirmado. El vecino recibió el aviso.");
         router.refresh();
@@ -97,13 +113,22 @@ export function ClaimDecisionCard({
           </p>
           <p className="text-xs text-muted-foreground">{consorcioName}</p>
         </div>
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <p className="text-xl font-semibold tabular-nums">
-            {formatCurrencyCents(amountCents)}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {formatPeriod(period)}
-          </p>
+        <div className="flex flex-col gap-1">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="text-xl font-semibold tabular-nums">
+              {formatCurrencyCents(informedCents)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {formatPeriod(period)}
+            </p>
+          </div>
+          {(informedCents < amountCents || paidCents > 0) && (
+            <p className="text-xs text-muted-foreground">
+              Sobre un total de {formatCurrencyCents(amountCents)}
+              {paidCents > 0 &&
+                ` · ya validado ${formatCurrencyCents(paidCents)}`}
+            </p>
+          )}
         </div>
         {note && (
           <div className="rounded-md bg-muted/50 p-3">
@@ -127,6 +152,31 @@ export function ClaimDecisionCard({
         <p className="text-xs text-muted-foreground">
           Avisó el {claimedAt.toLocaleString("es-AR")}
         </p>
+        <div className="flex flex-col gap-1.5">
+          <Label
+            htmlFor={`confirm-${claimId}`}
+            className="text-xs text-muted-foreground"
+          >
+            Monto a confirmar
+          </Label>
+          <div className="relative sm:w-44">
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+              $
+            </span>
+            <Input
+              id={`confirm-${claimId}`}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={Math.round(maxForThis / 100)}
+              step={1}
+              value={confirmedPesos}
+              onChange={(e) => setConfirmedPesos(e.target.value)}
+              disabled={approvePending}
+              className="h-11 pl-7 text-base"
+            />
+          </div>
+        </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button
             type="button"

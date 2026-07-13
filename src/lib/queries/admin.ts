@@ -43,11 +43,13 @@ export async function getPendingClaimsForAdmin(
     .select({
       claimId: paymentClaims.id,
       claimedAt: paymentClaims.claimedAt,
+      claimAmountCents: paymentClaims.amountCents,
       note: paymentClaims.note,
       receiptUrl: paymentClaims.receiptUrl,
       expenseId: expenses.id,
       period: expenses.period,
       amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
       unitLabel: units.label,
       consorcioId: consorcios.id,
       consorcioName: consorcios.name,

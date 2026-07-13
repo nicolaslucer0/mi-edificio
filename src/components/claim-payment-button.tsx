@@ -24,6 +24,7 @@ type Props = {
   expenseId: string;
   period: string;
   amountCents: number;
+  paidCents?: number;
   isFuture?: boolean;
 };
 
@@ -31,14 +32,48 @@ export function ClaimPaymentButton({
   expenseId,
   period,
   amountCents,
+  paidCents = 0,
   isFuture = false,
 }: Readonly<Props>) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [mode, setMode] = useState<"full" | "partial">("full");
+  const [partialPesos, setPartialPesos] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  const remaining = Math.max(0, amountCents - paidCents);
+  const isPartiallyPaid = paidCents > 0;
+  const remainingPesos = Math.round(remaining / 100);
+
+  const enteredCents = Math.round(Number(partialPesos) * 100);
+  const enteredValid =
+    partialPesos !== "" && Number.isFinite(enteredCents) && enteredCents > 0;
+  const wouldRemain = enteredValid
+    ? Math.max(0, remaining - Math.min(enteredCents, remaining))
+    : remaining;
+
+  function handleOpenChange(next: boolean) {
+    setOpen(next);
+    if (!next) {
+      setMode("full");
+      setPartialPesos("");
+      setError(null);
+    }
+  }
+
   function handleSubmit(formData: FormData) {
+    let amount = remaining;
+    if (mode === "partial") {
+      if (!enteredValid) {
+        setError("Ingresá cuánto transferiste.");
+        return;
+      }
+      amount = Math.min(enteredCents, remaining);
+    }
+    formData.set("amountCents", String(amount));
+    setError(null);
     setSubmitted(true);
     setOpen(false);
     startTransition(async () => {
@@ -54,6 +89,11 @@ export function ClaimPaymentButton({
       }
     });
   }
+
+  const triggerLabel = (() => {
+    if (isPartiallyPaid) return "Pagar lo que falta";
+    return isFuture ? "Adelantar expensa" : "Ya pagué";
+  })();
 
   if (submitted) {
     return (
@@ -71,21 +111,21 @@ export function ClaimPaymentButton({
     <>
       <Button
         onClick={() => setOpen(true)}
-        variant={isFuture ? "outline" : "default"}
-        aria-label={
-          isFuture
-            ? `Adelantar el pago de la expensa de ${formatPeriod(period)}`
-            : `Marcar como pagada la expensa de ${formatPeriod(period)}`
-        }
+        variant={isFuture && !isPartiallyPaid ? "outline" : "default"}
+        aria-label={`${triggerLabel} — expensa de ${formatPeriod(period)}`}
         className="h-11 w-full px-5 text-sm touch-manipulation sm:w-auto"
       >
-        {isFuture ? "Adelantar expensa" : "Ya pagué"}
+        {triggerLabel}
       </Button>
-      <Drawer open={open} onOpenChange={setOpen}>
+      <Drawer open={open} onOpenChange={handleOpenChange}>
         <DrawerContent>
           <DrawerHeader>
             <DrawerTitle>
-              {isFuture ? "¿Adelantar el pago?" : "¿Marcar como pagada?"}
+              {isPartiallyPaid
+                ? "Completar el pago"
+                : isFuture
+                  ? "¿Adelantar el pago?"
+                  : "¿Registrar tu pago?"}
             </DrawerTitle>
             <DrawerDescription>
               <span className="font-semibold text-foreground">
@@ -95,13 +135,98 @@ export function ClaimPaymentButton({
               <span className="font-semibold text-foreground">
                 {formatCurrencyCents(amountCents)}
               </span>
-              <br />
-              Cuando confirmes, el administrador va a recibir un mail para
-              validar el pago contra el extracto bancario.
+              {isPartiallyPaid && (
+                <>
+                  <br />
+                  Ya pagaste {formatCurrencyCents(paidCents)} · falta{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatCurrencyCents(remaining)}
+                  </span>
+                </>
+              )}
             </DrawerDescription>
           </DrawerHeader>
           <form action={handleSubmit} className="contents">
             <DrawerBody className="gap-4">
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-1 text-sm font-medium">
+                  ¿Cuánto transferiste?
+                </legend>
+                <label className="flex items-center gap-3 rounded-lg border border-border/60 p-3 touch-manipulation has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                  <input
+                    type="radio"
+                    name="mode"
+                    checked={mode === "full"}
+                    onChange={() => {
+                      setMode("full");
+                      setError(null);
+                    }}
+                    className="size-4 accent-primary"
+                  />
+                  <span className="text-sm">
+                    Pagué todo —{" "}
+                    <span className="font-semibold">
+                      {formatCurrencyCents(remaining)}
+                    </span>
+                  </span>
+                </label>
+                <label className="flex items-center gap-3 rounded-lg border border-border/60 p-3 touch-manipulation has-[:checked]:border-primary has-[:checked]:bg-primary/5">
+                  <input
+                    type="radio"
+                    name="mode"
+                    checked={mode === "partial"}
+                    onChange={() => setMode("partial")}
+                    className="size-4 accent-primary"
+                  />
+                  <span className="text-sm">Pagué una parte</span>
+                </label>
+
+                {mode === "partial" && (
+                  <div className="flex flex-col gap-2 pl-1 pt-1">
+                    <Label htmlFor="partial-amount" className="text-sm">
+                      Monto que transferí
+                    </Label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-base text-muted-foreground">
+                        $
+                      </span>
+                      <Input
+                        id="partial-amount"
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        max={remainingPesos}
+                        step={1}
+                        value={partialPesos}
+                        onChange={(e) => {
+                          setPartialPesos(e.target.value);
+                          setError(null);
+                        }}
+                        placeholder={String(remainingPesos)}
+                        className="h-12 pl-7 text-base"
+                        disabled={isPending}
+                      />
+                    </div>
+                    {enteredValid && (
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Te va a quedar pendiente{" "}
+                        <span className="font-semibold text-foreground">
+                          {formatCurrencyCents(wouldRemain)}
+                        </span>
+                      </p>
+                    )}
+                    {error && (
+                      <p
+                        role="alert"
+                        className="text-xs text-destructive leading-relaxed"
+                      >
+                        {error}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </fieldset>
+
               <div className="flex flex-col gap-2">
                 <Label htmlFor="receipt" className="text-sm">
                   Comprobante (opcional)
@@ -139,15 +264,12 @@ export function ClaimPaymentButton({
                 disabled={isPending}
                 className="h-12 text-base touch-manipulation"
               >
-                {(() => {
-                  if (isPending) return "Confirmando…";
-                  return isFuture ? "Sí, adelantar" : "Sí, ya pagué";
-                })()}
+                {isPending ? "Confirmando…" : "Confirmar"}
               </Button>
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => setOpen(false)}
+                onClick={() => handleOpenChange(false)}
                 disabled={isPending}
                 className="h-11 touch-manipulation"
               >

@@ -85,23 +85,67 @@ export async function getDebtForUser(
   if (!access) return { hasUnit: false };
 
   const rows = await db
-    .select({ amountCents: expenses.amountCents, dueDate: expenses.dueDate })
+    .select({
+      id: expenses.id,
+      amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
+      dueDate: expenses.dueDate,
+    })
     .from(expenses)
     .where(
       and(
         access,
-        notInArray(expenses.status, ["pagado", "en_validacion"]),
+        notInArray(expenses.status, ["pagado"]),
         // Las expensas de meses futuros todavía no son deuda.
         lte(expenses.period, currentPeriod()),
       ),
     );
 
-  const amountCents = rows.reduce((sum, r) => sum + r.amountCents, 0);
-  const nextDueDate = rows.reduce<Date | null>(
-    (min, r) => (!min || r.dueDate < min ? r.dueDate : min),
-    null,
-  );
-  return { hasUnit: true, amountCents, count: rows.length, nextDueDate };
+  if (rows.length === 0) {
+    return { hasUnit: true, amountCents: 0, count: 0, nextDueDate: null };
+  }
+
+  // Pagos pendientes de validación: se descuentan de la deuda mostrada
+  // (comportamiento optimista). Si el admin los rechaza, la deuda reaparece.
+  const pending = await db
+    .select({
+      expenseId: paymentClaims.expenseId,
+      amountCents: paymentClaims.amountCents,
+    })
+    .from(paymentClaims)
+    .where(
+      and(
+        inArray(
+          paymentClaims.expenseId,
+          rows.map((r) => r.id),
+        ),
+        eq(paymentClaims.resolution, "pending"),
+      ),
+    );
+  const amountById = new Map(rows.map((r) => [r.id, r.amountCents]));
+  const pendingByExpense = new Map<string, number>();
+  for (const p of pending) {
+    const informed = p.amountCents ?? amountById.get(p.expenseId) ?? 0;
+    pendingByExpense.set(
+      p.expenseId,
+      (pendingByExpense.get(p.expenseId) ?? 0) + informed,
+    );
+  }
+
+  let amountCents = 0;
+  let count = 0;
+  let nextDueDate: Date | null = null;
+  for (const r of rows) {
+    const owed = Math.max(
+      0,
+      r.amountCents - r.paidCents - (pendingByExpense.get(r.id) ?? 0),
+    );
+    if (owed <= 0) continue;
+    amountCents += owed;
+    count += 1;
+    if (!nextDueDate || r.dueDate < nextDueDate) nextDueDate = r.dueDate;
+  }
+  return { hasUnit: true, amountCents, count, nextDueDate };
 }
 
 export type ExpenseRow = {
@@ -111,6 +155,7 @@ export type ExpenseRow = {
   period: string;
   dueDate: Date;
   amountCents: number;
+  paidCents: number;
   type: (typeof expenseTypeEnum.enumValues)[number];
   status: (typeof expenseStatusEnum.enumValues)[number];
   description: string | null;
@@ -140,6 +185,7 @@ export async function getRecentExpensesForUser(
       period: expenses.period,
       dueDate: expenses.dueDate,
       amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
       type: expenses.type,
       status: expenses.status,
       description: expenses.description,
@@ -173,6 +219,7 @@ export async function getExpensesForUser(
         period: expenses.period,
         dueDate: expenses.dueDate,
         amountCents: expenses.amountCents,
+        paidCents: expenses.paidCents,
         type: expenses.type,
         status: expenses.status,
         description: expenses.description,

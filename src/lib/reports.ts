@@ -23,6 +23,7 @@ type ExpenseStatus = (typeof expenseStatusEnum.enumValues)[number];
 const STATUS_LABEL: Record<ExpenseStatus, string> = {
   pendiente: "Pendiente",
   en_validacion: "En validación",
+  parcial: "Parcial",
   pagado: "Pagada",
   rechazado: "Rechazada",
 };
@@ -33,6 +34,7 @@ export type ReportRow = {
   period: string;
   type: "ordinaria" | "extraordinaria";
   amountCents: number;
+  paidCents: number;
   status: ExpenseStatus;
   dueDate: Date;
   paidAt: Date | null;
@@ -90,6 +92,7 @@ export async function getMonthlyExpenseReportRows(
       period: expenses.period,
       type: expenses.type,
       amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
       status: expenses.status,
       dueDate: expenses.dueDate,
     })
@@ -153,6 +156,7 @@ export async function getMonthlyExpenseReportRows(
       period: r.period,
       type: r.type,
       amountCents: r.amountCents,
+      paidCents: r.paidCents,
       status: r.status,
       dueDate: r.dueDate,
       paidAt: r.status === "pagado" ? claim?.resolvedAt ?? null : null,
@@ -212,31 +216,30 @@ export function summarizeReport(
   expenditureRows: ExpenditureReportRow[],
 ): ReportSummary {
   let paidCount = 0;
-  let paidCents = 0;
+  let collectedCents = 0;
   let pendingCount = 0;
-  let pendingCents = 0;
+  let remainingTotal = 0;
   for (const r of expenseRows) {
-    if (r.status === "pagado") {
-      paidCount += 1;
-      paidCents += r.amountCents;
-    } else {
-      pendingCount += 1;
-      pendingCents += r.amountCents;
-    }
+    const paid = Math.min(r.paidCents, r.amountCents);
+    const owed = Math.max(0, r.amountCents - r.paidCents);
+    collectedCents += paid;
+    remainingTotal += owed;
+    if (owed <= 0) paidCount += 1;
+    else pendingCount += 1;
   }
   const spentCents = expenditureRows.reduce((s, g) => s + g.amountCents, 0);
-  const billedCents = paidCents + pendingCents;
+  const billedCents = collectedCents + remainingTotal;
   const collectedPct =
-    billedCents > 0 ? Math.round((paidCents / billedCents) * 100) : 0;
+    billedCents > 0 ? Math.round((collectedCents / billedCents) * 100) : 0;
   return {
     total: expenseRows.length,
     paidCount,
-    paidCents,
+    paidCents: collectedCents,
     pendingCount,
-    pendingCents,
+    pendingCents: remainingTotal,
     collectedPct,
     spentCents,
-    netCents: paidCents - spentCents,
+    netCents: collectedCents - spentCents,
   };
 }
 
@@ -246,6 +249,8 @@ const EXPENSE_HEADERS = [
   "Período",
   "Tipo",
   "Monto (pesos)",
+  "Pagado (pesos)",
+  "Falta (pesos)",
   "Estado",
   "¿Pagada?",
   "Vencimiento",
@@ -293,8 +298,13 @@ function expenseSection(rows: ReportRow[]): string[] {
         formatPeriod(r.period),
         r.type === "extraordinaria" ? "Extraordinaria" : "Ordinaria",
         pesos(r.amountCents),
+        pesos(Math.min(r.paidCents, r.amountCents)),
+        pesos(Math.max(0, r.amountCents - r.paidCents)),
         STATUS_LABEL[r.status],
-        r.status === "pagado" ? "Sí" : "No",
+        (() => {
+          if (r.paidCents >= r.amountCents) return "Sí";
+          return r.paidCents > 0 ? "Parcial" : "No";
+        })(),
         formatDate(r.dueDate),
         r.paidAt ? formatDate(r.paidAt) : "",
         r.paidBy ?? "",

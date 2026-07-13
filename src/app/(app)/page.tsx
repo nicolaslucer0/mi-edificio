@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarClock, Check, Clock } from "lucide-react";
+import { ArrowRight, CalendarClock, Check, Clock, PieChart } from "lucide-react";
 import { requireUser, roleLabel } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import {
@@ -209,6 +209,12 @@ const STATUS_DISPLAY = {
     classes:
       "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300",
     icon: Clock,
+  },
+  parcial: {
+    label: "Pago parcial",
+    classes:
+      "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+    icon: PieChart,
   },
   rechazado: {
     label: "Rechazada",

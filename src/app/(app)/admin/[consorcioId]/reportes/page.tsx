@@ -160,6 +160,7 @@ export default async function ReportesPage({
                     <TableHead>Propietario</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
+                    <TableHead className="text-right">Falta</TableHead>
                     <TableHead className="text-right">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -182,6 +183,11 @@ export default async function ReportesPage({
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {formatCurrencyCents(r.amountCents)}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-muted-foreground">
+                        {r.paidCents >= r.amountCents
+                          ? "—"
+                          : formatCurrencyCents(r.amountCents - r.paidCents)}
                       </TableCell>
                       <TableCell className="text-right">
                         <ExpenseStatusBadge

@@ -1,4 +1,4 @@
-import { AlertCircle, CalendarClock, Check, Clock, X } from "lucide-react";
+import { AlertCircle, CalendarClock, Check, Clock, PieChart, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isFuturePeriod } from "@/lib/format";
 import type { expenseStatusEnum } from "@/lib/db/schema";
@@ -33,6 +33,12 @@ const STATUS_CONFIG: Record<Status, BadgeConfig> = {
     icon: Clock,
     classes:
       "bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/40 dark:text-yellow-300 dark:border-yellow-800/60",
+  },
+  parcial: {
+    label: "Parcial",
+    icon: PieChart,
+    classes:
+      "bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:border-indigo-800/60",
   },
   rechazado: {
     label: "Rechazada",

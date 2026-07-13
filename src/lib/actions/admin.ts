@@ -20,6 +20,12 @@ import {
 } from "@/lib/email";
 import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
 import { notifyNewExpense, notifyPaymentResolved } from "@/lib/notifications";
+import {
+  claimValidatedCents,
+  computeExpenseStatus,
+  remainingCents,
+  type ExpenseStatus,
+} from "@/lib/payments";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -61,9 +67,11 @@ async function loadClaimContext(claimId: string) {
     .select({
       claimId: paymentClaims.id,
       resolution: paymentClaims.resolution,
+      claimAmountCents: paymentClaims.amountCents,
       expenseId: expenses.id,
       period: expenses.period,
       amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
       unitLabel: units.label,
       consorcioId: units.consorcioId,
       claimerUserId: paymentClaims.claimedByUserId,
@@ -79,7 +87,53 @@ async function loadClaimContext(claimId: string) {
   return row ?? null;
 }
 
-export async function approveClaim(claimId: string): Promise<ActionResult> {
+/**
+ * Recalcula el total pagado y el estado de una expensa a partir de sus claims.
+ * Fuente de verdad = los claims aprobados; se llama tras aprobar/rechazar uno.
+ */
+async function recomputeExpenseStatus(
+  expenseId: string,
+  expenseAmountCents: number,
+): Promise<{ paidCents: number; status: ExpenseStatus }> {
+  const claims = await db
+    .select({
+      resolution: paymentClaims.resolution,
+      amountCents: paymentClaims.amountCents,
+      confirmedAmountCents: paymentClaims.confirmedAmountCents,
+    })
+    .from(paymentClaims)
+    .where(eq(paymentClaims.expenseId, expenseId));
+
+  let paidCents = 0;
+  let hasPendingClaim = false;
+  let hasRejectedClaim = false;
+  for (const c of claims) {
+    if (c.resolution === "approved") {
+      paidCents += claimValidatedCents(c, expenseAmountCents);
+    } else if (c.resolution === "pending") {
+      hasPendingClaim = true;
+    } else if (c.resolution === "rejected") {
+      hasRejectedClaim = true;
+    }
+  }
+
+  const status = computeExpenseStatus({
+    amountCents: expenseAmountCents,
+    paidCents,
+    hasPendingClaim,
+    hasRejectedClaim,
+  });
+  await db
+    .update(expenses)
+    .set({ paidCents, status })
+    .where(eq(expenses.id, expenseId));
+  return { paidCents, status };
+}
+
+export async function approveClaim(
+  claimId: string,
+  confirmedAmountCents?: number,
+): Promise<ActionResult> {
   const ctx = await requireAdminContext();
   if (!ctx) return { ok: false, error: "Sin permisos." };
 
@@ -92,26 +146,34 @@ export async function approveClaim(claimId: string): Promise<ActionResult> {
     return { ok: false, error: "Este pago ya fue resuelto." };
   }
 
+  // Saldo disponible antes de este pago (la expensa aún no lo cuenta).
+  const maxForThis = remainingCents(claim.amountCents, claim.paidCents);
+  if (maxForThis <= 0) {
+    return { ok: false, error: "Esta expensa ya está saldada." };
+  }
+  // El admin puede corregir el monto informado; se capa al saldo restante.
+  const informed = claim.claimAmountCents ?? claim.amountCents;
+  const requested = confirmedAmountCents ?? informed;
+  const confirmed = Math.min(Math.max(1, requested), maxForThis);
+
   await db
     .update(paymentClaims)
     .set({
       resolution: "approved",
+      confirmedAmountCents: confirmed,
       resolvedByUserId: ctx.userId,
       resolvedAt: new Date(),
     })
     .where(eq(paymentClaims.id, claim.claimId));
 
-  await db
-    .update(expenses)
-    .set({ status: "pagado" })
-    .where(eq(expenses.id, claim.expenseId));
+  await recomputeExpenseStatus(claim.expenseId, claim.amountCents);
 
   if (claim.claimerEmail) {
     try {
       await sendPaymentConfirmedEmail({
         to: claim.claimerEmail,
         period: claim.period,
-        amountCents: claim.amountCents,
+        amountCents: confirmed,
         unitLabel: claim.unitLabel,
         notificationPrefs: claim.claimerPrefs,
       });
@@ -125,7 +187,7 @@ export async function approveClaim(claimId: string): Promise<ActionResult> {
     prefs: claim.claimerPrefs,
     resolution: "approved",
     period: claim.period,
-    amountCents: claim.amountCents,
+    amountCents: confirmed,
     unitLabel: claim.unitLabel,
   });
 
@@ -177,17 +239,16 @@ export async function rejectClaim(
     })
     .where(eq(paymentClaims.id, claim.claimId));
 
-  await db
-    .update(expenses)
-    .set({ status: "rechazado" })
-    .where(eq(expenses.id, claim.expenseId));
+  // Rechazar un pago no borra lo ya pagado: se recalcula el estado desde los
+  // claims restantes (puede quedar parcial, pendiente o rechazado).
+  await recomputeExpenseStatus(claim.expenseId, claim.amountCents);
 
   if (claim.claimerEmail) {
     try {
       await sendPaymentRejectedEmail({
         to: claim.claimerEmail,
         period: claim.period,
-        amountCents: claim.amountCents,
+        amountCents: claim.claimAmountCents ?? claim.amountCents,
         unitLabel: claim.unitLabel,
         reason: parsed.data.reason,
         notificationPrefs: claim.claimerPrefs,

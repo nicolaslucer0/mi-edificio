@@ -32,6 +32,7 @@ export const expenseTypeEnum = pgEnum("expense_type", [
 export const expenseStatusEnum = pgEnum("expense_status", [
   "pendiente",
   "en_validacion",
+  "parcial",
   "pagado",
   "rechazado",
 ]);
@@ -177,6 +178,9 @@ export const expenses = pgTable(
     period: text().notNull(),
     dueDate: timestamp({ mode: "date" }).notNull(),
     amountCents: integer().notNull(),
+    // Total pagado y validado. Se recalcula como la suma de los claims
+    // aprobados en cada aprobación/rechazo (ver src/lib/payments.ts).
+    paidCents: integer().notNull().default(0),
     type: expenseTypeEnum().notNull(),
     status: expenseStatusEnum().notNull().default("pendiente"),
     description: text(),
@@ -224,6 +228,11 @@ export const paymentClaims = pgTable(
       .notNull()
       .references(() => users.id),
     claimedAt: timestamp().defaultNow().notNull(),
+    // Monto que informa el vecino en este pago. Null en claims legacy
+    // (previos a pagos parciales) → se interpreta como la expensa completa.
+    amountCents: integer(),
+    // Monto que valida el admin al aprobar (puede corregir el informado).
+    confirmedAmountCents: integer(),
     receiptUrl: text(),
     note: text(),
     resolution: claimResolutionEnum().notNull().default("pending"),

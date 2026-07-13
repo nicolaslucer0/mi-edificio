@@ -64,6 +64,8 @@ export default async function AprobarPagosPage({
                   claimId={claim.claimId}
                   period={claim.period}
                   amountCents={claim.amountCents}
+                  claimAmountCents={claim.claimAmountCents}
+                  paidCents={claim.paidCents}
                   unitLabel={claim.unitLabel}
                   consorcioName={claim.consorcioName}
                   claimedByName={claim.claimedByName}

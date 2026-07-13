@@ -98,15 +98,25 @@ function ExpenseListItem({
   expense,
   index,
 }: Readonly<{ expense: ExpenseRow; index: number }>) {
-  const isPending =
-    expense.status === "pendiente" || expense.status === "rechazado";
+  const canClaim =
+    expense.status === "pendiente" ||
+    expense.status === "rechazado" ||
+    expense.status === "parcial";
   const isPaid = expense.status === "pagado";
   const isInValidation = expense.status === "en_validacion";
   const isFuture = isFuturePeriod(expense.period);
 
   const isExtraordinaria = expense.type === "extraordinaria";
+  const isPartiallyPaid =
+    expense.paidCents > 0 && expense.paidCents < expense.amountCents;
+  const remaining = Math.max(0, expense.amountCents - expense.paidCents);
+  const paidPct = Math.min(
+    100,
+    Math.round((expense.paidCents / expense.amountCents) * 100),
+  );
   // Una expensa a futuro todavía no vence: no mostramos urgencia.
-  const urgency = isPending && !isFuture ? formatDueUrgency(expense.dueDate) : null;
+  const urgency =
+    canClaim && !isFuture ? formatDueUrgency(expense.dueDate) : null;
 
   return (
     <li style={{ "--stagger-index": index } as React.CSSProperties}>
@@ -151,14 +161,42 @@ function ExpenseListItem({
                 )}
               </p>
             </div>
+
+            {isPartiallyPaid && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-sm">
+                  <span className="font-semibold text-success">
+                    Pagaste {formatCurrencyCents(expense.paidCents)}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    · falta {formatCurrencyCents(remaining)}
+                  </span>
+                </p>
+                <div
+                  role="progressbar"
+                  aria-valuenow={paidPct}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label={`Pagado ${paidPct}%`}
+                  className="h-2 w-full overflow-hidden rounded-full bg-muted"
+                >
+                  <div
+                    className="h-full rounded-full bg-success transition-[width]"
+                    style={{ width: `${paidPct}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="sm:shrink-0">
-            {isPending && (
+            {canClaim && (
               <ClaimPaymentButton
                 expenseId={expense.id}
                 period={expense.period}
                 amountCents={expense.amountCents}
+                paidCents={expense.paidCents}
                 isFuture={isFuture}
               />
             )}
