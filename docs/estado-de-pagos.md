@@ -19,8 +19,8 @@ necesario** y que el consorcio pueda apagarla por completo.
 - **Tres niveles de visibilidad**, configurables por el admin del consorcio, con
   `off` como default:
   - `off` — los vecinos no ven nada (estado actual).
-  - `resumen` — solo el agregado anónimo: "En agosto pagaron 14 de 20 unidades ·
-    faltan cobrar $340.000".
+  - `resumen` — solo el agregado anónimo: "14 de 20 unidades al día · faltan
+    cobrar $340.000".
   - `por_unidad` — listado de unidades con deuda vencida, **con monto**, ordenado
     por piso y departamento.
 - **Con montos** en el nivel `por_unidad` (sin flag aparte: si el admin llega a
@@ -93,8 +93,12 @@ query personal como la del consorcio lo consuman.
 
 Título: **"Estado de pagos del consorcio"**. Nunca se usa la palabra "morosos".
 
-- Nivel `resumen`: una tarjeta con "En agosto pagaron 14 de 20 unidades" y
-  "Faltan cobrar $340.000".
+- Nivel `resumen`: una tarjeta con "14 de 20 unidades al día" y "Faltan cobrar
+  $340.000".
+
+> **"Al día" significa lo mismo en todos lados:** sin deuda vencida, contando
+> toda la deuda y no solo la del mes. Es la misma idea que ya usa el home
+> ("Estás al día"). El denominador son las unidades con expensas ya emitidas.
 - Nivel `por_unidad`: la misma tarjeta de resumen + el listado debajo. Filas
   simples: `3° B · 2 meses · $85.000`. La fila de tu unidad lleva la marca
   "tu unidad".
@@ -118,10 +122,14 @@ Página nueva, con entrada en el panel del consorcio ("Estado de pagos" —
 - Campo de días de gracia.
 - Checkbox "Mostrar el resumen en la pantalla de inicio" (habilitado solo si el
   nivel no es `off`). Es lo que prende el widget del home.
-- **Vista previa**: exactamente lo que van a ver los vecinos con la config
-  elegida, antes de guardar.
-- Al pasar a `por_unidad`, confirmación explícita aclarando que cada vecino va a
-  ver la unidad y el monto adeudado de los demás.
+- **Qué expone cada opción**: debajo del form, con los datos reales del
+  consorcio, se ve el resumen y el listado que saldrían. No depende de lo que
+  esté seleccionado en el form: muestra las dos cosas siempre, así el admin
+  compara antes de elegir. Usa los días de gracia guardados, o sea que para
+  probar otro valor hay que guardar.
+- Al pasar a `por_unidad`, el botón de guardar queda deshabilitado hasta tildar
+  "entiendo que cada vecino va a ver qué unidades deben y cuánto, incluida la
+  suya". Solo aparece cuando el nivel todavía no era `por_unidad`.
 
 ## Límites y reglas adicionales
 
@@ -149,15 +157,19 @@ Página nueva, con entrada en el panel del consorcio ("Estado de pagos" —
 
 ## Impacto en archivos (estimado)
 
-- `db/schema.ts` — enum `debt_visibility` + 3 columnas en `consorcios` + migración.
-- `lib/queries/expenses.ts` — extraer el helper de adeudado por expensa.
-- `lib/queries/debt-board.ts` (nuevo) — resumen del consorcio y deuda por unidad,
-  respetando nivel y gracia.
-- `lib/actions/consorcio.ts` — action para guardar la configuración (admin).
+- `db/schema.ts` — enum `debt_visibility` + 3 columnas en `consorcios`.
+- `lib/queries/debt-board.ts` (nuevo) — `getDebtBoard` (vecino, respeta nivel y
+  permisos), `getDebtBoardConfig` y `getDebtBoardPreview` (admin).
+- `lib/actions/admin.ts` — `updateDebtBoardSettings`.
+- `components/debt-board.tsx` (nuevo) — tarjeta de resumen y listado por unidad,
+  compartidos entre `/balance`, el widget y la vista del admin.
 - `app/(app)/balance/page.tsx` — sección "Estado de pagos del consorcio".
 - `components/widgets/estado-de-pagos.tsx` (nuevo) + entrada en el registry.
 - `app/(app)/admin/[consorcioId]/estado-de-pagos/**` (nuevo) — página + form.
 - `app/(app)/admin/[consorcioId]/page.tsx` — tarjeta nueva en el panel.
-- Componentes: tarjeta de resumen, fila de unidad del listado.
+
+> **La migración es bloqueante para el deploy:** el home, `/balance` y el panel
+> leen las columnas nuevas. Hay que correr `npm run db:push` antes de que este
+> código llegue a producción.
 </content>
 </invoke>

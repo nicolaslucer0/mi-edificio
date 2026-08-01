@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import {
   consorcios,
   creditDeposits,
+  debtVisibilityEnum,
   expenditures,
   expenses,
   memberships,
@@ -378,6 +379,62 @@ export async function updatePaymentInfo(
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
+  return { ok: true };
+}
+
+const debtBoardSchema = z.object({
+  consorcioId: z.uuid(),
+  visibility: z.enum(debtVisibilityEnum.enumValues),
+  graceDays: z.coerce
+    .number()
+    .int()
+    .gte(0, "Los días de gracia no pueden ser negativos.")
+    .lte(90, "Como máximo 90 días de gracia."),
+  onHome: z.boolean(),
+});
+
+/**
+ * Configura cuánto ven los vecinos del estado de pagos del consorcio.
+ * Ver docs/estado-de-pagos.md.
+ */
+export async function updateDebtBoardSettings(
+  _prev: ActionResult | null,
+  formData: FormData,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const parsed = debtBoardSchema.safeParse({
+    consorcioId: formData.get("consorcioId"),
+    visibility: formData.get("visibility"),
+    graceDays: formData.get("graceDays"),
+    onHome: formData.get("onHome") === "on",
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Datos inválidos.",
+    };
+  }
+
+  if (!canAccessConsorcio(ctx, parsed.data.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+
+  const { visibility, graceDays } = parsed.data;
+  await db
+    .update(consorcios)
+    .set({
+      debtVisibility: visibility,
+      debtGraceDays: graceDays,
+      // Sin nada visible no hay widget que mostrar.
+      debtOnHome: visibility === "off" ? false : parsed.data.onHome,
+    })
+    .where(eq(consorcios.id, parsed.data.consorcioId));
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/balance");
+  revalidatePath("/");
   return { ok: true };
 }
 

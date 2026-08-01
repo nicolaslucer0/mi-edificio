@@ -63,6 +63,14 @@ export const expenditureCategoryEnum = pgEnum("expenditure_category", [
   "otros",
 ]);
 
+// Cuánto del estado de pagos del consorcio ven los vecinos entre ellos.
+// Ver docs/estado-de-pagos.md.
+export const debtVisibilityEnum = pgEnum("debt_visibility", [
+  "off",
+  "resumen",
+  "por_unidad",
+]);
+
 export const notificationTypeEnum = pgEnum("notification_type", [
   "claim_to_validate",
   "payment_confirmed",
@@ -139,6 +147,12 @@ export const consorcios = pgTable("consorcio", {
   paymentHolderName: text(),
   openingBalanceCents: integer().notNull().default(0),
   openingBalanceDate: timestamp({ mode: "date" }),
+  // Estado de pagos visible entre vecinos: off = nadie lo ve; resumen = solo el
+  // agregado ("14 de 20 al día"); por_unidad = listado con unidad y monto, sin
+  // nombres. Días de gracia = cuánto puede demorarse un pago antes de figurar.
+  debtVisibility: debtVisibilityEnum().notNull().default("off"),
+  debtGraceDays: integer().notNull().default(10),
+  debtOnHome: boolean().notNull().default(false),
   createdAt: timestamp().defaultNow().notNull(),
 });
 

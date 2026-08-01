@@ -1,5 +1,6 @@
 import type { CurrentUser, Role } from "@/lib/session";
 import { DeudaWidget } from "./deuda";
+import { EstadoDePagosWidget } from "./estado-de-pagos";
 import { InstallPromptWidget } from "./install-prompt";
 import { UltimosMovimientosWidget } from "./ultimos-movimientos";
 import type { WidgetDef } from "./types";
@@ -10,6 +11,7 @@ import type { WidgetDef } from "./types";
  */
 const WIDGETS: readonly WidgetDef[] = [
   { id: "deuda", order: 10, Component: DeudaWidget },
+  { id: "estado-de-pagos", order: 20, Component: EstadoDePagosWidget },
   { id: "install-prompt", order: 30, Component: InstallPromptWidget },
   { id: "ultimos-movimientos", order: 80, Component: UltimosMovimientosWidget },
 ];

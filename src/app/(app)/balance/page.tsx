@@ -14,6 +14,8 @@ import {
 } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
+import { DebtBoardSummary, DebtBoardUnits } from "@/components/debt-board";
+import { getDebtBoard } from "@/lib/queries/debt-board";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -23,9 +25,10 @@ export const metadata: Metadata = {
 export default async function BalancePage() {
   const user = await requireUser();
   const consorcioId = await getCurrentConsorcioId(user);
-  const [months, opening] = await Promise.all([
+  const [months, opening, debtBoard] = await Promise.all([
     getMonthlyBalance(user, 12, consorcioId),
     getOpeningBalanceForUser(user, consorcioId),
+    getDebtBoard(user, consorcioId),
   ]);
 
   const totals = months.reduce(
@@ -111,6 +114,18 @@ export default async function BalancePage() {
             </li>
           ))}
         </ul>
+
+        {/* Estado de pagos del consorcio: solo si la administración lo activó
+            (ver docs/estado-de-pagos.md). */}
+        {debtBoard && debtBoard.totalUnits > 0 && (
+          <section className="flex flex-col gap-3 border-t border-border/60 pt-6">
+            <h2 className="text-base font-semibold">
+              Estado de pagos del consorcio
+            </h2>
+            <DebtBoardSummary board={debtBoard} />
+            <DebtBoardUnits units={debtBoard.units} />
+          </section>
+        )}
       </div>
     </main>
   );

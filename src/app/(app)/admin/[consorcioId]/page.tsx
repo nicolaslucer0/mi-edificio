@@ -210,6 +210,13 @@ export default async function ConsorcioDashboard({
               tone="green"
             />
             <ActionCard
+              href={`/admin/${consorcioId}/estado-de-pagos`}
+              title="Estado de pagos"
+              description="Mostrar a los vecinos quién está al día. Configurable."
+              icon={<Users className="size-5" />}
+              tone="violet"
+            />
+            <ActionCard
               href={`/admin/${consorcioId}/reportes`}
               title="Reportes"
               description="Descargar el detalle de cobranzas del mes para auditoría."
