@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Download, Share, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const DISMISSED_KEY = "mi-edificio-install-dismissed";
 const DISMISS_DAYS = 30;
@@ -43,7 +44,7 @@ function wasRecentlyDismissed(): boolean {
   }
 }
 
-export function InstallPrompt() {
+export function InstallPrompt({ className }: Readonly<{ className?: string }>) {
   const [show, setShow] = useState(false);
   const [platform, setPlatform] = useState<Platform>("unknown");
   const [installEvent, setInstallEvent] =
@@ -91,7 +92,12 @@ export function InstallPrompt() {
   if (!show) return null;
 
   return (
-    <Card className="border-l-4 border-l-primary animate-in fade-in slide-in-from-bottom-2 duration-300">
+    <Card
+      className={cn(
+        "border-l-4 border-l-primary animate-in fade-in slide-in-from-bottom-2 duration-300",
+        className,
+      )}
+    >
       <CardContent className="flex items-start gap-3 p-4">
         <div
           aria-hidden="true"

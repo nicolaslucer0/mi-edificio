@@ -1,19 +1,8 @@
 import Link from "next/link";
 import { ChevronLeft, type LucideIcon } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
+import { TILE_TONES, type Tone } from "@/lib/tones";
 import { cn } from "@/lib/utils";
-
-type Tone = "violet" | "blue" | "green" | "amber" | "coral" | "teal";
-
-// Clases completas (no interpolar): Tailwind necesita verlas literales.
-const TILE_TONES: Record<Tone, string> = {
-  violet: "bg-spot-violet-soft text-spot-violet",
-  blue: "bg-spot-blue-soft text-spot-blue",
-  green: "bg-spot-green-soft text-spot-green",
-  amber: "bg-spot-amber-soft text-spot-amber",
-  coral: "bg-spot-coral-soft text-spot-coral",
-  teal: "bg-spot-teal-soft text-spot-teal",
-};
 
 type Props = {
   backHref: string;

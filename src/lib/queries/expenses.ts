@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import {
   and,
   desc,
@@ -78,7 +79,11 @@ export type DebtSummary =
       nextDueDate: Date | null;
     };
 
-export async function getDebtForUser(
+/**
+ * Cacheada por request: el home la consulta desde el saludo y desde el widget
+ * de deuda, y así va una sola vez a la base.
+ */
+export const getDebtForUser = cache(async function getDebtForUser(
   user: CurrentUser,
   consorcioId?: string | null,
 ): Promise<DebtSummary> {
@@ -147,7 +152,7 @@ export async function getDebtForUser(
     if (!nextDueDate || r.dueDate < nextDueDate) nextDueDate = r.dueDate;
   }
   return { hasUnit: true, amountCents, count, nextDueDate };
-}
+});
 
 export type ExpenseRow = {
   id: string;
