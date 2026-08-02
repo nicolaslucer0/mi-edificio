@@ -33,6 +33,6 @@ export default withSentryConfig(nextConfig, {
   // El SDK del navegador no entra porque no existe un archivo de config de
   // cliente, no por estas opciones. Verificado: el bundle quedó en los mismos
   // 1580 KB y "sentry" no aparece en ningún chunk del cliente.
-  disableLogger: true,
+  webpack: { treeshake: { removeDebugLogging: true } },
   telemetry: false,
 });
