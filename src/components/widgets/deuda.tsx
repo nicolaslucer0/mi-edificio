@@ -57,12 +57,12 @@ function DebtCard({
       <CardContent className="flex items-center gap-3 p-4">
         <span
           aria-hidden="true"
-          className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
+          className="alert-badge flex size-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
         >
           <AlertCircle className="size-5" />
         </span>
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="alert-amount flex min-w-0 flex-1 flex-col">
           <p className="text-2xl font-bold leading-tight tracking-tight tabular-nums text-destructive">
             {formatCurrencyCents(debt.amountCents)}
           </p>
