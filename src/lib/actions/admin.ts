@@ -5,6 +5,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { reportError } from "@/lib/observability";
 import {
   consorcios,
   creditDeposits,
@@ -145,7 +146,7 @@ export async function approveClaim(
         notificationPrefs: claim.claimerPrefs,
       });
     } catch (e) {
-      console.error("Failed to send confirmation email:", e);
+      reportError(e, { scope: "email-payment-confirmed" });
     }
   }
 
@@ -223,7 +224,7 @@ export async function rejectClaim(
         notificationPrefs: claim.claimerPrefs,
       });
     } catch (e) {
-      console.error("Failed to send rejection email:", e);
+      reportError(e, { scope: "email-payment-rejected" });
     }
   }
 

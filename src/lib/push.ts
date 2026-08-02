@@ -3,6 +3,7 @@ import webpush from "web-push";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { pushSubscriptions } from "@/lib/db/schema";
+import { reportError } from "@/lib/observability";
 
 /**
  * Envío de notificaciones push. Ver docs/notificaciones-push.md.
@@ -79,7 +80,11 @@ export async function sendPushToUsers(
           dead.push(subscription.id);
           return;
         }
-        console.error("push failed", subscription.endpoint, statusCode);
+        reportError(error, {
+          scope: "push",
+          endpoint: subscription.endpoint,
+          statusCode,
+        });
       }
     }),
   );
@@ -114,6 +119,6 @@ export async function sendPushToEndpoint(
       JSON.stringify(payload),
     );
   } catch (error) {
-    console.error("test push failed", (error as { statusCode?: number }).statusCode);
+    reportError(error, { scope: "push-test", endpoint });
   }
 }

@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { reportError } from "@/lib/observability";
 import {
   creditDeposits,
   expenses,
@@ -124,7 +125,7 @@ export async function claimPayment(
       note: note || null,
     });
   } catch (err) {
-    console.error("Failed to send claim notification:", err);
+    reportError(err, { scope: "claim-notification" });
   }
 
   await notifyClaimToValidate({

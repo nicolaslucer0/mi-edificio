@@ -1,5 +1,6 @@
 import "server-only";
 import { put, del, get } from "@vercel/blob";
+import { reportError } from "@/lib/observability";
 
 const MAX_RECEIPT_SIZE = 4 * 1024 * 1024;
 
@@ -26,7 +27,7 @@ export async function uploadReceipt(file: File): Promise<UploadReceiptResult> {
     });
     return { ok: true, url: blob.url };
   } catch (e) {
-    console.error("Failed to upload receipt:", e);
+    reportError(e, { scope: "receipt-upload" });
     return {
       ok: false,
       error: "No pudimos subir el comprobante. Probá de nuevo.",
@@ -39,7 +40,7 @@ export async function deleteReceipt(url: string | null): Promise<void> {
   try {
     await del(url);
   } catch (e) {
-    console.error("Failed to delete blob:", e);
+    reportError(e, { scope: "receipt-delete" });
   }
 }
 
@@ -68,7 +69,7 @@ export async function getPrivateReceipt(
     if (!result || result.statusCode !== 200) return null;
     return { stream: result.stream, contentType: result.blob.contentType };
   } catch (e) {
-    console.error("Failed to fetch receipt:", e);
+    reportError(e, { scope: "receipt-fetch" });
     return null;
   }
 }
