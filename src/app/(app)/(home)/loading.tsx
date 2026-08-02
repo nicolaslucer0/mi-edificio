@@ -27,16 +27,13 @@ export default function HomeLoading() {
             más alta y no se puede saber cuál toca hasta tener el dato. */}
         <section className="flex flex-col gap-3 sm:col-span-2">
           <Card className="border-l-4 border-l-muted shadow-sm">
-            <CardContent className="flex flex-col gap-4 p-5">
-              <div className="flex items-start gap-3">
-                <Skeleton className="size-10 shrink-0 rounded-2xl" />
-                <div className="flex min-w-0 flex-1 flex-col">
-                  <SkeletonLine box="h-4" bar="h-3" width="w-20" />
-                  <SkeletonLine box="h-9" bar="h-7" width="w-40" />
-                  <SkeletonLine box="h-5" bar="h-3" width="w-52" />
-                </div>
+            <CardContent className="flex items-center gap-3 p-4">
+              <Skeleton className="size-10 shrink-0 rounded-2xl" />
+              <div className="flex min-w-0 flex-1 flex-col">
+                <SkeletonLine box="h-7" bar="h-6" width="w-32" />
+                <SkeletonLine box="h-4" bar="h-3" width="w-44" />
               </div>
-              <Skeleton className="h-12 w-full rounded-lg" />
+              <Skeleton className="h-11 w-20 shrink-0 rounded-lg" />
             </CardContent>
           </Card>
           <SkeletonLine

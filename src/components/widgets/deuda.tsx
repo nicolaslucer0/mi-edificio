@@ -50,58 +50,53 @@ function DebtCard({
   return (
     <Card
       role="region"
-      aria-labelledby="debt-label"
+      aria-label="Tu deuda"
       aria-live="polite"
       className="border-l-4 border-l-destructive bg-destructive/5 shadow-sm"
     >
-      <CardContent className="flex flex-col gap-4 p-5">
-        <div className="flex items-start gap-3">
-          <span
-            aria-hidden="true"
-            className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
-          >
-            <AlertCircle className="size-5" />
-          </span>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <p
-              id="debt-label"
-              className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-            >
-              Tu deuda
-            </p>
-            <p className="text-3xl font-bold tracking-tight text-destructive">
-              {formatCurrencyCents(debt.amountCents)}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {debt.count === 1
-                ? "1 expensa pendiente"
-                : `${debt.count} expensas pendientes`}
-              {urgency && (
-                <>
-                  {" · "}
-                  <span
-                    className={cn(
-                      "font-semibold",
-                      urgency.tone === "danger"
-                        ? "text-destructive"
-                        : "text-foreground",
-                    )}
-                  >
-                    {urgency.label}
-                  </span>
-                </>
-              )}
-            </p>
-          </div>
+      <CardContent className="flex items-center gap-3 p-4">
+        <span
+          aria-hidden="true"
+          className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
+        >
+          <AlertCircle className="size-5" />
+        </span>
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <p className="text-2xl font-bold leading-tight tracking-tight tabular-nums text-destructive">
+            {formatCurrencyCents(debt.amountCents)}
+          </p>
+          <p className="truncate text-xs text-muted-foreground">
+            {debt.count === 1
+              ? "1 expensa pendiente"
+              : `${debt.count} expensas pendientes`}
+            {urgency && (
+              <>
+                {" · "}
+                <span
+                  className={cn(
+                    "font-semibold",
+                    urgency.tone === "danger"
+                      ? "text-destructive"
+                      : "text-foreground",
+                  )}
+                >
+                  {urgency.label}
+                </span>
+              </>
+            )}
+          </p>
         </div>
+
         <Link
           href="/expensas"
+          aria-label="Ver el detalle de tus expensas"
           className={cn(
             buttonVariants(),
-            "h-12 w-full gap-2 text-base touch-manipulation",
+            "h-11 shrink-0 gap-1.5 px-4 text-sm touch-manipulation",
           )}
         >
-          Ver detalle
+          Ver
           <ArrowRight aria-hidden="true" className="size-4" />
         </Link>
       </CardContent>
