@@ -43,8 +43,9 @@ const STATE_DISPLAY: Record<
     icon: PieChart,
   },
   debe: {
+    // Rojo pleno, no lavado: es el único estado que tiene que saltar a la vista.
     label: "Sin pagar",
-    classes: "bg-destructive/10 text-destructive",
+    classes: "bg-destructive text-background",
     icon: AlertCircle,
   },
   pendiente: {

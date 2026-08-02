@@ -1,7 +1,8 @@
 import { Users } from "lucide-react";
-import { formatCurrencyCents, formatPeriod } from "@/lib/format";
+import { formatPeriod } from "@/lib/format";
 import { getMonthlyFinancials } from "@/lib/queries/balance";
 import { getDebtBoard } from "@/lib/queries/debt-board";
+import { CollectionMeter } from "@/components/collection-meter";
 import { WidgetCard } from "./widget-card";
 import type { WidgetProps } from "./types";
 
@@ -42,11 +43,12 @@ export async function EstadoDePagosWidget({
           ? "Pagaron todas las unidades 🎉"
           : `Pagaron ${month.unitsPaid} de ${month.unitsTotal} unidades`}
       </p>
-      {!allPaid && month.pendingCents > 0 && (
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Falta cobrar {formatCurrencyCents(month.pendingCents)} de este mes.
-        </p>
-      )}
+      <CollectionMeter
+        className="mt-1"
+        collectedCents={month.collectedCents}
+        pendingCents={month.pendingCents}
+        collectedPct={month.collectedPct}
+      />
     </WidgetCard>
   );
 }

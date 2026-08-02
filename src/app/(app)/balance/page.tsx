@@ -12,6 +12,7 @@ import { getDebtBoard } from "@/lib/queries/debt-board";
 import { formatCurrencyCents, formatPeriod } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
+import { CollectionMeter } from "@/components/collection-meter";
 import { DebtBoardSummary, DebtBoardUnits } from "@/components/debt-board";
 import { cn } from "@/lib/utils";
 
@@ -162,32 +163,17 @@ function CurrentMonthCard({ month }: Readonly<{ month: MonthlyFinancials }>) {
                 {month.collectedPct}%
               </p>
             </div>
-            {/* El canal va hundido y la barra apoyada encima: le da relieve sin
-                bajar el contraste. El porcentaje siempre está en texto. */}
-            <div
-              aria-hidden="true"
-              className="h-3 w-full overflow-hidden rounded-full bg-muted inset-shadow-2xs"
-            >
-              <div
-                className="h-full rounded-full bg-success"
-                style={{ width: `${Math.min(100, month.collectedPct)}%` }}
-              />
-            </div>
+            <CollectionMeter
+              collectedCents={month.collectedCents}
+              pendingCents={month.pendingCents}
+              collectedPct={month.collectedPct}
+            />
             <p className="text-sm text-muted-foreground">
               Pagaron{" "}
               <span className="font-semibold text-foreground">
                 {month.unitsPaid} de {month.unitsTotal}
               </span>{" "}
               {month.unitsTotal === 1 ? "unidad" : "unidades"}
-              {month.pendingCents > 0 && (
-                <>
-                  {" "}
-                  · falta cobrar{" "}
-                  <span className="font-semibold tabular-nums text-destructive">
-                    {formatCurrencyCents(month.pendingCents)}
-                  </span>
-                </>
-              )}
             </p>
           </div>
         )}
