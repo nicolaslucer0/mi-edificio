@@ -1,4 +1,4 @@
-import { Bell, Wallet } from "lucide-react";
+import { Bell, Mail, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
@@ -7,12 +7,14 @@ import {
   type StatementMovement,
   type UnitStatement,
 } from "@/lib/queries/statement";
+import { getNotificationPrefs } from "@/lib/queries/users";
 import { formatCurrencyCents, formatDate } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { ExpenseStatusBadge } from "@/components/expense-status-badge";
 import { PushToggle } from "@/components/push-toggle";
+import { NotificationPrefsForm } from "@/components/notification-prefs-form";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -22,7 +24,10 @@ export const metadata: Metadata = {
 export default async function AccountStatementPage() {
   const user = await requireUser();
   const consorcioId = await getCurrentConsorcioId(user);
-  const statements = await getAccountStatement(user, consorcioId);
+  const [statements, prefs] = await Promise.all([
+    getAccountStatement(user, consorcioId),
+    getNotificationPrefs(user.id),
+  ]);
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
@@ -68,6 +73,31 @@ export default async function AccountStatementPage() {
           <Card>
             <CardContent className="p-5">
               <PushToggle />
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-spot-blue-soft text-spot-blue"
+            >
+              <Mail className="size-5" />
+            </span>
+            <div className="flex flex-col">
+              <h2 className="text-base font-semibold">Qué avisos recibís</h2>
+              <p className="text-xs text-muted-foreground">
+                Vale para el mail y para los avisos del teléfono
+              </p>
+            </div>
+          </div>
+          <Card>
+            <CardContent className="p-5">
+              <NotificationPrefsForm
+                prefs={prefs}
+                isAdmin={user.isAdmin || user.isSuperAdmin}
+              />
             </CardContent>
           </Card>
         </section>

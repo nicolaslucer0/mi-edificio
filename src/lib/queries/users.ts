@@ -1,9 +1,33 @@
 import "server-only";
 import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { consorcios, memberships, units, users } from "@/lib/db/schema";
+import {
+  consorcios,
+  memberships,
+  units,
+  users,
+  type NotificationPrefs,
+} from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
 import { getAccessibleConsorcioIds } from "./admin";
+
+/**
+ * Las preferencias de avisos del usuario.
+ *
+ * Va aparte de `getCurrentUser` a propósito: esa corre en cada request de la
+ * app y hoy no toca la tabla `user`. Sumarle una consulta por una pantalla que
+ * se abre una vez cada tanto sería pagarla en todas las demás.
+ */
+export async function getNotificationPrefs(
+  userId: string,
+): Promise<NotificationPrefs | null> {
+  const [row] = await db
+    .select({ prefs: users.notificationPrefs })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+  return row?.prefs ?? null;
+}
 
 type Role = "super_admin" | "admin" | "owner" | "tenant";
 
