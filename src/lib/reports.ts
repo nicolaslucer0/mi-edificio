@@ -41,6 +41,13 @@ export type ReportRow = {
   paidBy: string | null;
   owners: string;
   ownerEmails: string;
+  /**
+   * Los inquilinos también van en el reporte: son los que pagan las
+   * ordinarias, así que sin ellos hay unidades sin ningún nombre a quién
+   * reclamarle.
+   */
+  tenants: string;
+  tenantEmails: string;
 };
 
 export type ExpenditureReportRow = {
@@ -106,7 +113,7 @@ export async function getMonthlyExpenseReportRows(
   const expenseIds = rows.map((r) => r.expenseId);
   const unitIds = Array.from(new Set(rows.map((r) => r.unitId)));
 
-  const [claims, owners] = await Promise.all([
+  const [claims, people] = await Promise.all([
     db
       .select({
         expenseId: paymentClaims.expenseId,
@@ -125,31 +132,49 @@ export async function getMonthlyExpenseReportRows(
     db
       .select({
         unitId: memberships.unitId,
+        role: memberships.role,
         name: users.name,
         email: users.email,
       })
       .from(memberships)
       .innerJoin(users, eq(users.id, memberships.userId))
       .where(
-        and(inArray(memberships.unitId, unitIds), eq(memberships.role, "owner")),
+        and(
+          inArray(memberships.unitId, unitIds),
+          inArray(memberships.role, ["owner", "tenant"]),
+        ),
       ),
   ]);
 
   const claimByExpense = new Map(claims.map((c) => [c.expenseId, c]));
-  const ownersByUnit = new Map<
-    string,
-    { name: string | null; email: string | null }[]
-  >();
-  for (const o of owners) {
-    if (!o.unitId) continue;
-    const list = ownersByUnit.get(o.unitId) ?? [];
-    list.push({ name: o.name, email: o.email });
-    ownersByUnit.set(o.unitId, list);
+
+  type Person = { name: string | null; email: string | null };
+  const peopleByUnit = new Map<string, { owners: Person[]; tenants: Person[] }>();
+  for (const p of people) {
+    if (!p.unitId) continue;
+    const entry = peopleByUnit.get(p.unitId) ?? { owners: [], tenants: [] };
+    const list = p.role === "tenant" ? entry.tenants : entry.owners;
+    // Una persona puede tener más de una membresía sobre la misma unidad.
+    if (!list.some((x) => x.email === p.email)) {
+      list.push({ name: p.name, email: p.email });
+    }
+    peopleByUnit.set(p.unitId, entry);
   }
+
+  const names = (list: Person[]) =>
+    list
+      .map((p) => p.name ?? p.email ?? "")
+      .filter(Boolean)
+      .join(", ");
+  const emails = (list: Person[]) =>
+    list
+      .map((p) => p.email ?? "")
+      .filter(Boolean)
+      .join(", ");
 
   return rows.map((r) => {
     const claim = claimByExpense.get(r.expenseId);
-    const unitOwners = ownersByUnit.get(r.unitId) ?? [];
+    const unitPeople = peopleByUnit.get(r.unitId) ?? { owners: [], tenants: [] };
     return {
       floor: r.floor,
       unitLabel: r.unitLabel,
@@ -162,14 +187,10 @@ export async function getMonthlyExpenseReportRows(
       paidAt: r.status === "pagado" ? claim?.resolvedAt ?? null : null,
       paidBy:
         r.status === "pagado" ? claim?.name ?? claim?.email ?? null : null,
-      owners: unitOwners
-        .map((o) => o.name ?? o.email ?? "")
-        .filter(Boolean)
-        .join(", "),
-      ownerEmails: unitOwners
-        .map((o) => o.email ?? "")
-        .filter(Boolean)
-        .join(", "),
+      owners: names(unitPeople.owners),
+      ownerEmails: emails(unitPeople.owners),
+      tenants: names(unitPeople.tenants),
+      tenantEmails: emails(unitPeople.tenants),
     };
   });
 }
@@ -257,7 +278,9 @@ const EXPENSE_HEADERS = [
   "Fecha de pago",
   "Pagada por",
   "Propietario(s)",
-  "Email(s)",
+  "Email(s) del propietario",
+  "Inquilino(s)",
+  "Email(s) del inquilino",
 ];
 
 const EXPENDITURE_HEADERS = [
@@ -310,6 +333,8 @@ function expenseSection(rows: ReportRow[]): string[] {
         r.paidBy ?? "",
         r.owners,
         r.ownerEmails,
+        r.tenants,
+        r.tenantEmails,
       ]),
     ),
   ];

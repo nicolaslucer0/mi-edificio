@@ -163,7 +163,7 @@ export default async function ReportesPage({
                   <TableRow>
                     <TableHead>Piso</TableHead>
                     <TableHead>Depto</TableHead>
-                    <TableHead>Propietario</TableHead>
+                    <TableHead>Vecinos</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Monto</TableHead>
                     <TableHead className="text-right">Falta</TableHead>
@@ -179,8 +179,26 @@ export default async function ReportesPage({
                       <TableCell className="font-medium">
                         {r.unitLabel}
                       </TableCell>
-                      <TableCell className="max-w-[12rem] truncate text-muted-foreground">
-                        {r.owners || "—"}
+                      {/* Sin truncar: con dos propietarios el nombre se cortaba
+                          justo donde importa. */}
+                      <TableCell className="min-w-40 whitespace-normal text-muted-foreground">
+                        {r.owners || r.tenants ? (
+                          <span className="flex flex-col gap-0.5">
+                            {r.owners && <span>{r.owners}</span>}
+                            {r.tenants && (
+                              <span className="text-xs">
+                                {r.tenants}
+                                <span className="ml-1 text-[10px] font-semibold uppercase tracking-wide">
+                                  {r.tenants.includes(",")
+                                    ? "Inquilinos"
+                                    : "Inquilino"}
+                                </span>
+                              </span>
+                            )}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {r.type === "extraordinaria"
