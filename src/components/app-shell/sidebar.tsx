@@ -8,6 +8,7 @@ import { BrandMark } from "@/components/illustrations";
 import { UserMenu } from "./user-menu";
 import { ConsorcioSelector } from "./consorcio-selector";
 import { NotificationsBell } from "./notifications-bell";
+import { ThemeToggle } from "./theme-toggle";
 import { getNavItems } from "./nav-items";
 import type { NotificationView } from "@/components/notification-row";
 
@@ -98,6 +99,8 @@ export function Sidebar({
             <p className="truncate text-xs text-muted-foreground">{email}</p>
           )}
         </div>
+        {/* En desktop la top bar no se muestra: el cambio de tema vive acá. */}
+        <ThemeToggle />
         <NotificationsBell unreadCount={unreadCount} items={notifications} />
       </div>
     </aside>

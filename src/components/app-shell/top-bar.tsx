@@ -3,6 +3,7 @@ import { BrandMark } from "@/components/illustrations";
 import { UserMenu } from "./user-menu";
 import { ConsorcioSelector } from "./consorcio-selector";
 import { NotificationsBell } from "./notifications-bell";
+import { ThemeToggle } from "./theme-toggle";
 import type { NotificationView } from "@/components/notification-row";
 
 type Props = {
@@ -26,7 +27,8 @@ export function TopBar({
   notifications,
   unreadCount,
 }: Readonly<Props>) {
-  const hasConsorcios = consorcios.length > 0;
+  // Con un solo consorcio el selector no se dibuja (no hay nada que elegir).
+  const canSwitch = consorcios.length > 1;
 
   return (
     <header
@@ -41,9 +43,11 @@ export function TopBar({
             className="inline-flex items-center gap-2 text-base font-semibold tracking-tight transition-opacity hover:opacity-80 touch-manipulation"
           >
             <BrandMark className="size-8 shrink-0" />
-            {!hasConsorcios && <span>Mi edificio</span>}
+            {/* Sin selector a la vista, el nombre acompaña a la marca: si no,
+                la barra queda con un ícono suelto y todo el espacio vacío. */}
+            {!canSwitch && <span>Mi edificio</span>}
           </Link>
-          {hasConsorcios && (
+          {canSwitch && (
             <ConsorcioSelector
               variant="bar"
               options={consorcios}
@@ -54,6 +58,7 @@ export function TopBar({
           )}
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <ThemeToggle />
           <NotificationsBell
             unreadCount={unreadCount}
             items={notifications}
