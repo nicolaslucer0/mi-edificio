@@ -342,6 +342,28 @@ export const notifications = pgTable(
   (t) => [index("notification_user_idx").on(t.userId)],
 );
 
+// Un dispositivo suscripto a las notificaciones push. El mismo vecino puede
+// tener varios (el teléfono y la computadora), y cada uno se da de alta y de
+// baja por separado. Ver docs/notificaciones-push.md.
+export const pushSubscriptions = pgTable(
+  "push_subscription",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    userId: text()
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // La URL que da el navegador: identifica al dispositivo.
+    endpoint: text().notNull().unique(),
+    // Claves con las que el navegador descifra el mensaje.
+    p256dh: text().notNull(),
+    auth: text().notNull(),
+    // Para poder listar "Chrome en Android" en la pantalla de Cuenta.
+    userAgent: text(),
+    createdAt: timestamp().defaultNow().notNull(),
+  },
+  (t) => [index("push_subscription_user_idx").on(t.userId)],
+);
+
 // Espacios comunes reservables del consorcio (pileta, terraza, SUM).
 export const amenities = pgTable(
   "amenity",

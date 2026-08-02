@@ -1,4 +1,4 @@
-import { Wallet } from "lucide-react";
+import { Bell, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
@@ -12,6 +12,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { ExpenseStatusBadge } from "@/components/expense-status-badge";
+import { PushToggle } from "@/components/push-toggle";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -46,6 +47,30 @@ export default async function AccountStatementPage() {
             <UnitStatementCard key={unit.unitId} unit={unit} />
           ))
         )}
+
+        <section className="flex flex-col gap-3 border-t border-border/60 pt-6">
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-spot-violet-soft text-spot-violet"
+            >
+              <Bell className="size-5" />
+            </span>
+            <div className="flex flex-col">
+              <h2 className="text-base font-semibold">
+                Avisos en este dispositivo
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Se configura por teléfono o computadora
+              </p>
+            </div>
+          </div>
+          <Card>
+            <CardContent className="p-5">
+              <PushToggle />
+            </CardContent>
+          </Card>
+        </section>
       </div>
     </main>
   );
