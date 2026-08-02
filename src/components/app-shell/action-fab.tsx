@@ -5,14 +5,14 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { ChevronRight, Plus, Receipt, Wallet } from "lucide-react";
 import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 
 type Props = {
   /** Fallback consorcio to act on when not inside an /admin/<id> route. */
@@ -39,22 +39,22 @@ export function ActionFab({ consorcioId }: Readonly<Props>) {
   if (!targetId || onFormRoute) return null;
 
   return (
-    <Drawer open={open} onOpenChange={setOpen}>
-      <DrawerTrigger
+    <ResponsiveDialog open={open} onOpenChange={setOpen}>
+      <ResponsiveDialogTrigger
         aria-label="Agregar expensa o gasto"
         data-print-hide
         className="fixed right-4 bottom-[calc(5.25rem+env(safe-area-inset-bottom))] z-40 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 transition-transform active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background touch-manipulation lg:right-8 lg:bottom-8"
       >
         <Plus aria-hidden="true" className="size-7" strokeWidth={2.4} />
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Agregar</DrawerTitle>
-          <DrawerDescription>
+      </ResponsiveDialogTrigger>
+      <ResponsiveDialogContent>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Agregar</ResponsiveDialogTitle>
+          <ResponsiveDialogDescription>
             Elegí qué querés cargar para el consorcio.
-          </DrawerDescription>
-        </DrawerHeader>
-        <DrawerBody className="gap-3 pt-1">
+          </ResponsiveDialogDescription>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogBody className="gap-3 pt-1">
           <ActionRow
             href={`/admin/${targetId}/expensas/nueva`}
             title="Nueva expensa"
@@ -69,9 +69,9 @@ export function ActionFab({ consorcioId }: Readonly<Props>) {
             icon={<Receipt aria-hidden="true" className="size-5" />}
             onNavigate={() => setOpen(false)}
           />
-        </DrawerBody>
-      </DrawerContent>
-    </Drawer>
+        </ResponsiveDialogBody>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }
 

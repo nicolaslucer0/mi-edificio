@@ -4,22 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, SlidersHorizontal, X } from "lucide-react";
 import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +24,6 @@ import {
 } from "@/lib/format";
 import { CATEGORY_ICON, CATEGORY_TONE } from "@/lib/expenditure-categories";
 import { TILE_TONES } from "@/lib/tones";
-import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -60,8 +51,6 @@ export function ExpenditureFilters({
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  // En pantalla grande un panel que sube desde abajo queda raro: va modal.
-  const isDesktop = useMediaQuery("(min-width: 640px)");
 
   const activeCount = (category ? 1 : 0) + (month ? 1 : 0);
 
@@ -180,35 +169,18 @@ export function ExpenditureFilters({
         />
       )}
 
-      {isDesktop ? (
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="text-lg">Filtrar gastos</DialogTitle>
-              <DialogDescription className="leading-relaxed">
-                Elegí una categoría, un mes, o los dos.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col gap-6">{fields}</div>
-            <DialogFooter className="sm:flex-row-reverse sm:justify-start">
-              {footer}
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      ) : (
-        <Drawer open={open} onOpenChange={setOpen}>
-          <DrawerContent>
-            <DrawerHeader>
-              <DrawerTitle>Filtrar gastos</DrawerTitle>
-              <DrawerDescription>
-                Elegí una categoría, un mes, o los dos.
-              </DrawerDescription>
-            </DrawerHeader>
-            <DrawerBody className="gap-6">{fields}</DrawerBody>
-            <DrawerFooter>{footer}</DrawerFooter>
-          </DrawerContent>
-        </Drawer>
-      )}
+      <ResponsiveDialog open={open} onOpenChange={setOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Filtrar gastos</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
+              Elegí una categoría, un mes, o los dos.
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          <ResponsiveDialogBody className="gap-6">{fields}</ResponsiveDialogBody>
+          <ResponsiveDialogFooter>{footer}</ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </div>
   );
 }

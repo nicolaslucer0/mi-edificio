@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { Clock } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -117,17 +117,17 @@ export function ClaimPaymentButton({
       >
         {triggerLabel}
       </Button>
-      <Drawer open={open} onOpenChange={handleOpenChange}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>
+      <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>
               {isPartiallyPaid
                 ? "Completar el pago"
                 : isFuture
                   ? "¿Adelantar el pago?"
                   : "¿Registrar tu pago?"}
-            </DrawerTitle>
-            <DrawerDescription>
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               <span className="font-semibold text-foreground">
                 {formatPeriod(period)}
               </span>{" "}
@@ -144,10 +144,10 @@ export function ClaimPaymentButton({
                   </span>
                 </>
               )}
-            </DrawerDescription>
-          </DrawerHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
           <form action={handleSubmit} className="contents">
-            <DrawerBody className="gap-4">
+            <ResponsiveDialogBody className="gap-4">
               <fieldset className="flex flex-col gap-2">
                 <legend className="mb-1 text-sm font-medium">
                   ¿Cuánto transferiste?
@@ -257,8 +257,8 @@ export function ClaimPaymentButton({
                   disabled={isPending}
                 />
               </div>
-            </DrawerBody>
-            <DrawerFooter>
+            </ResponsiveDialogBody>
+            <ResponsiveDialogFooter>
               <Button
                 type="submit"
                 disabled={isPending}
@@ -275,10 +275,10 @@ export function ClaimPaymentButton({
               >
                 Cancelar
               </Button>
-            </DrawerFooter>
+            </ResponsiveDialogFooter>
           </form>
-        </DrawerContent>
-      </Drawer>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </>
   );
 }

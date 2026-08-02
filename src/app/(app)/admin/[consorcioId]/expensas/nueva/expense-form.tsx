@@ -20,13 +20,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { formatCurrencyCents, formatUnitWithFloor } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { AdminUnit } from "@/lib/queries/admin";
@@ -365,11 +365,11 @@ export function ExpenseForm({
         </Button>
       </form>
 
-      <Drawer open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>¿Crear para todo el consorcio?</DrawerTitle>
-            <DrawerDescription>
+      <ResponsiveDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>¿Crear para todo el consorcio?</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               {mode === "fixed"
                 ? `Vas a crear una expensa de ${formatCurrencyCents(
                     Number(amount) * 100,
@@ -381,9 +381,9 @@ export function ExpenseForm({
                       ? " según su coeficiente"
                       : " en partes iguales"
                   }.`}
-            </DrawerDescription>
-          </DrawerHeader>
-          <DrawerFooter>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          <ResponsiveDialogFooter>
             <Button
               type="button"
               onClick={handleConfirm}
@@ -401,9 +401,9 @@ export function ExpenseForm({
             >
               Cancelar
             </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </>
   );
 }

@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { Paperclip } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -198,18 +198,18 @@ export function ClaimDecisionCard({
         </div>
       </CardContent>
 
-      <Drawer open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Rechazar pago</DrawerTitle>
-            <DrawerDescription>
+      <ResponsiveDialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Rechazar pago</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Contale al vecino por qué rechazás el pago. Va a recibir un mail
               con el motivo y la posibilidad de volver a marcarla como pagada.
-            </DrawerDescription>
-          </DrawerHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
           <form action={rejectAction} className="contents">
             <input type="hidden" name="claimId" value={claimId} />
-            <DrawerBody>
+            <ResponsiveDialogBody>
               <div className="flex flex-col gap-2">
                 <Label htmlFor={`reason-${claimId}`} className="text-sm">
                   Motivo del rechazo
@@ -236,8 +236,8 @@ export function ClaimDecisionCard({
                   </p>
                 )}
               </div>
-            </DrawerBody>
-            <DrawerFooter>
+            </ResponsiveDialogBody>
+            <ResponsiveDialogFooter>
               <Button
                 type="submit"
                 variant="destructive"
@@ -255,10 +255,10 @@ export function ClaimDecisionCard({
               >
                 Cancelar
               </Button>
-            </DrawerFooter>
+            </ResponsiveDialogFooter>
           </form>
-        </DrawerContent>
-      </Drawer>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </Card>
   );
 }

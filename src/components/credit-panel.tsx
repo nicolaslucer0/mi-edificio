@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { PiggyBank, Plus } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -107,17 +107,17 @@ export function CreditPanel({ units }: Readonly<{ units: UnitCredit[] }>) {
         </CardContent>
       </Card>
 
-      <Drawer open={open} onOpenChange={handleOpenChange}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Cargar saldo a favor</DrawerTitle>
-            <DrawerDescription>
+      <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Cargar saldo a favor</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Informá un adelanto. El administrador lo valida y queda como saldo
               para tus próximas expensas.
-            </DrawerDescription>
-          </DrawerHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
           <form action={handleSubmit} className="contents">
-            <DrawerBody className="gap-4">
+            <ResponsiveDialogBody className="gap-4">
               {units.length > 1 && (
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="credit-unit" className="text-sm">
@@ -193,8 +193,8 @@ export function CreditPanel({ units }: Readonly<{ units: UnitCredit[] }>) {
                   disabled={isPending}
                 />
               </div>
-            </DrawerBody>
-            <DrawerFooter>
+            </ResponsiveDialogBody>
+            <ResponsiveDialogFooter>
               <Button
                 type="submit"
                 disabled={isPending}
@@ -211,10 +211,10 @@ export function CreditPanel({ units }: Readonly<{ units: UnitCredit[] }>) {
               >
                 Cancelar
               </Button>
-            </DrawerFooter>
+            </ResponsiveDialogFooter>
           </form>
-        </DrawerContent>
-      </Drawer>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </>
   );
 }

@@ -5,13 +5,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Bell } from "lucide-react";
 import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogTrigger,
+} from "@/components/ui/responsive-dialog";
 import {
   NotificationRow,
   type NotificationView,
@@ -39,8 +39,8 @@ export function NotificationsBell({ unreadCount, items }: Readonly<Props>) {
   }
 
   return (
-    <Drawer open={open} onOpenChange={handleOpenChange}>
-      <DrawerTrigger
+    <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
+      <ResponsiveDialogTrigger
         aria-label={
           unreadCount > 0
             ? `Novedades (${unreadCount} sin leer)`
@@ -54,12 +54,12 @@ export function NotificationsBell({ unreadCount, items }: Readonly<Props>) {
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
-      </DrawerTrigger>
-      <DrawerContent>
-        <DrawerHeader>
-          <DrawerTitle>Novedades</DrawerTitle>
-        </DrawerHeader>
-        <DrawerBody className="gap-1">
+      </ResponsiveDialogTrigger>
+      <ResponsiveDialogContent>
+        <ResponsiveDialogHeader>
+          <ResponsiveDialogTitle>Novedades</ResponsiveDialogTitle>
+        </ResponsiveDialogHeader>
+        <ResponsiveDialogBody className="gap-1">
           {items.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">
               No tenés novedades todavía.
@@ -82,8 +82,8 @@ export function NotificationsBell({ unreadCount, items }: Readonly<Props>) {
               </Link>
             </>
           )}
-        </DrawerBody>
-      </DrawerContent>
-    </Drawer>
+        </ResponsiveDialogBody>
+      </ResponsiveDialogContent>
+    </ResponsiveDialog>
   );
 }

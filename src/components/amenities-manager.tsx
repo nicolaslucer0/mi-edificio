@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { Clock, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import {
   Dialog,
   DialogContent,
@@ -149,16 +149,16 @@ export function AmenitiesManager({
         </ul>
       )}
 
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>
+      <ResponsiveDialog open={open} onOpenChange={setOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>
               {editing ? "Editar amenity" : "Nueva amenity"}
-            </DrawerTitle>
-            <DrawerDescription>
+            </ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Configurá el espacio y su disponibilidad para reservar.
-            </DrawerDescription>
-          </DrawerHeader>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
           <form
             key={editing?.id ?? "new"}
             action={handleSubmit}
@@ -166,7 +166,7 @@ export function AmenitiesManager({
           >
             <input type="hidden" name="consorcioId" value={consorcioId} />
             {editing && <input type="hidden" name="id" value={editing.id} />}
-            <DrawerBody className="gap-4">
+            <ResponsiveDialogBody className="gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="am-name" className="text-sm">
                   Nombre
@@ -259,8 +259,8 @@ export function AmenitiesManager({
                   disabled={isPending}
                 />
               </div>
-            </DrawerBody>
-            <DrawerFooter>
+            </ResponsiveDialogBody>
+            <ResponsiveDialogFooter>
               <Button
                 type="submit"
                 disabled={isPending}
@@ -280,10 +280,10 @@ export function AmenitiesManager({
               >
                 Cancelar
               </Button>
-            </DrawerFooter>
+            </ResponsiveDialogFooter>
           </form>
-        </DrawerContent>
-      </Drawer>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
 
       <Dialog
         open={confirmDelete !== null}

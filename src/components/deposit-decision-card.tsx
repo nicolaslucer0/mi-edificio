@@ -5,14 +5,14 @@ import { useRouter } from "next/navigation";
 import { Paperclip, PiggyBank } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Drawer,
-  DrawerBody,
-  DrawerContent,
-  DrawerDescription,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
+  ResponsiveDialog,
+  ResponsiveDialogBody,
+  ResponsiveDialogContent,
+  ResponsiveDialogDescription,
+  ResponsiveDialogFooter,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+} from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -144,15 +144,15 @@ export function DepositDecisionCard({
         </div>
       </CardContent>
 
-      <Drawer open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Rechazar adelanto</DrawerTitle>
-            <DrawerDescription>
+      <ResponsiveDialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <ResponsiveDialogContent>
+          <ResponsiveDialogHeader>
+            <ResponsiveDialogTitle>Rechazar adelanto</ResponsiveDialogTitle>
+            <ResponsiveDialogDescription>
               Contale al vecino por qué rechazás el adelanto.
-            </DrawerDescription>
-          </DrawerHeader>
-          <DrawerBody>
+            </ResponsiveDialogDescription>
+          </ResponsiveDialogHeader>
+          <ResponsiveDialogBody>
             <div className="flex flex-col gap-2">
               <Label htmlFor={`deposit-reason-${depositId}`} className="text-sm">
                 Motivo del rechazo
@@ -168,8 +168,8 @@ export function DepositDecisionCard({
                 disabled={rejectPending}
               />
             </div>
-          </DrawerBody>
-          <DrawerFooter>
+          </ResponsiveDialogBody>
+          <ResponsiveDialogFooter>
             <Button
               type="button"
               variant="destructive"
@@ -188,9 +188,9 @@ export function DepositDecisionCard({
             >
               Cancelar
             </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+          </ResponsiveDialogFooter>
+        </ResponsiveDialogContent>
+      </ResponsiveDialog>
     </Card>
   );
 }
