@@ -76,6 +76,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   "payment_confirmed",
   "payment_rejected",
   "new_expense",
+  "due_reminder",
 ]);
 
 export type NotificationPrefs = {
@@ -213,6 +214,10 @@ export const expenses = pgTable(
     type: expenseTypeEnum().notNull(),
     status: expenseStatusEnum().notNull().default("pendiente"),
     description: text(),
+    // Cuándo se mandó el aviso de "vence mañana". El cron corre todos los días
+    // y esta marca es lo que evita que reintentos o corridas manuales avisen
+    // dos veces (ver api/cron/due-reminders).
+    dueReminderSentAt: timestamp({ mode: "date" }),
     createdAt: timestamp().defaultNow().notNull(),
   },
   (t) => [

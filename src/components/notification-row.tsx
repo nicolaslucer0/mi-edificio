@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  CalendarClock,
   CheckCircle2,
   Clock,
   Receipt,
@@ -15,7 +16,8 @@ export type NotificationView = {
     | "claim_to_validate"
     | "payment_confirmed"
     | "payment_rejected"
-    | "new_expense";
+    | "new_expense"
+    | "due_reminder";
   title: string;
   body: string | null;
   href: string | null;
@@ -37,6 +39,11 @@ const ICON_BY_TYPE: Record<
     classes: "bg-destructive/10 text-destructive",
   },
   new_expense: { icon: Receipt, classes: "bg-primary/10 text-primary" },
+  // Ámbar y no rojo: todavía no venció, es un aviso y no un reclamo.
+  due_reminder: {
+    icon: CalendarClock,
+    classes: "bg-spot-amber-soft text-spot-amber",
+  },
 };
 
 export function NotificationRow({
