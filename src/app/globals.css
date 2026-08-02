@@ -241,29 +241,94 @@
   }
 }
 
-/* Respiración de la ilustración de "estás al día". Lenta y mínima a
-   propósito: acompaña la sensación de calma, no pide atención. La red de
-   seguridad de prefers-reduced-motion de más abajo la apaga. */
-.animate-breathe {
-  animation: breathe 6s ease-in-out infinite;
+/* Entrada de la medalla de "estás al día": aparece la medalla, se dibuja el
+   check y caen los papelitos. Corre una sola vez y queda quieta — la idea es
+   el momento lindo al llegar, no un loop que después distraiga. Todas usan
+   fill-mode `both`, así que con prefers-reduced-motion (que las corta a
+   0.01ms más abajo) el dibujo queda igual, solo que sin el movimiento. */
+.celebrate-badge {
+  transform-box: view-box;
+  transform-origin: 80px 68px;
+  animation: celebrate-badge 520ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
-@keyframes breathe {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
+.celebrate-check {
+  stroke-dasharray: 40;
+  animation: celebrate-check 460ms cubic-bezier(0.65, 0, 0.35, 1) 300ms both;
+}
+
+.celebrate-shadow {
+  animation: celebrate-shadow 520ms ease-out both;
+}
+
+.celebrate-confetti > * {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: celebrate-confetti 420ms cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+
+/* Los papelitos entran escalonados, después de que la medalla se asentó. */
+.celebrate-confetti > *:nth-child(1) {
+  animation-delay: 480ms;
+}
+.celebrate-confetti > *:nth-child(2) {
+  animation-delay: 560ms;
+}
+.celebrate-confetti > *:nth-child(3) {
+  animation-delay: 620ms;
+}
+.celebrate-confetti > *:nth-child(4) {
+  animation-delay: 540ms;
+}
+.celebrate-confetti > *:nth-child(5) {
+  animation-delay: 660ms;
+}
+.celebrate-confetti > *:nth-child(6) {
+  animation-delay: 700ms;
+}
+
+@keyframes celebrate-badge {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
   }
-  50% {
-    transform: translateY(-6px) scale(1.015);
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes celebrate-check {
+  from {
+    stroke-dashoffset: 40;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes celebrate-shadow {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 0.2;
+  }
+}
+
+@keyframes celebrate-confetti {
+  from {
+    opacity: 0;
+    transform: scale(0.4) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   [data-stagger] > * {
-    animation: none;
-  }
-
-  .animate-breathe {
     animation: none;
   }
 

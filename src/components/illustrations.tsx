@@ -220,30 +220,55 @@ export function CelebrateScene({ className }: IllustrationProps) {
         </filter>
       </defs>
 
-      {/* papelitos de colores */}
-      <g>
-        <rect x="22" y="30" width="9" height="9" rx="2" fill="oklch(0.6 0.17 274)" transform="rotate(-18 26 34)" />
-        <rect x="128" y="36" width="9" height="9" rx="2" fill="oklch(0.7 0.13 75)" transform="rotate(22 132 40)" />
-        <circle cx="34" cy="74" r="4.5" fill="oklch(0.64 0.18 25)" />
-        <circle cx="126" cy="80" r="4.5" fill="oklch(0.57 0.16 255)" />
-        <rect x="40" y="14" width="7" height="7" rx="2" fill="oklch(0.55 0.19 300)" transform="rotate(30 43 17)" />
-        <path d="M118 18l1.8 4.2 4.2 1.8-4.2 1.8-1.8 4.2-1.8-4.2-4.2-1.8 4.2-1.8z" fill="oklch(0.7 0.13 75)" />
+      {/* Papelitos de colores. Cada uno va envuelto en un <g> porque la
+          animación usa transform y pisaría el rotate del elemento. */}
+      <g className="celebrate-confetti">
+        <g>
+          <rect x="22" y="30" width="9" height="9" rx="2" fill="oklch(0.6 0.17 274)" transform="rotate(-18 26 34)" />
+        </g>
+        <g>
+          <rect x="128" y="36" width="9" height="9" rx="2" fill="oklch(0.7 0.13 75)" transform="rotate(22 132 40)" />
+        </g>
+        <g>
+          <circle cx="34" cy="74" r="4.5" fill="oklch(0.64 0.18 25)" />
+        </g>
+        <g>
+          <circle cx="126" cy="80" r="4.5" fill="oklch(0.57 0.16 255)" />
+        </g>
+        <g>
+          <rect x="40" y="14" width="7" height="7" rx="2" fill="oklch(0.55 0.19 300)" transform="rotate(30 43 17)" />
+        </g>
+        <g>
+          <path d="M118 18l1.8 4.2 4.2 1.8-4.2 1.8-1.8 4.2-1.8-4.2-4.2-1.8 4.2-1.8z" fill="oklch(0.7 0.13 75)" />
+        </g>
       </g>
 
       {/* sombra */}
-      <ellipse cx="80" cy="118" rx="38" ry="7" fill="oklch(0.5 0.1 160)" opacity="0.2" filter="url(#cs-shadow)" />
+      <ellipse
+        className="celebrate-shadow"
+        cx="80"
+        cy="118"
+        rx="38"
+        ry="7"
+        fill="oklch(0.5 0.1 160)"
+        opacity="0.2"
+        filter="url(#cs-shadow)"
+      />
 
       {/* medalla */}
-      <circle cx="80" cy="68" r="40" fill="url(#cs-badge)" />
-      <circle cx="80" cy="68" r="40" fill="#fff" opacity="0.12" />
-      <circle cx="80" cy="62" r="30" fill="#fff" opacity="0.16" />
-      <path
-        d="M67 69l9 9 18-19"
-        stroke="#fff"
-        strokeWidth="6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+      <g className="celebrate-badge">
+        <circle cx="80" cy="68" r="40" fill="url(#cs-badge)" />
+        <circle cx="80" cy="68" r="40" fill="#fff" opacity="0.12" />
+        <circle cx="80" cy="62" r="30" fill="#fff" opacity="0.16" />
+        <path
+          className="celebrate-check"
+          d="M67 69l9 9 18-19"
+          stroke="#fff"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
     </svg>
   );
 }

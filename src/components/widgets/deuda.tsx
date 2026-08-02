@@ -117,7 +117,7 @@ function UpToDateCard() {
       className="border-success/25 bg-success/5 shadow-sm dark:bg-success/10"
     >
       <CardContent className="flex items-center gap-4 p-5 sm:gap-5 sm:p-6">
-        <CelebrateScene className="h-auto w-20 shrink-0 animate-breathe sm:w-24" />
+        <CelebrateScene className="h-auto w-20 shrink-0 sm:w-24" />
         <div className="flex min-w-0 flex-col gap-1">
           <p className="text-2xl font-bold tracking-tight text-success text-balance">
             Estás al día 🎉
