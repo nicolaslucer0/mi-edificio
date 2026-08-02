@@ -9,7 +9,7 @@ import {
   type MonthlyFinancials,
 } from "@/lib/queries/balance";
 import { getDebtBoard } from "@/lib/queries/debt-board";
-import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
+import { formatCurrencyCents, formatPeriod } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { DebtBoardSummary, DebtBoardUnits } from "@/components/debt-board";
@@ -100,43 +100,32 @@ export default async function BalancePage() {
   );
 }
 
+/**
+ * Solo el número. El saldo inicial entra en la cuenta pero no se muestra: es un
+ * dato de cuando arrancó la app, no información del consorcio. Y con el desglose
+ * a la vista la resta no cerraría (ver docs/balance.md).
+ */
 function CashCard({
   cash,
 }: Readonly<{ cash: Awaited<ReturnType<typeof getConsorcioCash>> }>) {
   const positive = cash.balanceCents >= 0;
   return (
     <Card className={cn("border-l-4", positive ? "border-l-success" : "border-l-destructive")}>
-      <CardContent className="flex flex-col gap-4 p-5">
-        <div className="flex flex-col gap-1">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Plata del consorcio
-          </p>
-          <p
-            className={cn(
-              "text-4xl font-bold tracking-tight tabular-nums",
-              positive ? "text-success" : "text-destructive",
-            )}
-          >
-            {formatCurrencyCents(cash.balanceCents)}
-          </p>
-        </div>
-        <dl className="grid grid-cols-3 gap-2 border-t border-border/60 pt-3 text-sm">
-          <Figure
-            label="Saldo inicial"
-            value={formatCurrencyCents(cash.openingCents)}
-            hint={cash.openingDate ? `Al ${formatDate(cash.openingDate)}` : undefined}
-          />
-          <Figure
-            label="Cobrado"
-            value={formatCurrencyCents(cash.collectedCents)}
-            tone="positive"
-          />
-          <Figure
-            label="Gastado"
-            value={formatCurrencyCents(cash.spentCents)}
-            tone="negative"
-          />
-        </dl>
+      <CardContent className="flex flex-col gap-1 p-5">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          Plata del consorcio
+        </p>
+        <p
+          className={cn(
+            "text-4xl font-bold tracking-tight tabular-nums",
+            positive ? "text-success" : "text-destructive",
+          )}
+        >
+          {formatCurrencyCents(cash.balanceCents)}
+        </p>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Es lo que hay hoy en la cuenta del consorcio.
+        </p>
       </CardContent>
     </Card>
   );
@@ -270,13 +259,11 @@ function MonthRow({ month }: Readonly<{ month: MonthlyFinancials }>) {
 function Figure({
   label,
   value,
-  hint,
   tone,
   emphasis,
 }: Readonly<{
   label: string;
   value: string;
-  hint?: string;
   tone?: "positive" | "negative";
   emphasis?: boolean;
 }>) {
@@ -297,7 +284,6 @@ function Figure({
       >
         {value}
       </dd>
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
     </div>
   );
 }

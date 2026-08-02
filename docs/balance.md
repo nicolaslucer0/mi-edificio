@@ -29,12 +29,16 @@ mitad figuraba como un mes sin un peso de ingreso.
   período, sumando ordinarias y extraordinarias.
 - **Los meses vacíos no se listan.** Un consorcio recién cargado no muestra once
   tarjetas en cero.
+- **El saldo inicial no se muestra.** Es de cuándo se empezó a usar la app, no
+  información del consorcio: se carga desde "Datos de pago y saldo" y entra en la
+  cuenta, nada más. Por eso la tarjeta de la caja quedó con el número solo — con
+  el desglose de cobrado y gastado a la vista, la resta no cerraría y parecería
+  un error.
 
 ## Secciones
 
-1. **Plata del consorcio** — un número grande: saldo inicial + todo lo cobrado −
-   todo lo gastado, con las tres partes desglosadas abajo. Es acumulado desde el
-   saldo inicial, no de los últimos 12 meses.
+1. **Plata del consorcio** — un número grande y nada más: saldo inicial + todo lo
+   cobrado − todo lo gastado. Es acumulado, no de los últimos 12 meses.
 2. **Este mes** — cuánto se emitió, cuánto se cobró (con barra y porcentaje),
    cuántas unidades pagaron de cuántas, cuánto falta cobrar, cuánto se gastó y el
    resultado.
