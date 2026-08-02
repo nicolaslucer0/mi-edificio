@@ -7,47 +7,62 @@
  * aria-hidden y no exponen rol de imagen.
  */
 
+import {
+  BRAND_DOOR,
+  BRAND_GRADIENT_FROM,
+  BRAND_GRADIENT_TO,
+  BRAND_ROOFLINE,
+  BRAND_ROOFLINE_WIDTH,
+  BRAND_VIEWBOX,
+} from "@/lib/brand";
+
 type IllustrationProps = Readonly<{
   className?: string;
 }>;
 
-/** Marca de la app: building con degradé índigo→violeta. */
+/**
+ * Marca de la app: la "M" de Mi edificio como línea de techos, con una puerta
+ * recortada. La geometría vive en `lib/brand.ts`, compartida con los íconos
+ * de la PWA, para que el logo del sidebar y el de la pantalla de inicio sean
+ * literalmente el mismo dibujo.
+ */
 export function BrandMark({ className }: IllustrationProps) {
   return (
     <svg
-      viewBox="0 0 64 64"
+      viewBox={`0 0 ${BRAND_VIEWBOX} ${BRAND_VIEWBOX}`}
       fill="none"
       aria-hidden="true"
       className={className}
     >
       <defs>
         <linearGradient id="bm-tile" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="oklch(0.66 0.18 274)" />
-          <stop offset="1" stopColor="oklch(0.52 0.2 300)" />
+          <stop offset="0" stopColor={BRAND_GRADIENT_FROM} />
+          <stop offset="1" stopColor={BRAND_GRADIENT_TO} />
         </linearGradient>
       </defs>
-      <rect width="64" height="64" rx="18" fill="url(#bm-tile)" />
+      <rect width="64" height="64" rx="16" fill="url(#bm-tile)" />
       {/* brillo superior para dar volumen */}
       <path
-        d="M0 18C0 8 8 0 18 0h28c10 0 18 8 18 18v6H0z"
+        d="M0 16C0 7.2 7.2 0 16 0h32c8.8 0 16 7.2 16 16v6H0z"
         fill="#fff"
-        opacity="0.14"
+        opacity="0.13"
       />
-      {/* edificio */}
-      <g fill="#fff">
-        <rect x="20" y="22" width="13" height="24" rx="2.5" opacity="0.95" />
-        <rect x="33" y="16" width="13" height="30" rx="2.5" />
-        <rect x="22.5" y="26" width="3.2" height="3.2" rx="0.8" fill="oklch(0.6 0.18 274)" />
-        <rect x="27.3" y="26" width="3.2" height="3.2" rx="0.8" fill="oklch(0.6 0.18 274)" />
-        <rect x="22.5" y="32" width="3.2" height="3.2" rx="0.8" fill="oklch(0.6 0.18 274)" />
-        <rect x="27.3" y="32" width="3.2" height="3.2" rx="0.8" fill="oklch(0.6 0.18 274)" />
-        <rect x="36" y="21" width="3.2" height="3.2" rx="0.8" fill="oklch(0.55 0.2 300)" />
-        <rect x="40.5" y="21" width="3.2" height="3.2" rx="0.8" fill="oklch(0.55 0.2 300)" />
-        <rect x="36" y="27" width="3.2" height="3.2" rx="0.8" fill="oklch(0.55 0.2 300)" />
-        <rect x="40.5" y="27" width="3.2" height="3.2" rx="0.8" fill="oklch(0.55 0.2 300)" />
-        <rect x="36" y="33" width="3.2" height="3.2" rx="0.8" fill="oklch(0.55 0.2 300)" />
-        <rect x="40.5" y="33" width="3.2" height="3.2" rx="0.8" fill="oklch(0.55 0.2 300)" />
-      </g>
+      <path
+        d={BRAND_ROOFLINE}
+        fill="none"
+        stroke="#fff"
+        strokeWidth={BRAND_ROOFLINE_WIDTH}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <rect
+        x={BRAND_DOOR.x}
+        y={BRAND_DOOR.y}
+        width={BRAND_DOOR.width}
+        height={BRAND_DOOR.height}
+        rx={BRAND_DOOR.radius}
+        fill={BRAND_GRADIENT_TO}
+      />
     </svg>
   );
 }

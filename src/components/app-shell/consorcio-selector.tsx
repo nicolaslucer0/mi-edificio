@@ -38,7 +38,10 @@ export function ConsorcioSelector({
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
 
-  if (options.length === 0) return null;
+  // Con un solo consorcio no hay nada que elegir: el vecino sabe en qué
+  // edificio está y el admin llega a "todos los consorcios" y a "crear" desde
+  // la sección Admin. Un selector que no selecciona nada es ruido.
+  if (options.length <= 1) return null;
 
   // On /admin/<id>/… the URL is the source of truth for the active consorcio.
   const segments = pathname.split("/");

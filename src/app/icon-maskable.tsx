@@ -1,42 +1,18 @@
 import { ImageResponse } from "next/og";
+import { BrandTile } from "@/lib/brand-tile";
+import { BRAND_MASKABLE_SCALE } from "@/lib/brand";
 
 export const size = { width: 512, height: 512 };
 export const contentType = "image/png";
 
+/**
+ * Android recorta este ícono con la forma que tenga el launcher (círculo,
+ * squircle, gota) y solo garantiza el 66 % central. La baldosa va a sangre y
+ * el dibujo achicado, así no se come las puntas de la eme.
+ */
 export default function IconMaskable() {
   return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#18181b",
-        }}
-      >
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="220"
-          height="220"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#ffffff"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z" />
-          <path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
-          <path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2" />
-          <path d="M10 6h4" />
-          <path d="M10 10h4" />
-          <path d="M10 14h4" />
-          <path d="M10 18h4" />
-        </svg>
-      </div>
-    ),
+    <BrandTile size={size.width} radius={0} scale={BRAND_MASKABLE_SCALE} />,
     size,
   );
 }

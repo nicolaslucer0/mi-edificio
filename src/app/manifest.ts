@@ -8,7 +8,9 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/",
     display: "standalone",
     orientation: "portrait",
-    background_color: "#f7f7f8",
+    // El mismo fondo que la app, para que el splash de Android no arranque
+    // con un blanco distinto al de la primera pantalla.
+    background_color: "#fbfaf7",
     theme_color: "#18181b",
     lang: "es-AR",
     scope: "/",
