@@ -36,12 +36,20 @@ type Props = {
   membership: UserMembershipRow;
   unitsInConsorcio: AdminUnit[];
   consorcioId: string;
+  /**
+   * Qué decir en la fila. Cuando la lista está agrupada por unidad, la unidad
+   * ya está en el encabezado y acá va la persona.
+   */
+  primary?: string;
+  secondary?: string;
 };
 
 export function MembershipRow({
   membership,
   unitsInConsorcio,
   consorcioId,
+  primary,
+  secondary,
 }: Readonly<Props>) {
   const [editing, setEditing] = useState(false);
   const display = describeMembership(membership);
@@ -59,7 +67,16 @@ export function MembershipRow({
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg bg-muted/50 px-3 py-2">
       <div className="min-w-0 flex-1 text-sm leading-tight">
-        {membership.unitId ? (
+        {primary ? (
+          <>
+            <p className="truncate font-medium">{primary}</p>
+            {secondary && (
+              <p className="truncate text-xs text-muted-foreground">
+                {secondary}
+              </p>
+            )}
+          </>
+        ) : membership.unitId ? (
           <Link
             href={`/admin/${consorcioId}/unidades#unit-${membership.unitId}`}
             className="hover:text-foreground hover:underline underline-offset-2"

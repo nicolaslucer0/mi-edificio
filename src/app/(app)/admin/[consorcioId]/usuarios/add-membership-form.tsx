@@ -28,9 +28,18 @@ const ROLE_OPTIONS: Array<{ value: Role; label: string }> = [
 type Props = {
   consorcios: AdminConsorcio[];
   units: AdminUnit[];
+  /** Unidad preseleccionada, cuando se abre desde una unidad puntual. */
+  defaultUnitId?: string;
+  /** Para cerrar el diálogo que lo contiene. */
+  onDone?: () => void;
 };
 
-export function AddMembershipForm({ consorcios, units }: Readonly<Props>) {
+export function AddMembershipForm({
+  consorcios,
+  units,
+  defaultUnitId,
+  onDone,
+}: Readonly<Props>) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<
     ActionResult | null,
@@ -61,18 +70,20 @@ export function AddMembershipForm({ consorcios, units }: Readonly<Props>) {
     [filteredUnits],
   );
 
-  const [unitId, setUnitId] = useState<string>(filteredUnits[0]?.id ?? "");
-
-  useEffect(() => {
-    setUnitId(filteredUnits[0]?.id ?? "");
-  }, [filteredUnits]);
+  // Derivada, no sincronizada con un efecto: si la unidad elegida no está en el
+  // consorcio actual, vale la primera del listado.
+  const [pickedUnitId, setPickedUnitId] = useState<string>(defaultUnitId ?? "");
+  const unitId = filteredUnits.some((u) => u.id === pickedUnitId)
+    ? pickedUnitId
+    : filteredUnits[0]?.id ?? "";
 
   useEffect(() => {
     if (state?.ok) {
       toast.success("Asignación agregada.");
+      onDone?.();
       router.refresh();
     }
-  }, [state, router]);
+  }, [state, router, onDone]);
 
   if (consorcios.length === 0) {
     return (
@@ -153,34 +164,41 @@ export function AddMembershipForm({ consorcios, units }: Readonly<Props>) {
         </Select>
       </div>
 
+      {/* Con un solo consorcio el selector es ruido: va como campo oculto. */}
+      {consorcios.length === 1 && (
+        <input type="hidden" name="consorcioId" value={consorcioId} />
+      )}
+
       <div className="grid gap-5 sm:grid-cols-2">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="consorcioId" className="text-base">
-            Consorcio
-          </Label>
-          <Select
-            name="consorcioId"
-            items={consorcioItems}
-            value={consorcioId}
-            onValueChange={(v) => setConsorcioId(v ?? "")}
-            disabled={pending}
-          >
-            <SelectTrigger
-              id="consorcioId"
-              className="h-12 w-full text-base"
-              data-size="default"
+        {consorcios.length > 1 && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="consorcioId" className="text-base">
+              Consorcio
+            </Label>
+            <Select
+              name="consorcioId"
+              items={consorcioItems}
+              value={consorcioId}
+              onValueChange={(v) => setConsorcioId(v ?? "")}
+              disabled={pending}
             >
-              <SelectValue placeholder="Elegí consorcio" />
-            </SelectTrigger>
-            <SelectContent>
-              {consorcios.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+              <SelectTrigger
+                id="consorcioId"
+                className="h-12 w-full text-base"
+                data-size="default"
+              >
+                <SelectValue placeholder="Elegí consorcio" />
+              </SelectTrigger>
+              <SelectContent>
+                {consorcios.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {needsUnit && (
           <div className="flex flex-col gap-2">
@@ -196,7 +214,7 @@ export function AddMembershipForm({ consorcios, units }: Readonly<Props>) {
                 name="unitId"
                 items={unitItems}
                 value={unitId}
-                onValueChange={(v) => setUnitId(v ?? "")}
+                onValueChange={(v) => setPickedUnitId(v ?? "")}
                 disabled={pending}
               >
                 <SelectTrigger
