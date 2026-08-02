@@ -65,7 +65,7 @@ widget = agregar un archivo y una entrada.** `page.tsx` no se toca nunca más.
 | 10 | `deuda` | full | el usuario tiene unidad |
 | 15 | `tu-anio` | full | tiene al menos una expensa en el año |
 | 20 | `estado-de-pagos` | half | `debtVisibility != 'off'` y `debtOnHome` |
-| 25 | `gastos-del-mes` | half | hubo gastos en el mes |
+| 25 | `gastos-del-mes` | half | siempre (un mes sin gastos se muestra en cero) |
 | 30 | `install-prompt` | full | no instalada y no descartada (client) |
 | 80 | `ultimos-movimientos` | full | hay movimientos |
 
@@ -74,6 +74,16 @@ guarda estado ahí elige un nombre de parámetro y lo documenta en esta tabla, p
 que dos widgets no se pisen. Hoy hay uno solo: **`mes`**, que mueve el mes de
 `estado-de-pagos` (el que tiene las flechas) y que `gastos-del-mes` sigue, así
 las dos tarjetas hablan siempre del mismo período.
+
+Cambiar de mes es una navegación con `<Link>` sobre la misma ruta: Next no
+vuelve a mostrar el `loading.tsx` para un cambio de search params, así que la
+señal de que está cargando la da la flecha, que se convierte en spinner con
+`useLinkStatus` (ver `components/month-nav-arrow.tsx`).
+
+**Un widget con datos en cero se muestra igual, en cero.** Devolver `null` es
+para cuando el widget no aplica —el vecino no tiene unidad, la administración no
+activó el estado de pagos—, no para cuando la respuesta es "no hubo nada":
+esconder la tarjeta hace parecer que el dato no existe.
 
 El filtro por `roles` es lo que va a permitir widgets solo de admin (ej. "pagos a
 aprobar") sin ensuciar el home del vecino.

@@ -28,7 +28,6 @@ export async function GastosDelMesWidget({
     period,
     consorcioId,
   );
-  if (breakdown.totalCents === 0) return null;
 
   const top = breakdown.byCategory.slice(0, TOP_CATEGORIES);
   const restCents = breakdown.byCategory
@@ -50,6 +49,13 @@ export async function GastosDelMesWidget({
       <p className="text-2xl font-bold tracking-tight">
         {formatCurrencyCents(breakdown.totalCents)}
       </p>
+      {/* Un mes sin gastos se muestra igual, en cero: esconder la tarjeta haría
+          parecer que el dato no existe, cuando la respuesta es "no se gastó". */}
+      {breakdown.totalCents === 0 && (
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          No se cargaron gastos en este mes.
+        </p>
+      )}
       <dl className="flex flex-col gap-1 text-sm">
         {top.map((item) => (
           <div key={item.category} className="flex justify-between gap-3">

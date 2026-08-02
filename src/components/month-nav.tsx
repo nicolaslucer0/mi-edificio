@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { formatPeriod, shiftPeriod } from "@/lib/format";
+import { MonthNavArrowIcon } from "@/components/month-nav-arrow";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -80,7 +81,7 @@ function Arrow({
         "text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
       )}
     >
-      <Icon aria-hidden="true" className="size-5" />
+      <MonthNavArrowIcon direction={direction} />
     </Link>
   );
 }
