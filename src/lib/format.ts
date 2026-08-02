@@ -42,6 +42,17 @@ export function isFuturePeriod(period: string): boolean {
   return period > currentPeriod();
 }
 
+/** Corre un período "YYYY-MM" tantos meses (negativo = hacia atrás). */
+export function shiftPeriod(period: string, months: number): string {
+  const [year, month] = period.split("-").map(Number);
+  const d = new Date(year, month - 1 + months, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export function isValidPeriodString(value: string): boolean {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+}
+
 const DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
   day: "2-digit",
   month: "2-digit",

@@ -9,30 +9,55 @@ import {
   type MonthlyFinancials,
 } from "@/lib/queries/balance";
 import { getDebtBoard } from "@/lib/queries/debt-board";
-import { formatCurrencyCents, formatPeriod } from "@/lib/format";
+import {
+  currentPeriod,
+  formatCurrencyCents,
+  formatPeriod,
+  isValidPeriodString,
+  shiftPeriod,
+} from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
 import { CollectionMeter } from "@/components/collection-meter";
 import { DebtBoardSummary, DebtBoardUnits } from "@/components/debt-board";
+import { MonthNav } from "@/components/month-nav";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "Balance del consorcio — Mi edificio",
 };
 
-export default async function BalancePage() {
+const MONTHS_BACK = 11;
+
+export default async function BalancePage({
+  searchParams,
+}: Readonly<{
+  searchParams: Promise<{ mes?: string }>;
+}>) {
   const user = await requireUser();
   const consorcioId = await getCurrentConsorcioId(user);
+  const params = await searchParams;
+
+  const current = currentPeriod();
+  const oldest = shiftPeriod(current, -MONTHS_BACK);
+  const selected =
+    params.mes &&
+    isValidPeriodString(params.mes) &&
+    params.mes <= current &&
+    params.mes >= oldest
+      ? params.mes
+      : current;
+
   const [cash, months, debtBoard] = await Promise.all([
     getConsorcioCash(user, consorcioId),
     getMonthlyFinancials(user, 12, consorcioId),
     getDebtBoard(user, consorcioId),
   ]);
 
-  const [currentMonth, ...olderMonths] = months;
+  const selectedMonth = months.find((m) => m.period === selected) ?? null;
   // Meses sin expensas ni gastos no aportan nada: no se listan.
-  const previousMonths = olderMonths.filter(
-    (m) => m.billedCents > 0 || m.spentCents > 0,
+  const otherMonths = months.filter(
+    (m) => m.period !== selected && (m.billedCents > 0 || m.spentCents > 0),
   );
 
   return (
@@ -53,22 +78,26 @@ export default async function BalancePage() {
 
         <CashCard cash={cash} />
 
-        {currentMonth && (
-          <section className="flex flex-col gap-3">
-            <h2 className="text-base font-semibold">
-              Este mes · {formatPeriod(currentMonth.period)}
-            </h2>
-            <CurrentMonthCard month={currentMonth} />
-          </section>
-        )}
+        <section className="flex flex-col gap-3">
+          <h2 className="text-base font-semibold">
+            {selected === current ? "Este mes" : "Mes a mes"}
+          </h2>
+          <MonthNav
+            period={selected}
+            hrefFor={(p) => (p === current ? "/balance" : `/balance?mes=${p}`)}
+            minPeriod={oldest}
+            maxPeriod={current}
+          />
+          <MonthDetailCard month={selectedMonth} />
+        </section>
 
-        {previousMonths.length > 0 && (
+        {otherMonths.length > 0 && (
           <section className="flex flex-col gap-3">
-            <h2 className="text-base font-semibold">Meses anteriores</h2>
+            <h2 className="text-base font-semibold">Los otros meses</h2>
             <ul className="flex flex-col gap-3" aria-label="Balance mensual">
-              {previousMonths.map((m) => (
+              {otherMonths.map((m) => (
                 <li key={m.period}>
-                  <MonthRow month={m} />
+                  <MonthRow month={m} current={current} />
                 </li>
               ))}
             </ul>
@@ -132,13 +161,15 @@ function CashCard({
   );
 }
 
-function CurrentMonthCard({ month }: Readonly<{ month: MonthlyFinancials }>) {
-  if (month.billedCents === 0 && month.spentCents === 0) {
+function MonthDetailCard({
+  month,
+}: Readonly<{ month: MonthlyFinancials | null }>) {
+  if (!month || (month.billedCents === 0 && month.spentCents === 0)) {
     return (
       <Card>
         <CardContent className="px-6 py-8 text-center">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Todavía no hay expensas ni gastos cargados en este mes.
+            No hay expensas ni gastos cargados en este mes.
           </p>
         </CardContent>
       </Card>
@@ -201,46 +232,58 @@ function CurrentMonthCard({ month }: Readonly<{ month: MonthlyFinancials }>) {
   );
 }
 
-function MonthRow({ month }: Readonly<{ month: MonthlyFinancials }>) {
+function MonthRow({
+  month,
+  current,
+}: Readonly<{ month: MonthlyFinancials; current: string }>) {
   const positive = month.netCents >= 0;
+  const href =
+    month.period === current ? "/balance" : `/balance?mes=${month.period}`;
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-3 p-5">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-base font-semibold tracking-tight">
-            {formatPeriod(month.period)}
-          </p>
-          {month.billedCents > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {month.collectedPct}% cobrado · pagaron {month.unitsPaid} de{" "}
-              {month.unitsTotal}
+    <Link
+      href={href}
+      scroll={false}
+      aria-label={`Ver el detalle de ${formatPeriod(month.period)}`}
+      className="block touch-manipulation"
+    >
+      <Card className="transition-colors hover:bg-muted/40">
+        <CardContent className="flex flex-col gap-3 p-5">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <p className="text-base font-semibold tracking-tight">
+              {formatPeriod(month.period)}
             </p>
-          )}
-        </div>
-        <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-          <Figure
-            label="Expensas"
-            value={formatCurrencyCents(month.billedCents)}
-          />
-          <Figure
-            label="Cobrado"
-            value={formatCurrencyCents(month.collectedCents)}
-            tone="positive"
-          />
-          <Figure
-            label="Gastado"
-            value={formatCurrencyCents(month.spentCents)}
-            tone="negative"
-          />
-          <Figure
-            label="Resultado"
-            value={formatCurrencyCents(month.netCents)}
-            tone={positive ? "positive" : "negative"}
-            emphasis
-          />
-        </dl>
-      </CardContent>
-    </Card>
+            {month.billedCents > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {month.collectedPct}% cobrado · pagaron {month.unitsPaid} de{" "}
+                {month.unitsTotal}
+              </p>
+            )}
+          </div>
+          <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+            <Figure
+              label="Expensas"
+              value={formatCurrencyCents(month.billedCents)}
+            />
+            <Figure
+              label="Cobrado"
+              value={formatCurrencyCents(month.collectedCents)}
+              tone="positive"
+            />
+            <Figure
+              label="Gastado"
+              value={formatCurrencyCents(month.spentCents)}
+              tone="negative"
+            />
+            <Figure
+              label="Resultado"
+              value={formatCurrencyCents(month.netCents)}
+              tone={positive ? "positive" : "negative"}
+              emphasis
+            />
+          </dl>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 

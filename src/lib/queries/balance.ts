@@ -1,8 +1,9 @@
 import "server-only";
-import { and, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, isNotNull, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { consorcios, expenditures, expenses, units } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
+import type { ExpenditureCategory } from "@/lib/format";
 import { getViewableConsorcioIds } from "./expenditures";
 
 /**
@@ -161,14 +162,82 @@ export async function getMonthlyFinancials(
       .where(and(...expenditureConditions)),
   ]);
 
+  const periods: string[] = [];
+  for (let i = 0; i < monthsBack; i += 1) {
+    periods.push(periodOf(new Date(now.getFullYear(), now.getMonth() - i, 1)));
+  }
+
+  return aggregateMonths(periods, expenseRows, spentRows).sort((a, b) =>
+    b.period.localeCompare(a.period),
+  );
+}
+
+/** Un mes puntual, para las pantallas que navegan mes a mes. */
+export async function getMonthFinancials(
+  user: CurrentUser,
+  period: string,
+  consorcioId?: string | null,
+): Promise<MonthlyFinancials | null> {
+  const ids = narrowToConsorcio(getViewableConsorcioIds(user), consorcioId);
+  if (ids !== "all" && ids.length === 0) return null;
+
+  const { start, end } = monthBounds(period);
+
+  const expenseConditions = [eq(expenses.period, period)];
+  if (ids !== "all") {
+    expenseConditions.push(inArray(units.consorcioId, ids));
+  }
+  const expenditureConditions = [
+    gte(expenditures.date, start),
+    lt(expenditures.date, end),
+  ];
+  if (ids !== "all") {
+    expenditureConditions.push(inArray(expenditures.consorcioId, ids));
+  }
+
+  const [expenseRows, spentRows] = await Promise.all([
+    db
+      .select({
+        period: expenses.period,
+        unitId: expenses.unitId,
+        amountCents: expenses.amountCents,
+        paidCents: expenses.paidCents,
+      })
+      .from(expenses)
+      .innerJoin(units, eq(units.id, expenses.unitId))
+      .where(and(...expenseConditions)),
+    db
+      .select({ date: expenditures.date, amountCents: expenditures.amountCents })
+      .from(expenditures)
+      .where(and(...expenditureConditions)),
+  ]);
+
+  return aggregateMonths([period], expenseRows, spentRows)[0] ?? null;
+}
+
+function monthBounds(period: string): { start: Date; end: Date } {
+  const [year, month] = period.split("-").map(Number);
+  return { start: new Date(year, month - 1, 1), end: new Date(year, month, 1) };
+}
+
+type ExpenseInput = {
+  period: string;
+  unitId: string;
+  amountCents: number;
+  paidCents: number;
+};
+
+function aggregateMonths(
+  periods: string[],
+  expenseRows: ExpenseInput[],
+  spentRows: Array<{ date: Date; amountCents: number }>,
+): MonthlyFinancials[] {
   type Bucket = MonthlyFinancials & {
     /** Facturado y cobrado por unidad, para saber cuántas cubrieron el mes. */
     byUnit: Map<string, { billed: number; collected: number }>;
   };
   const months = new Map<string, Bucket>();
-  for (let i = 0; i < monthsBack; i += 1) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const period = periodOf(d);
+  for (const period of periods) {
     months.set(period, {
       period,
       billedCents: 0,
@@ -201,14 +270,13 @@ export async function getMonthlyFinancials(
     if (month) month.spentCents += row.amountCents;
   }
 
-  const result: MonthlyFinancials[] = [];
-  for (const month of months.values()) {
+  return Array.from(months.values()).map((month) => {
     const { byUnit, ...rest } = month;
     let unitsPaid = 0;
     for (const unit of byUnit.values()) {
       if (unit.collected >= unit.billed) unitsPaid += 1;
     }
-    result.push({
+    return {
       ...rest,
       pendingCents: Math.max(0, month.billedCents - month.collectedCents),
       collectedPct:
@@ -218,8 +286,51 @@ export async function getMonthlyFinancials(
       unitsTotal: byUnit.size,
       unitsPaid,
       netCents: month.collectedCents - month.spentCents,
-    });
+    };
+  });
+}
+
+export type MonthExpenditureBreakdown = {
+  totalCents: number;
+  /** Categorías del mes, de mayor a menor. */
+  byCategory: Array<{ category: ExpenditureCategory; amountCents: number }>;
+};
+
+/** En qué se fue la plata del mes, por categoría. */
+export async function getMonthExpenditureBreakdown(
+  user: CurrentUser,
+  period: string,
+  consorcioId?: string | null,
+): Promise<MonthExpenditureBreakdown> {
+  const ids = narrowToConsorcio(getViewableConsorcioIds(user), consorcioId);
+  if (ids !== "all" && ids.length === 0) {
+    return { totalCents: 0, byCategory: [] };
   }
 
-  return result.sort((a, b) => b.period.localeCompare(a.period));
+  const { start, end } = monthBounds(period);
+  const conditions = [
+    gte(expenditures.date, start),
+    lt(expenditures.date, end),
+  ];
+  if (ids !== "all") {
+    conditions.push(inArray(expenditures.consorcioId, ids));
+  }
+
+  const rows = await db
+    .select({
+      category: expenditures.category,
+      total: sql<number>`coalesce(sum(${expenditures.amountCents}), 0)::int`,
+    })
+    .from(expenditures)
+    .where(and(...conditions))
+    .groupBy(expenditures.category);
+
+  const byCategory = rows
+    .map((r) => ({ category: r.category, amountCents: Number(r.total) }))
+    .sort((a, b) => b.amountCents - a.amountCents);
+
+  return {
+    totalCents: byCategory.reduce((sum, c) => sum + c.amountCents, 0),
+    byCategory,
+  };
 }

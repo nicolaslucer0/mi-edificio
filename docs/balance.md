@@ -39,11 +39,14 @@ mitad figuraba como un mes sin un peso de ingreso.
 
 1. **Plata del consorcio** — un número grande y nada más: saldo inicial + todo lo
    cobrado − todo lo gastado. Es acumulado, no de los últimos 12 meses.
-2. **Este mes** — cuánto se emitió, cuánto se cobró (con barra y porcentaje),
-   cuántas unidades pagaron de cuántas, cuánto falta cobrar, cuánto se gastó y el
-   resultado.
-3. **Meses anteriores** — hasta 12, la misma información comprimida en cuatro
-   cifras: expensas, cobrado, gastado, resultado.
+2. **El mes elegido** — con flechas para moverse hasta 12 meses atrás. Cuánto se
+   emitió, cuánto se cobró (barra y porcentaje), cuántas unidades pagaron de
+   cuántas, cuánto falta cobrar, cuánto se gastó y el resultado. El mes va en la
+   URL (`?mes=YYYY-MM`), así que las flechas son links: andan sin JavaScript, se
+   pueden compartir y el botón de atrás funciona.
+3. **Los otros meses** — hasta 12, la misma información comprimida en cuatro
+   cifras: expensas, cobrado, gastado, resultado. Cada tarjeta es un link que
+   trae ese mes al detalle de arriba.
 4. **Deuda acumulada** — solo si la administración activó el estado de pagos.
    Documentado en [estado de pagos](./estado-de-pagos.md).
 

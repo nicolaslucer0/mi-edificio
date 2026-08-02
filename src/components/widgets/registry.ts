@@ -1,6 +1,7 @@
 import type { CurrentUser, Role } from "@/lib/session";
 import { DeudaWidget } from "./deuda";
 import { EstadoDePagosWidget } from "./estado-de-pagos";
+import { GastosDelMesWidget } from "./gastos-del-mes";
 import { InstallPromptWidget } from "./install-prompt";
 import { TuAnioWidget } from "./tu-anio";
 import { UltimosMovimientosWidget } from "./ultimos-movimientos";
@@ -14,6 +15,7 @@ const WIDGETS: readonly WidgetDef[] = [
   { id: "deuda", order: 10, Component: DeudaWidget },
   { id: "tu-anio", order: 15, Component: TuAnioWidget },
   { id: "estado-de-pagos", order: 20, Component: EstadoDePagosWidget },
+  { id: "gastos-del-mes", order: 25, Component: GastosDelMesWidget },
   { id: "install-prompt", order: 30, Component: InstallPromptWidget },
   { id: "ultimos-movimientos", order: 80, Component: UltimosMovimientosWidget },
 ];

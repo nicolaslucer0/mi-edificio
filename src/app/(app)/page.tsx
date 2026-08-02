@@ -42,10 +42,17 @@ function buildStatusSummary(debt: DebtSummary): string | null {
   return summary;
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: Readonly<{
+  searchParams: Promise<Record<string, string | undefined>>;
+}>) {
   const user = await requireUser();
   const consorcioId = await getCurrentConsorcioId(user);
-  const debt = await getDebtForUser(user, consorcioId);
+  const [debt, params] = await Promise.all([
+    getDebtForUser(user, consorcioId),
+    searchParams,
+  ]);
 
   const firstName = getFirstName(user.name, user.email);
   const summary = buildStatusSummary(debt);
@@ -72,7 +79,12 @@ export default async function Home() {
           decide si se muestra y cuánto ocupa; ver components/widgets. */}
       <div className="mx-auto grid w-full max-w-2xl grid-cols-1 gap-7 sm:grid-cols-2">
         {widgets.map(({ id, Component }) => (
-          <Component key={id} user={user} consorcioId={consorcioId} />
+          <Component
+            key={id}
+            user={user}
+            consorcioId={consorcioId}
+            searchParams={params}
+          />
         ))}
       </div>
     </main>

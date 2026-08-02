@@ -5,6 +5,12 @@ import type { CurrentUser, Role } from "@/lib/session";
 export interface WidgetProps {
   user: CurrentUser;
   consorcioId: string | null;
+  /**
+   * Los parámetros de la URL del home. Un widget que guarda estado en la URL
+   * (navegar meses, por ejemplo) lee el suyo de acá y lo nombra con su propio
+   * prefijo para no pisarse con otro widget.
+   */
+  searchParams: Record<string, string | undefined>;
 }
 
 export interface WidgetDef {

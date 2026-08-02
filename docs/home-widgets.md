@@ -32,6 +32,7 @@ El home deja de saber qué widgets existen: recorre un registry y los renderiza.
 export interface WidgetProps {
   user: CurrentUser;
   consorcioId: string | null;
+  searchParams: Record<string, string | undefined>;
 }
 
 export interface WidgetDef {
@@ -62,9 +63,17 @@ widget = agregar un archivo y una entrada.** `page.tsx` no se toca nunca más.
 | order | id | span | condición para aparecer |
 |---|---|---|---|
 | 10 | `deuda` | full | el usuario tiene unidad |
+| 15 | `tu-anio` | full | tiene al menos una expensa en el año |
 | 20 | `estado-de-pagos` | half | `debtVisibility != 'off'` y `debtOnHome` |
+| 25 | `gastos-del-mes` | half | hubo gastos en el mes |
 | 30 | `install-prompt` | full | no instalada y no descartada (client) |
 | 80 | `ultimos-movimientos` | full | hay movimientos |
+
+**Estado en la URL.** `searchParams` son los de la página del home. Un widget que
+guarda estado ahí elige un nombre de parámetro y lo documenta en esta tabla, para
+que dos widgets no se pisen. Hoy hay uno solo: **`mes`**, que mueve el mes de
+`estado-de-pagos` (el que tiene las flechas) y que `gastos-del-mes` sigue, así
+las dos tarjetas hablan siempre del mismo período.
 
 El filtro por `roles` es lo que va a permitir widgets solo de admin (ej. "pagos a
 aprobar") sin ensuciar el home del vecino.
