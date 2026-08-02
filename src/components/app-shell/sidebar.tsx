@@ -74,7 +74,7 @@ export function Sidebar({
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className="block rounded-xl"
+                  className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <SidebarItemVisual
                     Icon={Icon}
@@ -122,6 +122,9 @@ function SidebarItemVisual({
           : "text-muted-foreground hover:bg-muted hover:text-foreground",
       )}
     >
+      <span role="status" className="sr-only">
+        {pending ? `Cargando ${label}…` : ""}
+      </span>
       <Icon
         aria-hidden="true"
         className="size-4.5 shrink-0"

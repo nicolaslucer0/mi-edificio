@@ -31,7 +31,7 @@ export function BottomNav({ isAdmin, hasAmenities }: Readonly<Props>) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 aria-label={item.label}
-                className="group/nav-item flex flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-1.5 text-[11px] font-medium touch-manipulation"
+                className="group/nav-item flex flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-1.5 text-[11px] font-medium touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <NavItemVisual Icon={Icon} label={item.label} active={active} />
               </Link>
@@ -48,6 +48,14 @@ export function BottomNav({ isAdmin, hasAmenities }: Readonly<Props>) {
  * termine de cargar. La navegación tarda lo mismo, pero deja de sentirse como
  * que el toque no hizo nada: la respuesta es inmediata y el contenido llega
  * cuando llega.
+ *
+ * Ojo con dos cosas de accesibilidad:
+ * - `aria-current` NO sigue al pending, sigue al pathname real: decirle al
+ *   lector de pantalla que ya estás en una página a la que todavía no
+ *   llegaste es mentirle. El resaltado es visual, el estado es semántico.
+ * - El resaltado solo lo ve quien ve. Por eso va también la región `status`,
+ *   que anuncia "Cargando…" mientras dura. Se renderiza siempre (vacía) para
+ *   que el lector la tenga registrada antes de que aparezca el texto.
  */
 function NavItemVisual({
   Icon,
@@ -59,6 +67,9 @@ function NavItemVisual({
 
   return (
     <>
+      <span role="status" className="sr-only">
+        {pending ? `Cargando ${label}…` : ""}
+      </span>
       <span
         className={cn(
           "relative flex h-9 w-12 items-center justify-center rounded-2xl transition-all duration-300 ease-out",
