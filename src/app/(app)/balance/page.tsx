@@ -162,9 +162,11 @@ function CurrentMonthCard({ month }: Readonly<{ month: MonthlyFinancials }>) {
                 {month.collectedPct}%
               </p>
             </div>
+            {/* El canal va hundido y la barra apoyada encima: le da relieve sin
+                bajar el contraste. El porcentaje siempre está en texto. */}
             <div
               aria-hidden="true"
-              className="h-2 w-full overflow-hidden rounded-full bg-muted"
+              className="h-3 w-full overflow-hidden rounded-full bg-muted inset-shadow-2xs"
             >
               <div
                 className="h-full rounded-full bg-success"

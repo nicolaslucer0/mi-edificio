@@ -4,6 +4,7 @@ import {
   and,
   desc,
   eq,
+  gte,
   inArray,
   lte,
   notInArray,
@@ -153,6 +154,84 @@ export const getDebtForUser = cache(async function getDebtForUser(
   }
   return { hasUnit: true, amountCents, count, nextDueDate };
 });
+
+/**
+ * Cómo le fue al vecino en un mes:
+ * - `pagado`: cubrió todo lo emitido.
+ * - `parcial`: pagó una parte.
+ * - `debe`: venció y no pagó nada.
+ * - `pendiente`: emitida pero todavía no vencida.
+ * - `sin`: no se le emitió nada ese mes.
+ */
+export type MonthPaymentState =
+  | "pagado"
+  | "parcial"
+  | "debe"
+  | "pendiente"
+  | "sin";
+
+export type YearMonthSummary = {
+  period: string;
+  state: MonthPaymentState;
+  billedCents: number;
+  paidCents: number;
+};
+
+/**
+ * Los últimos 12 meses del vecino, del más viejo al más nuevo. Un mes cuenta
+ * como pagado cuando cubrió todo lo que se le emitió, sumando ordinarias y
+ * extraordinarias.
+ */
+export async function getYearOverviewForUser(
+  user: CurrentUser,
+  consorcioId?: string | null,
+): Promise<YearMonthSummary[]> {
+  const access = buildExpenseAccessCondition(user, consorcioId);
+  if (!access) return [];
+
+  const now = new Date();
+  const firstMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const cutoff = `${firstMonth.getFullYear()}-${String(firstMonth.getMonth() + 1).padStart(2, "0")}`;
+
+  const rows = await db
+    .select({
+      period: expenses.period,
+      amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
+      dueDate: expenses.dueDate,
+    })
+    .from(expenses)
+    .where(and(access, gte(expenses.period, cutoff)));
+
+  type Bucket = { billed: number; paid: number; allFuture: boolean };
+  const months = new Map<string, Bucket>();
+  for (let i = 11; i >= 0; i -= 1) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.set(
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+      { billed: 0, paid: 0, allFuture: true },
+    );
+  }
+
+  for (const row of rows) {
+    const month = months.get(row.period);
+    if (!month) continue;
+    month.billed += row.amountCents;
+    month.paid += Math.min(row.paidCents, row.amountCents);
+    if (row.dueDate.getTime() <= now.getTime()) month.allFuture = false;
+  }
+
+  return Array.from(months.entries()).map(([period, m]) => {
+    const state = ((): MonthPaymentState => {
+      if (m.billed === 0) return "sin";
+      if (m.paid >= m.billed) return "pagado";
+      // Nada vencido todavía: no es deuda, está por vencer.
+      if (m.allFuture) return "pendiente";
+      return m.paid > 0 ? "parcial" : "debe";
+    })();
+    return { period, state, billedCents: m.billed, paidCents: m.paid };
+  });
+}
 
 export type ExpenseRow = {
   id: string;
