@@ -88,6 +88,7 @@ export default async function AdminExpendituresPage({
               category={category}
               month={month}
               basePath={basePath}
+              resultCount={paginated.total}
             />
             <div className="flex flex-col gap-1 border-t pt-4 text-center">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">

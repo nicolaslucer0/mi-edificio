@@ -1,5 +1,6 @@
 import {
   SkeletonExpenditureCard,
+  SkeletonLine,
   SkeletonList,
   SkeletonPageHeader,
 } from "@/components/skeletons";
@@ -11,16 +12,17 @@ export default function GastosLoading() {
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
         <SkeletonPageHeader />
+        <SkeletonLine box="h-5" bar="h-3" width="w-full max-w-sm" />
         <Card>
           <CardContent className="flex flex-col gap-4 p-5">
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Skeleton className="h-11 w-full" />
-              <Skeleton className="h-11 w-full" />
+            {/* Botón "Filtrar" (h-11) y, si hay filtros puestos, sus chips. */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-11 w-28 rounded-lg" />
             </div>
-            <div className="flex flex-col items-center gap-1.5 border-t pt-4">
-              <Skeleton className="h-3 w-32" />
-              <Skeleton className="h-9 w-36" />
-              <Skeleton className="h-3 w-16" />
+            <div className="flex flex-col items-center border-t pt-4">
+              <SkeletonLine box="h-4" bar="h-3" width="w-32" />
+              <SkeletonLine box="h-9" bar="h-7" width="w-40" />
+              <SkeletonLine box="h-4" bar="h-3" width="w-16" />
             </div>
           </CardContent>
         </Card>

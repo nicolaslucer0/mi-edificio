@@ -79,7 +79,11 @@ export default async function ExpendituresPage({
 
         <Card>
           <CardContent className="flex flex-col gap-4 p-5">
-            <ExpenditureFilters category={category} month={month} />
+            <ExpenditureFilters
+              category={category}
+              month={month}
+              resultCount={paginated.total}
+            />
             <div className="flex flex-col gap-1 border-t pt-4 text-center">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 Total {periodLabel}
