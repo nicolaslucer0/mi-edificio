@@ -241,8 +241,29 @@
   }
 }
 
+/* Respiración de la ilustración de "estás al día". Lenta y mínima a
+   propósito: acompaña la sensación de calma, no pide atención. La red de
+   seguridad de prefers-reduced-motion de más abajo la apaga. */
+.animate-breathe {
+  animation: breathe 6s ease-in-out infinite;
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-6px) scale(1.015);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-stagger] > * {
+    animation: none;
+  }
+
+  .animate-breathe {
     animation: none;
   }
 

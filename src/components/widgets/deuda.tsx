@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { AlertCircle, ArrowRight } from "lucide-react";
 import { getDebtForUser } from "@/lib/queries/expenses";
-import { formatCurrencyCents } from "@/lib/format";
+import { formatCurrencyCents, formatDueUrgency } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CelebrateScene } from "@/components/illustrations";
@@ -35,38 +35,70 @@ export async function DeudaWidget({ user, consorcioId }: Readonly<WidgetProps>) 
   );
 }
 
+/**
+ * Compacta y con el tono de alerta puesto en el color y el ícono, no en el
+ * tamaño ni en el movimiento: una tarjeta enorme y parpadeando en rojo es
+ * hostil, sobre todo para un vecino grande. Ocupa poco y se entiende rápido.
+ */
 function DebtCard({
   debt,
 }: Readonly<{
-  debt: { amountCents: number; count: number };
+  debt: { amountCents: number; count: number; nextDueDate: Date | null };
 }>) {
+  const urgency = debt.nextDueDate ? formatDueUrgency(debt.nextDueDate) : null;
+
   return (
     <Card
       role="region"
       aria-labelledby="debt-label"
       aria-live="polite"
-      className="border-destructive/15 bg-card shadow-sm"
+      className="border-l-4 border-l-destructive bg-destructive/5 shadow-sm"
     >
-      <CardContent className="flex flex-col items-center gap-3 p-7 text-center sm:p-8">
-        <p
-          id="debt-label"
-          className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
-        >
-          Tu deuda
-        </p>
-        <p className="text-5xl font-bold tracking-tight tabular-nums text-destructive sm:text-6xl">
-          {formatCurrencyCents(debt.amountCents)}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {debt.count === 1
-            ? "1 expensa pendiente"
-            : `${debt.count} expensas pendientes`}
-        </p>
+      <CardContent className="flex flex-col gap-4 p-5">
+        <div className="flex items-start gap-3">
+          <span
+            aria-hidden="true"
+            className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-destructive/10 text-destructive"
+          >
+            <AlertCircle className="size-5" />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <p
+              id="debt-label"
+              className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+            >
+              Tu deuda
+            </p>
+            <p className="text-3xl font-bold tracking-tight text-destructive">
+              {formatCurrencyCents(debt.amountCents)}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {debt.count === 1
+                ? "1 expensa pendiente"
+                : `${debt.count} expensas pendientes`}
+              {urgency && (
+                <>
+                  {" · "}
+                  <span
+                    className={cn(
+                      "font-semibold",
+                      urgency.tone === "danger"
+                        ? "text-destructive"
+                        : "text-foreground",
+                    )}
+                  >
+                    {urgency.label}
+                  </span>
+                </>
+              )}
+            </p>
+          </div>
+        </div>
         <Link
           href="/expensas"
           className={cn(
             buttonVariants(),
-            "mt-3 h-12 w-full max-w-xs gap-2 text-base touch-manipulation",
+            "h-12 w-full gap-2 text-base touch-manipulation",
           )}
         >
           Ver detalle
@@ -77,6 +109,11 @@ function DebtCard({
   );
 }
 
+/**
+ * La contracara: acá el espacio es el mensaje. Aire, una ilustración grande
+ * que respira despacio y una línea que dice que no hace falta estar
+ * revisando — que es lo que de verdad baja la ansiedad.
+ */
 function UpToDateCard() {
   return (
     <Card
@@ -84,13 +121,19 @@ function UpToDateCard() {
       aria-live="polite"
       className="border-success/25 bg-success/5 shadow-sm dark:bg-success/10"
     >
-      <CardContent className="flex flex-col items-center gap-3 p-7 text-center sm:p-8">
-        <CelebrateScene className="h-auto w-36" />
-        <p className="text-3xl font-bold tracking-tight text-success text-balance sm:text-4xl">
-          Estás al día 🎉
-        </p>
-        <p className="text-sm leading-relaxed text-success/80 dark:text-success-foreground/70">
-          No tenés expensas pendientes.
+      <CardContent className="flex flex-col items-center gap-4 px-6 py-10 text-center sm:py-14">
+        <CelebrateScene className="h-auto w-44 animate-breathe sm:w-52" />
+        <div className="flex flex-col gap-2">
+          <p className="text-3xl font-bold tracking-tight text-success text-balance sm:text-4xl">
+            Estás al día 🎉
+          </p>
+          <p className="text-base leading-relaxed text-success/80 text-balance dark:text-success-foreground/70">
+            No tenés ninguna expensa pendiente.
+          </p>
+        </div>
+        <p className="text-sm leading-relaxed text-muted-foreground text-balance">
+          Te avisamos cuando llegue la próxima. No hace falta que entres a
+          chequear.
         </p>
       </CardContent>
     </Card>

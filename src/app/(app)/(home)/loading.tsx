@@ -22,14 +22,21 @@ export default function HomeLoading() {
       </section>
 
       <div className="mx-auto grid w-full max-w-2xl grid-cols-1 gap-7 sm:grid-cols-2">
-        {/* Deuda: card propia, centrada, sin header, con el link debajo. */}
+        {/* Deuda: card propia, sin header, con el link debajo. Dibujamos la
+            variante compacta (con deuda); la de "estás al día" es bastante
+            más alta y no se puede saber cuál toca hasta tener el dato. */}
         <section className="flex flex-col gap-3 sm:col-span-2">
-          <Card className="border-destructive/15 shadow-sm">
-            <CardContent className="flex flex-col items-center gap-3 p-7 text-center sm:p-8">
-              <SkeletonLine box="h-4" bar="h-3" width="w-20" />
-              <SkeletonLine box="h-12 sm:h-15" bar="h-10" width="w-56" />
-              <SkeletonLine box="h-5" bar="h-3" width="w-32" />
-              <Skeleton className="mt-3 h-12 w-full max-w-xs rounded-lg" />
+          <Card className="border-l-4 border-l-muted shadow-sm">
+            <CardContent className="flex flex-col gap-4 p-5">
+              <div className="flex items-start gap-3">
+                <Skeleton className="size-10 shrink-0 rounded-2xl" />
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <SkeletonLine box="h-4" bar="h-3" width="w-20" />
+                  <SkeletonLine box="h-9" bar="h-7" width="w-40" />
+                  <SkeletonLine box="h-5" bar="h-3" width="w-52" />
+                </div>
+              </div>
+              <Skeleton className="h-12 w-full rounded-lg" />
             </CardContent>
           </Card>
           <SkeletonLine
