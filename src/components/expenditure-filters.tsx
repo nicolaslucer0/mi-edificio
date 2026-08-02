@@ -52,7 +52,16 @@ export function ExpenditureFilters({
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
 
+  // Lo elegido adentro del panel es un borrador: recién se aplica al
+  // confirmar. Además de evitar una navegación por cada tap, saca de encima
+  // la transición de página, que dibuja una captura del contenido por arriba
+  // del modal mientras anima (ver (app)/template.tsx).
+  const [draftCategory, setDraftCategory] = useState(category);
+  const [draftMonth, setDraftMonth] = useState(month);
+
   const activeCount = (category ? 1 : 0) + (month ? 1 : 0);
+  const draftCount = (draftCategory ? 1 : 0) + (draftMonth ? 1 : 0);
+  const draftChanged = draftCategory !== category || draftMonth !== month;
 
   function setParams(changes: Record<string, string | null>) {
     const params = new URLSearchParams(searchParams.toString());
@@ -68,6 +77,27 @@ export function ExpenditureFilters({
     });
   }
 
+  function handleOpenChange(next: boolean) {
+    // Al abrir, el borrador arranca de lo aplicado; al cerrar sin confirmar,
+    // se descarta.
+    if (next) {
+      setDraftCategory(category);
+      setDraftMonth(month);
+    }
+    setOpen(next);
+  }
+
+  function applyDraft() {
+    // Primero cerrar: así la transición de página arranca con el panel ya
+    // fuera de pantalla.
+    setOpen(false);
+    if (!draftChanged) return;
+    setParams({
+      category: draftCategory ?? null,
+      month: draftMonth ?? null,
+    });
+  }
+
   const fields = (
     <>
       <fieldset className="flex flex-col gap-3">
@@ -77,9 +107,10 @@ export function ExpenditureFilters({
             <CategoryTile
               key={c}
               category={c}
-              selected={category === c}
-              disabled={pending}
-              onToggle={() => setParams({ category: category === c ? null : c })}
+              selected={draftCategory === c}
+              onToggle={() =>
+                setDraftCategory(draftCategory === c ? undefined : c)
+              }
             />
           ))}
         </div>
@@ -93,18 +124,16 @@ export function ExpenditureFilters({
           <Input
             id="filter-month"
             type="month"
-            value={month ?? ""}
+            value={draftMonth ?? ""}
             max={currentPeriod()}
-            disabled={pending}
-            onChange={(e) => setParams({ month: e.target.value || null })}
+            onChange={(e) => setDraftMonth(e.target.value || undefined)}
             className="h-12 flex-1 text-base"
           />
-          {month && (
+          {draftMonth && (
             <Button
               type="button"
               variant="ghost"
-              disabled={pending}
-              onClick={() => setParams({ month: null })}
+              onClick={() => setDraftMonth(undefined)}
               className="h-12 shrink-0 touch-manipulation"
             >
               Todos
@@ -122,17 +151,25 @@ export function ExpenditureFilters({
     <>
       <Button
         type="button"
-        onClick={() => setOpen(false)}
+        onClick={applyDraft}
         className="h-12 text-base touch-manipulation"
       >
-        {resultCount === 1 ? "Ver 1 gasto" : `Ver ${resultCount} gastos`}
+        {/* Sin cambios podemos prometer el número exacto; con cambios todavía
+            no lo sabemos, así que no lo inventamos. */}
+        {draftChanged
+          ? "Aplicar filtros"
+          : resultCount === 1
+            ? "Ver 1 gasto"
+            : `Ver ${resultCount} gastos`}
       </Button>
-      {activeCount > 0 && (
+      {draftCount > 0 && (
         <Button
           type="button"
           variant="ghost"
-          disabled={pending}
-          onClick={() => setParams({ category: null, month: null })}
+          onClick={() => {
+            setDraftCategory(undefined);
+            setDraftMonth(undefined);
+          }}
           className="h-11 text-base touch-manipulation"
         >
           Limpiar filtros
@@ -146,7 +183,7 @@ export function ExpenditureFilters({
       <Button
         type="button"
         variant={activeCount > 0 ? "default" : "outline"}
-        onClick={() => setOpen(true)}
+        onClick={() => handleOpenChange(true)}
         className="h-11 px-4 text-base touch-manipulation"
       >
         <SlidersHorizontal aria-hidden="true" className="size-4" />
@@ -169,7 +206,7 @@ export function ExpenditureFilters({
         />
       )}
 
-      <ResponsiveDialog open={open} onOpenChange={setOpen}>
+      <ResponsiveDialog open={open} onOpenChange={handleOpenChange}>
         <ResponsiveDialogContent>
           <ResponsiveDialogHeader>
             <ResponsiveDialogTitle>Filtrar gastos</ResponsiveDialogTitle>
@@ -207,12 +244,10 @@ function FilterChip({
 function CategoryTile({
   category,
   selected,
-  disabled,
   onToggle,
 }: Readonly<{
   category: ExpenditureCategory;
   selected: boolean;
-  disabled: boolean;
   onToggle: () => void;
 }>) {
   const Icon = CATEGORY_ICON[category];
@@ -221,7 +256,6 @@ function CategoryTile({
     <button
       type="button"
       onClick={onToggle}
-      disabled={disabled}
       aria-pressed={selected}
       className={cn(
         "relative flex min-h-20 flex-col items-start gap-2 rounded-xl border p-3 text-left transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
