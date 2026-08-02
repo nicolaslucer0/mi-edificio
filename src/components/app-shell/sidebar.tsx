@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/illustrations";
 import { UserMenu } from "./user-menu";
@@ -73,26 +74,13 @@ export function Sidebar({
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "group/nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-foreground text-background shadow-sm"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
+                  className="block rounded-xl"
                 >
-                  <Icon
-                    aria-hidden="true"
-                    className="size-4.5 shrink-0"
-                    strokeWidth={active ? 2.4 : 2}
+                  <SidebarItemVisual
+                    Icon={Icon}
+                    label={item.label}
+                    active={active}
                   />
-                  <span
-                    className={cn(
-                      "leading-none transition-all",
-                      active ? "font-semibold" : "font-medium",
-                    )}
-                  >
-                    {item.label}
-                  </span>
                 </Link>
               </li>
             );
@@ -113,5 +101,40 @@ export function Sidebar({
         <NotificationsBell unreadCount={unreadCount} items={notifications} />
       </div>
     </aside>
+  );
+}
+
+/** Se pinta como activo apenas lo tocás (ver BottomNav para el porqué). */
+function SidebarItemVisual({
+  Icon,
+  label,
+  active,
+}: Readonly<{ Icon: LucideIcon; label: string; active: boolean }>) {
+  const { pending } = useLinkStatus();
+  const highlighted = active || pending;
+
+  return (
+    <span
+      className={cn(
+        "group/nav-item flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
+        highlighted
+          ? "bg-foreground text-background shadow-sm"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground",
+      )}
+    >
+      <Icon
+        aria-hidden="true"
+        className="size-4.5 shrink-0"
+        strokeWidth={highlighted ? 2.4 : 2}
+      />
+      <span
+        className={cn(
+          "leading-none transition-all",
+          highlighted ? "font-semibold" : "font-medium",
+        )}
+      >
+        {label}
+      </span>
+    </span>
   );
 }

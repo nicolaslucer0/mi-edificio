@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNavItems } from "./nav-items";
 
@@ -30,40 +31,58 @@ export function BottomNav({ isAdmin, hasAmenities }: Readonly<Props>) {
                 href={item.href}
                 aria-current={active ? "page" : undefined}
                 aria-label={item.label}
-                className={cn(
-                  "group/nav-item flex flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-1.5 text-[11px] font-medium touch-manipulation transition-colors",
-                  active
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
+                className="group/nav-item flex flex-col items-center justify-center gap-1.5 rounded-2xl px-2 py-1.5 text-[11px] font-medium touch-manipulation"
               >
-                <span
-                  className={cn(
-                    "relative flex h-9 w-12 items-center justify-center rounded-2xl transition-all duration-300 ease-out",
-                    active
-                      ? "bg-foreground text-background scale-100 shadow-sm"
-                      : "bg-transparent scale-95 group-hover/nav-item:bg-muted group-active/nav-item:scale-90",
-                  )}
-                >
-                  <Icon
-                    aria-hidden="true"
-                    className="size-4.5 transition-all duration-300"
-                    strokeWidth={active ? 2.4 : 2}
-                  />
-                </span>
-                <span
-                  className={cn(
-                    "leading-none transition-all",
-                    active ? "font-semibold" : "font-medium",
-                  )}
-                >
-                  {item.label}
-                </span>
+                <NavItemVisual Icon={Icon} label={item.label} active={active} />
               </Link>
             </li>
           );
         })}
       </ul>
     </nav>
+  );
+}
+
+/**
+ * El ítem se pinta como activo apenas lo tocás, sin esperar a que la ruta
+ * termine de cargar. La navegación tarda lo mismo, pero deja de sentirse como
+ * que el toque no hizo nada: la respuesta es inmediata y el contenido llega
+ * cuando llega.
+ */
+function NavItemVisual({
+  Icon,
+  label,
+  active,
+}: Readonly<{ Icon: LucideIcon; label: string; active: boolean }>) {
+  const { pending } = useLinkStatus();
+  const highlighted = active || pending;
+
+  return (
+    <>
+      <span
+        className={cn(
+          "relative flex h-9 w-12 items-center justify-center rounded-2xl transition-all duration-300 ease-out",
+          highlighted
+            ? "bg-foreground text-background scale-100 shadow-sm"
+            : "bg-transparent scale-95 group-hover/nav-item:bg-muted group-active/nav-item:scale-90",
+        )}
+      >
+        <Icon
+          aria-hidden="true"
+          className="size-4.5 transition-all duration-300"
+          strokeWidth={highlighted ? 2.4 : 2}
+        />
+      </span>
+      <span
+        className={cn(
+          "leading-none transition-colors",
+          highlighted
+            ? "font-semibold text-foreground"
+            : "font-medium text-muted-foreground group-hover/nav-item:text-foreground",
+        )}
+      >
+        {label}
+      </span>
+    </>
   );
 }
