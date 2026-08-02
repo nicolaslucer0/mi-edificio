@@ -16,6 +16,10 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExpenditureFilters } from "@/components/expenditure-filters";
+import {
+  FilterPendingProvider,
+  PendingResults,
+} from "@/components/filter-pending";
 import { ExpenditureItem } from "@/components/expenditure-item";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
@@ -62,6 +66,40 @@ export default async function ExpendituresPage({
   const isFiltered = Boolean(category || month);
   const periodLabel = month ? formatPeriod(month) : "todos los meses";
 
+  const results =
+    paginated.items.length === 0 ? (
+      <Card>
+        <CardContent className="p-8 text-center text-muted-foreground">
+          {isFiltered
+            ? "No hay gastos con esos filtros."
+            : "Todavía no hay gastos cargados."}
+        </CardContent>
+      </Card>
+    ) : (
+      <>
+        <ul
+          className="flex flex-col gap-3"
+          aria-label="Lista de gastos del consorcio"
+        >
+          {paginated.items.map((item) => (
+            <li key={item.id}>
+              <ExpenditureItem item={item} />
+            </li>
+          ))}
+        </ul>
+
+        {paginated.totalPages > 1 && (
+          <Pagination
+            page={paginated.page}
+            totalPages={paginated.totalPages}
+            category={category}
+            month={month}
+            basePath="/gastos"
+          />
+        )}
+      </>
+    );
+
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
@@ -77,61 +115,34 @@ export default async function ExpendituresPage({
           Acá podés ver en qué se está gastando la plata del consorcio.
         </p>
 
-        <Card>
-          <CardContent className="flex flex-col gap-4 p-5">
-            <ExpenditureFilters
-              category={category}
-              month={month}
-              resultCount={paginated.total}
-            />
-            <div className="flex flex-col gap-1 border-t pt-4 text-center">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Total {periodLabel}
-              </p>
-              <p className="text-3xl font-bold tabular-nums">
-                {formatCurrencyCents(paginated.totalCents)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {paginated.total === 1
-                  ? "1 gasto"
-                  : `${paginated.total} gastos`}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {paginated.items.length === 0 ? (
+        <FilterPendingProvider>
           <Card>
-            <CardContent className="p-8 text-center text-muted-foreground">
-              {isFiltered
-                ? "No hay gastos con esos filtros."
-                : "Todavía no hay gastos cargados."}
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            <ul
-              className="flex flex-col gap-3"
-              aria-label="Lista de gastos del consorcio"
-            >
-              {paginated.items.map((item) => (
-                <li key={item.id}>
-                  <ExpenditureItem item={item} />
-                </li>
-              ))}
-            </ul>
-
-            {paginated.totalPages > 1 && (
-              <Pagination
-                page={paginated.page}
-                totalPages={paginated.totalPages}
+            <CardContent className="flex flex-col gap-4 p-5">
+              <ExpenditureFilters
                 category={category}
                 month={month}
-                basePath="/gastos"
+                resultCount={paginated.total}
               />
-            )}
-          </>
-        )}
+              <PendingResults className="border-t pt-4">
+                <div className="flex flex-col gap-1 text-center">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Total {periodLabel}
+                  </p>
+                  <p className="text-3xl font-bold tabular-nums">
+                    {formatCurrencyCents(paginated.totalCents)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {paginated.total === 1
+                      ? "1 gasto"
+                      : `${paginated.total} gastos`}
+                  </p>
+                </div>
+              </PendingResults>
+            </CardContent>
+          </Card>
+
+          <PendingResults>{results}</PendingResults>
+        </FilterPendingProvider>
       </div>
     </main>
   );

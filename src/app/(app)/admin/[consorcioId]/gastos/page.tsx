@@ -16,6 +16,10 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { ExpenditureFilters } from "@/components/expenditure-filters";
+import {
+  FilterPendingProvider,
+  PendingResults,
+} from "@/components/filter-pending";
 import { ExpenditureItem } from "@/components/expenditure-item";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
@@ -82,58 +86,64 @@ export default async function AdminExpendituresPage({
           Cargar gasto nuevo
         </Link>
 
-        <Card>
-          <CardContent className="flex flex-col gap-4 p-5">
-            <ExpenditureFilters
-              category={category}
-              month={month}
-              basePath={basePath}
-              resultCount={paginated.total}
-            />
-            <div className="flex flex-col gap-1 border-t pt-4 text-center">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Total {periodLabel}
-              </p>
-              <p className="text-3xl font-bold tabular-nums">
-                {formatCurrencyCents(paginated.totalCents)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {paginated.total === 1
-                  ? "1 gasto"
-                  : `${paginated.total} gastos`}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {emptyStateNode ?? (
-          <>
-            <ul
-              className="flex flex-col gap-3"
-              aria-label="Lista de gastos del consorcio"
-            >
-              {paginated.items.map((item) => (
-                <li key={item.id}>
-                  <ExpenditureItem
-                    item={item}
-                    showAdminActions
-                    editHrefBase={basePath}
-                  />
-                </li>
-              ))}
-            </ul>
-
-            {paginated.totalPages > 1 && (
-              <Pagination
-                consorcioId={consorcioId}
-                page={paginated.page}
-                totalPages={paginated.totalPages}
+        <FilterPendingProvider>
+          <Card>
+            <CardContent className="flex flex-col gap-4 p-5">
+              <ExpenditureFilters
                 category={category}
                 month={month}
+                basePath={basePath}
+                resultCount={paginated.total}
               />
+              <PendingResults className="border-t pt-4">
+                <div className="flex flex-col gap-1 text-center">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Total {periodLabel}
+                  </p>
+                  <p className="text-3xl font-bold tabular-nums">
+                    {formatCurrencyCents(paginated.totalCents)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {paginated.total === 1
+                      ? "1 gasto"
+                      : `${paginated.total} gastos`}
+                  </p>
+                </div>
+              </PendingResults>
+            </CardContent>
+          </Card>
+
+          <PendingResults>
+            {emptyStateNode ?? (
+              <>
+                <ul
+                  className="flex flex-col gap-3"
+                  aria-label="Lista de gastos del consorcio"
+                >
+                  {paginated.items.map((item) => (
+                    <li key={item.id}>
+                      <ExpenditureItem
+                        item={item}
+                        showAdminActions
+                        editHrefBase={basePath}
+                      />
+                    </li>
+                  ))}
+                </ul>
+
+                {paginated.totalPages > 1 && (
+                  <Pagination
+                    consorcioId={consorcioId}
+                    page={paginated.page}
+                    totalPages={paginated.totalPages}
+                    category={category}
+                    month={month}
+                  />
+                )}
+              </>
             )}
-          </>
-        )}
+          </PendingResults>
+        </FilterPendingProvider>
       </div>
     </main>
   );

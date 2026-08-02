@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, SlidersHorizontal, X } from "lucide-react";
+import { Check, Loader2, SlidersHorizontal, X } from "lucide-react";
 import {
   ResponsiveDialog,
   ResponsiveDialogBody,
@@ -24,6 +24,7 @@ import {
 } from "@/lib/format";
 import { CATEGORY_ICON, CATEGORY_TONE } from "@/lib/expenditure-categories";
 import { TILE_TONES } from "@/lib/tones";
+import { useFilterPending } from "@/components/filter-pending";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -49,7 +50,9 @@ export function ExpenditureFilters({
 }: Readonly<Props>) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [pending, startTransition] = useTransition();
+  // La transición se comparte con la lista de resultados, que se atenúa
+  // mientras carga (ver components/filter-pending.tsx).
+  const { pending, start } = useFilterPending();
   const [open, setOpen] = useState(false);
 
   // Lo elegido adentro del panel es un borrador: recién se aplica al
@@ -72,7 +75,7 @@ export function ExpenditureFilters({
     // Al cambiar un filtro, la paginación vuelve al principio.
     params.delete("page");
     const qs = params.toString();
-    startTransition(() => {
+    start(() => {
       router.push(qs ? `${basePath}?${qs}` : basePath);
     });
   }
@@ -186,9 +189,16 @@ export function ExpenditureFilters({
         onClick={() => handleOpenChange(true)}
         className="h-11 px-4 text-base touch-manipulation"
       >
-        <SlidersHorizontal aria-hidden="true" className="size-4" />
-        Filtrar
-        {activeCount > 0 && ` · ${activeCount}`}
+        {pending ? (
+          <Loader2
+            aria-hidden="true"
+            className="size-4 animate-spin motion-reduce:animate-none"
+          />
+        ) : (
+          <SlidersHorizontal aria-hidden="true" className="size-4" />
+        )}
+        {pending ? "Buscando…" : "Filtrar"}
+        {!pending && activeCount > 0 && ` · ${activeCount}`}
       </Button>
 
       {category && (
