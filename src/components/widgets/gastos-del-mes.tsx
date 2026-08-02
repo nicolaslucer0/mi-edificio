@@ -45,7 +45,7 @@ export async function GastosDelMesWidget({
         label: "Ver detalle",
         ariaLabel: "Ver el detalle de los gastos del consorcio",
       }}
-      contentClassName="flex flex-col gap-2 py-1"
+      contentClassName="flex flex-col gap-2"
     >
       <p className="text-2xl font-bold tracking-tight">
         {formatCurrencyCents(breakdown.totalCents)}

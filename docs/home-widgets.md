@@ -120,6 +120,12 @@ contenido → `footer` opcional debajo de la card.
 
 - **El header va arriba de la card, no adentro**, que es como ya se veía
   "Últimos movimientos". Por eso el refactor no cambia nada visualmente.
+- **La card crece con `flex-1`**, así dos widgets `half` en la misma fila
+  terminan con la misma altura. Sin eso cada card mide lo que mide su contenido
+  y la fila queda despareja.
+- **El contenido va con `p-5`**, el mismo padding que las tarjetas del resto de
+  la app. Un widget puede pisarlo (la lista de movimientos usa `px-5 py-1`
+  porque sus filas ya traen el suyo), pero por defecto todos miden igual.
 - Reusa `Card` de shadcn y la paleta de tonos, que se movió de `page-header.tsx`
   a `lib/tones.ts` para que header de pantalla y widget usen la misma
   (`violet | blue | green | amber | coral | teal`), con las clases literales —
@@ -165,6 +171,21 @@ El refactor mueve lo que ya existe, sin tocar el diseño:
 
 Recién después entra el widget nuevo de estado de pagos (ver
 `docs/estado-de-pagos.md`), que ya no toca `page.tsx`.
+
+## Skeleton
+
+El home vive en el grupo de rutas `(app)/(home)/` para tener su propio
+`loading.tsx`: el `loading.tsx` de `(app)` es el genérico que comparten otras
+quince rutas, y un skeleton con forma de home no les sirve a ellas.
+
+`WidgetCardSkeleton` está exportado desde `widget-card.tsx`, al lado del
+componente real, y repite su estructura con barras: misma celda, mismo header,
+mismo `p-5`. Cambiar uno sin el otro salta a la vista en el mismo archivo.
+
+Las barras de texto usan `SkeletonLine`, que envuelve la barra en una caja del
+alto de la línea real (`text-sm` → `h-5`, `text-2xl` → `h-8`, …). Así el
+skeleton ocupa exactamente lo mismo que el contenido y la página no salta al
+cargar.
 
 ## Fuera de alcance por ahora
 

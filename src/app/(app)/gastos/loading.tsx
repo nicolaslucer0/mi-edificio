@@ -1,7 +1,7 @@
 import {
   SkeletonExpenditureCard,
   SkeletonList,
-  SkeletonPageTitle,
+  SkeletonPageHeader,
 } from "@/components/skeletons";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +10,7 @@ export default function GastosLoading() {
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
       <div className="flex w-full max-w-2xl flex-col gap-6">
-        <SkeletonPageTitle />
+        <SkeletonPageHeader />
         <Card>
           <CardContent className="flex flex-col gap-4 p-5">
             <div className="flex flex-col gap-3 sm:flex-row">

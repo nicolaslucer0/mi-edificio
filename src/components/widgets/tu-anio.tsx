@@ -93,7 +93,7 @@ export async function TuAnioWidget({
         label: "Ver expensas",
         ariaLabel: "Ver todas tus expensas",
       }}
-      contentClassName="flex flex-col gap-3 py-1"
+      contentClassName="flex flex-col gap-3"
     >
       <p className="text-sm leading-relaxed">
         Pagaste{" "}

@@ -2,14 +2,28 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
-export function SkeletonHeader({ className }: { className?: string }) {
+/**
+ * Una línea de texto. La caja (`box`) mide lo mismo que la línea real y la
+ * barra va centrada adentro: así el bloque ocupa exactamente el alto del texto
+ * que reemplaza y la página no salta cuando carga.
+ *
+ * Alturas de línea de Tailwind: text-xs → h-4, text-sm → h-5, text-base → h-6,
+ * text-lg → h-7, text-2xl → h-8, text-3xl → h-9, text-4xl → h-10.
+ */
+export function SkeletonLine({
+  box,
+  bar = "h-4",
+  width,
+  className,
+}: {
+  box: string;
+  bar?: string;
+  width: string;
+  className?: string;
+}) {
   return (
-    <div className={cn("flex items-center gap-3", className)}>
-      <Skeleton className="size-9 shrink-0 rounded-lg" />
-      <div className="flex flex-1 flex-col gap-1.5">
-        <Skeleton className="h-6 w-40" />
-        <Skeleton className="h-3 w-24" />
-      </div>
+    <div className={cn("flex items-center", box, className)}>
+      <Skeleton className={cn(bar, width)} />
     </div>
   );
 }
@@ -110,11 +124,24 @@ export function SkeletonExpenditureCard() {
   );
 }
 
-export function SkeletonPageTitle() {
+/**
+ * Espejo de `PageHeader`: botón de volver (size-9), tile de ícono (size-10
+ * rounded-2xl) y el título, con subtítulo opcional. Las medidas son las mismas
+ * que las del componente real.
+ */
+export function SkeletonPageHeader({
+  subtitle = false,
+}: {
+  subtitle?: boolean;
+}) {
   return (
     <div className="flex items-center gap-3">
       <Skeleton className="size-9 shrink-0 rounded-lg" />
-      <Skeleton className="h-7 w-48" />
+      <Skeleton className="size-10 shrink-0 rounded-2xl" />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <SkeletonLine box="h-8" bar="h-5" width="w-44" />
+        {subtitle && <SkeletonLine box="h-4" bar="h-3" width="w-28" />}
+      </div>
     </div>
   );
 }

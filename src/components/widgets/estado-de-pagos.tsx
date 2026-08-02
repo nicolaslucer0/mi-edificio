@@ -43,7 +43,7 @@ export async function EstadoDePagosWidget({
         label: "Ver balance",
         ariaLabel: "Ver el balance del consorcio",
       }}
-      contentClassName="flex flex-col gap-2 py-1"
+      contentClassName="flex flex-col gap-2"
     >
       <MonthNav
         period={period}
