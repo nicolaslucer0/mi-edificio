@@ -1,11 +1,5 @@
 import { requireUser, roleLabel } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
-import { getDebtForUser, type DebtSummary } from "@/lib/queries/expenses";
-import {
-  formatCurrencyCents,
-  formatDate,
-  formatDueUrgency,
-} from "@/lib/format";
 import { widgetsForUser } from "@/components/widgets/registry";
 
 function getGreeting(): string {
@@ -27,21 +21,6 @@ function getFirstName(name: string | null, email: string): string {
   return email.split("@")[0];
 }
 
-function buildStatusSummary(debt: DebtSummary): string | null {
-  if (!debt.hasUnit) return null;
-  if (debt.amountCents === 0) return "Estás al día con las expensas.";
-  const plural =
-    debt.count === 1 ? "expensa pendiente" : "expensas pendientes";
-  let summary = `Debés ${formatCurrencyCents(debt.amountCents)} en ${debt.count} ${plural}.`;
-  if (debt.nextDueDate) {
-    const urgency = formatDueUrgency(debt.nextDueDate);
-    summary += urgency
-      ? ` La próxima ${urgency.label.toLowerCase()}.`
-      : ` La próxima vence el ${formatDate(debt.nextDueDate)}.`;
-  }
-  return summary;
-}
-
 export default async function Home({
   searchParams,
 }: Readonly<{
@@ -49,13 +28,9 @@ export default async function Home({
 }>) {
   const user = await requireUser();
   const consorcioId = await getCurrentConsorcioId(user);
-  const [debt, params] = await Promise.all([
-    getDebtForUser(user, consorcioId),
-    searchParams,
-  ]);
+  const params = await searchParams;
 
   const firstName = getFirstName(user.name, user.email);
-  const summary = buildStatusSummary(debt);
   const widgets = widgetsForUser(user);
 
   return (
@@ -65,14 +40,11 @@ export default async function Home({
         <h1 className="text-3xl font-bold tracking-tight text-balance">
           {firstName} 👋
         </h1>
+        {/* Sin resumen de deuda acá: lo decía igual que la tarjeta de abajo,
+            dos veces la misma frase en la misma pantalla. */}
         <p className="mt-1 text-sm text-muted-foreground">
           {roleLabel(user.primaryRole)}
         </p>
-        {summary && (
-          <p className="mt-3 text-base leading-relaxed text-foreground/90 text-balance">
-            {summary}
-          </p>
-        )}
       </section>
 
       {/* Grilla de widgets: una columna en mobile, dos en desktop. Cada widget

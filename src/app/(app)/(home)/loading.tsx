@@ -12,13 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function HomeLoading() {
   return (
     <main className="flex flex-1 flex-col gap-7 px-4 pt-6 pb-10 sm:px-6">
-      {/* Saludo: "Buenas tardes," (text-sm) + nombre (text-3xl) + rol (text-sm)
-          + resumen (text-base con mt-3). */}
+      {/* Saludo: "Buenas tardes," (text-sm) + nombre (text-3xl) + rol (text-sm). */}
       <section className="mx-auto w-full max-w-2xl">
         <SkeletonLine box="h-5" bar="h-3" width="w-28" />
         <SkeletonLine box="h-9" bar="h-7" width="w-48" />
         <SkeletonLine box="h-5" bar="h-3" width="w-36" className="mt-1" />
-        <SkeletonLine box="h-6" bar="h-4" width="w-64" className="mt-3" />
       </section>
 
       <div className="mx-auto grid w-full max-w-2xl grid-cols-1 gap-7 sm:grid-cols-2">

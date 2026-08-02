@@ -116,20 +116,17 @@ function UpToDateCard() {
       aria-live="polite"
       className="border-success/25 bg-success/5 shadow-sm dark:bg-success/10"
     >
-      <CardContent className="flex flex-col items-center gap-4 px-6 py-10 text-center sm:py-14">
-        <CelebrateScene className="h-auto w-44 animate-breathe sm:w-52" />
-        <div className="flex flex-col gap-2">
-          <p className="text-3xl font-bold tracking-tight text-success text-balance sm:text-4xl">
+      <CardContent className="flex items-center gap-4 p-5 sm:gap-5 sm:p-6">
+        <CelebrateScene className="h-auto w-20 shrink-0 animate-breathe sm:w-24" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <p className="text-2xl font-bold tracking-tight text-success text-balance">
             Estás al día 🎉
           </p>
-          <p className="text-base leading-relaxed text-success/80 text-balance dark:text-success-foreground/70">
-            No tenés ninguna expensa pendiente.
+          <p className="text-sm leading-relaxed text-muted-foreground text-balance">
+            Te avisamos cuando llegue la próxima. No hace falta que entres a
+            chequear.
           </p>
         </div>
-        <p className="text-sm leading-relaxed text-muted-foreground text-balance">
-          Te avisamos cuando llegue la próxima. No hace falta que entres a
-          chequear.
-        </p>
       </CardContent>
     </Card>
   );
