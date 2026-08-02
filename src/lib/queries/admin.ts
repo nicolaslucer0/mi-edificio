@@ -218,27 +218,25 @@ export async function getConsorcioDashboardStats(
     unitCount,
     vecinoCount,
   ] = await Promise.all([
+    // Lo efectivamente cobrado, incluidos los pagos parciales. Mismo criterio
+    // que /balance (ver getConsorcioCash) para que los dos números coincidan.
     db
       .select({
-        total: sql<number>`coalesce(sum(${expenses.amountCents}), 0)::int`,
+        total: sql<number>`coalesce(sum(least(${expenses.paidCents}, ${expenses.amountCents})), 0)::int`,
       })
       .from(expenses)
       .innerJoin(units, eq(units.id, expenses.unitId))
-      .where(
-        and(
-          eq(units.consorcioId, consorcioId),
-          eq(expenses.status, "pagado"),
-        ),
-      ),
+      .where(eq(units.consorcioId, consorcioId)),
     db
       .select({
         total: sql<number>`coalesce(sum(${expenditures.amountCents}), 0)::int`,
       })
       .from(expenditures)
       .where(eq(expenditures.consorcioId, consorcioId)),
+    // Lo que falta cobrar del mes: descuenta lo ya pagado de cada expensa.
     db
       .select({
-        total: sql<number>`coalesce(sum(${expenses.amountCents}), 0)::int`,
+        total: sql<number>`coalesce(sum(greatest(${expenses.amountCents} - ${expenses.paidCents}, 0)), 0)::int`,
         count: sql<number>`count(*)::int`,
       })
       .from(expenses)

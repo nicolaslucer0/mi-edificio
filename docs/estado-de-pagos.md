@@ -32,10 +32,17 @@ necesario** y que el consorcio pueda apagarla por completo.
   descuentan, igual que ya hace `getDebtForUser`.
 - **La sección vive en `/balance`**, que ya es la página de transparencia del
   consorcio. Hay que entrar a buscarla.
+- **La deuda es acumulada, y se dice.** El listado suma la deuda vencida de
+  cualquier período, no la del mes. Por eso en `/balance` va bajo el título
+  "Deuda acumulada" y separado del bloque mensual: son dos preguntas distintas
+  ("cómo venimos este mes" vs. "quién arrastra deuda") y mezclarlas confunde más
+  de lo que aclara.
 - **El admin decide si va algo en el home** (flag aparte). Si lo activa, aparece
-  un **widget con el resumen** y link a `/balance` — nunca el listado por unidad,
-  en ningún nivel. El widget entra por el sistema de
-  [widgets del home](./home-widgets.md).
+  un widget con la **cobranza del mes en curso** —"Cobranza de agosto · pagaron
+  14 de 20 unidades"— y link a `/balance`. Nunca el listado por unidad, en
+  ningún nivel, y nunca el acumulado: en el inicio, un número sin mes al lado de
+  "Últimos movimientos" se lee como si fuera del mes. El widget entra por el
+  sistema de [widgets del home](./home-widgets.md).
 - **Se activa en silencio.** No hay mail de aviso ni cartel de "activado el
   DD/MM": el admin lo prende y los vecinos lo ven la próxima vez que entran.
 - **Sin ranking.** Orden por piso y depto, misma tipografía para todos. Ordenar
@@ -89,28 +96,35 @@ query personal como la del consorcio lo consuman.
 
 ## Flujos / UX
 
-### Vecino — sección en `/balance`
+### Vecino — sección "Deuda acumulada" en `/balance`
 
-Título: **"Estado de pagos del consorcio"**. Nunca se usa la palabra "morosos".
+Última sección de la pantalla, después del mes a mes y separada por una línea.
+Nunca se usa la palabra "morosos".
 
+- Bajada fija: "Expensas vencidas sin pagar, de este mes y de los anteriores".
+  Es lo que evita leerlo como si fuera del mes.
 - Nivel `resumen`: una tarjeta con "14 de 20 unidades al día" y "Faltan cobrar
   $340.000".
+- Nivel `por_unidad`: la misma tarjeta + el listado debajo. Filas simples:
+  `3° B · 2 expensas vencidas · $85.000`. La fila de tu unidad lleva la marca
+  "tu unidad".
+- Si están todas al día: "Todas las unidades están al día 🎉" y no se lista nada.
 
 > **"Al día" significa lo mismo en todos lados:** sin deuda vencida, contando
 > toda la deuda y no solo la del mes. Es la misma idea que ya usa el home
 > ("Estás al día"). El denominador son las unidades con expensas ya emitidas.
-- Nivel `por_unidad`: la misma tarjeta de resumen + el listado debajo. Filas
-  simples: `3° B · 2 meses · $85.000`. La fila de tu unidad lleva la marca
-  "tu unidad".
-- Si están todas al día: "Todas las unidades están al día 🎉" y no se lista nada.
+
+El resto de la pantalla —caja, mes en curso, mes a mes— está en
+[balance](./balance.md).
 
 ### Vecino — widget en el home (solo si `debtOnHome`)
 
-Widget `estado-de-pagos` (`span: "half"`, order 20) con el resumen: "14 de 20
-unidades al día" y la acción "Ver detalle" hacia `/balance`. Sin monto destacado,
-sin rojo, sin listado. Devuelve `null` —y por lo tanto no ocupa lugar en la
-grilla— si el nivel es `off` o si `debtOnHome` está apagado. Contrato en
-[widgets del home](./home-widgets.md).
+Widget `estado-de-pagos` (`span: "half"`, order 20), **acotado al mes en curso**:
+título "Cobranza de agosto", cuerpo "Pagaron 14 de 20 unidades" + "Falta cobrar
+$X de este mes", acción "Ver balance". Sin acumulado, sin listado, sin rojo.
+Devuelve `null` —y por lo tanto no ocupa lugar en la grilla— si el nivel es `off`,
+si `debtOnHome` está apagado o si el mes todavía no tiene expensas emitidas.
+Contrato en [widgets del home](./home-widgets.md).
 
 ### Admin — `/admin/[consorcioId]/estado-de-pagos`
 
