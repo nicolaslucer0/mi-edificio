@@ -177,18 +177,34 @@
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Page-level View Transitions: gentle crossfade on navigation */
+/* View Transitions al navegar.
+
+   La transición se aplica SOLO al área de contenido, no a la raíz. Animando
+   `root` se captura la pantalla entera —barra de arriba, sidebar y barra de
+   abajo incluidas— y toda la app se desvanece en cada toque de la navegación:
+   se siente como si recargara todo, aunque el ruteo no recargue nada. Con un
+   nombre propio en el contenedor del contenido, el shell queda fijo y solo
+   cambia lo que de verdad cambió. */
+#main-content {
+  view-transition-name: app-content;
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
+  animation: none;
+}
+
+::view-transition-old(app-content),
+::view-transition-new(app-content) {
   animation-duration: 220ms;
   animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-::view-transition-old(root) {
+::view-transition-old(app-content) {
   animation-name: vt-fade-out;
 }
 
-::view-transition-new(root) {
+::view-transition-new(app-content) {
   animation-name: vt-fade-in-up;
 }
 
@@ -215,8 +231,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-old(app-content),
+  ::view-transition-new(app-content) {
     animation-duration: 0.01ms;
     animation-name: -ua-view-transition-fade-in,
       -ua-view-transition-fade-out;
