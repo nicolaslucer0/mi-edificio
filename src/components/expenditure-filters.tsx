@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check, SlidersHorizontal, X } from "lucide-react";
 import {
@@ -12,8 +12,19 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  currentPeriod,
   EXPENDITURE_CATEGORIES,
   formatExpenditureCategory,
   formatPeriod,
@@ -21,20 +32,8 @@ import {
 } from "@/lib/format";
 import { CATEGORY_ICON, CATEGORY_TONE } from "@/lib/expenditure-categories";
 import { TILE_TONES } from "@/lib/tones";
+import { useMediaQuery } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
-
-/** Meses que se ofrecen como chips. */
-const MONTHS_SHOWN = 6;
-
-function lastMonths(n: number): string[] {
-  const now = new Date();
-  const out: string[] = [];
-  for (let i = 0; i < n; i += 1) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-  }
-  return out;
-}
 
 type Props = {
   category: string | undefined;
@@ -61,7 +60,8 @@ export function ExpenditureFilters({
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
-  const months = useMemo(() => lastMonths(MONTHS_SHOWN), []);
+  // En pantalla grande un panel que sube desde abajo queda raro: va modal.
+  const isDesktop = useMediaQuery("(min-width: 640px)");
 
   const activeCount = (category ? 1 : 0) + (month ? 1 : 0);
 
@@ -78,6 +78,79 @@ export function ExpenditureFilters({
       router.push(qs ? `${basePath}?${qs}` : basePath);
     });
   }
+
+  const fields = (
+    <>
+      <fieldset className="flex flex-col gap-3">
+        <legend className="mb-1 text-base font-medium">Categoría</legend>
+        <div className="grid grid-cols-2 gap-2">
+          {EXPENDITURE_CATEGORIES.map((c) => (
+            <CategoryTile
+              key={c}
+              category={c}
+              selected={category === c}
+              disabled={pending}
+              onToggle={() => setParams({ category: category === c ? null : c })}
+            />
+          ))}
+        </div>
+      </fieldset>
+
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="filter-month" className="text-base font-medium">
+          Mes
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="filter-month"
+            type="month"
+            value={month ?? ""}
+            max={currentPeriod()}
+            disabled={pending}
+            onChange={(e) => setParams({ month: e.target.value || null })}
+            className="h-12 flex-1 text-base"
+          />
+          {month && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={pending}
+              onClick={() => setParams({ month: null })}
+              className="h-12 shrink-0 touch-manipulation"
+            >
+              Todos
+            </Button>
+          )}
+        </div>
+        <p className="text-xs leading-relaxed text-muted-foreground">
+          Vacío = todos los meses.
+        </p>
+      </div>
+    </>
+  );
+
+  const footer = (
+    <>
+      <Button
+        type="button"
+        onClick={() => setOpen(false)}
+        className="h-12 text-base touch-manipulation"
+      >
+        {resultCount === 1 ? "Ver 1 gasto" : `Ver ${resultCount} gastos`}
+      </Button>
+      {activeCount > 0 && (
+        <Button
+          type="button"
+          variant="ghost"
+          disabled={pending}
+          onClick={() => setParams({ category: null, month: null })}
+          className="h-11 text-base touch-manipulation"
+        >
+          Limpiar filtros
+        </Button>
+      )}
+    </>
+  );
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -107,77 +180,35 @@ export function ExpenditureFilters({
         />
       )}
 
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Filtrar gastos</DrawerTitle>
-            <DrawerDescription>
-              Elegí una categoría, un mes, o los dos.
-            </DrawerDescription>
-          </DrawerHeader>
-
-          <DrawerBody className="gap-6">
-            <fieldset className="flex flex-col gap-3">
-              <legend className="mb-1 text-base font-medium">Categoría</legend>
-              <div className="grid grid-cols-2 gap-2">
-                {EXPENDITURE_CATEGORIES.map((c) => (
-                  <CategoryTile
-                    key={c}
-                    category={c}
-                    selected={category === c}
-                    disabled={pending}
-                    onToggle={() =>
-                      setParams({ category: category === c ? null : c })
-                    }
-                  />
-                ))}
-              </div>
-            </fieldset>
-
-            <fieldset className="flex flex-col gap-3">
-              <legend className="mb-1 text-base font-medium">Mes</legend>
-              <div className="flex flex-wrap gap-2">
-                <MonthChip
-                  label="Todos"
-                  selected={!month}
-                  disabled={pending}
-                  onSelect={() => setParams({ month: null })}
-                />
-                {months.map((m) => (
-                  <MonthChip
-                    key={m}
-                    label={formatPeriod(m)}
-                    selected={month === m}
-                    disabled={pending}
-                    onSelect={() => setParams({ month: month === m ? null : m })}
-                  />
-                ))}
-              </div>
-            </fieldset>
-          </DrawerBody>
-
-          <DrawerFooter>
-            <Button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="h-12 text-base touch-manipulation"
-            >
-              {resultCount === 1 ? "Ver 1 gasto" : `Ver ${resultCount} gastos`}
-            </Button>
-            {activeCount > 0 && (
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={pending}
-                onClick={() => setParams({ category: null, month: null })}
-                className="h-11 text-base touch-manipulation"
-              >
-                Limpiar filtros
-              </Button>
-            )}
-          </DrawerFooter>
-        </DrawerContent>
-      </Drawer>
+      {isDesktop ? (
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-lg">Filtrar gastos</DialogTitle>
+              <DialogDescription className="leading-relaxed">
+                Elegí una categoría, un mes, o los dos.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-6">{fields}</div>
+            <DialogFooter className="sm:flex-row-reverse sm:justify-start">
+              {footer}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : (
+        <Drawer open={open} onOpenChange={setOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle>Filtrar gastos</DrawerTitle>
+              <DrawerDescription>
+                Elegí una categoría, un mes, o los dos.
+              </DrawerDescription>
+            </DrawerHeader>
+            <DrawerBody className="gap-6">{fields}</DrawerBody>
+            <DrawerFooter>{footer}</DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      )}
     </div>
   );
 }
@@ -247,35 +278,6 @@ function CategoryTile({
           <Check className="size-3" strokeWidth={3} />
         </span>
       )}
-    </button>
-  );
-}
-
-function MonthChip({
-  label,
-  selected,
-  disabled,
-  onSelect,
-}: Readonly<{
-  label: string;
-  selected: boolean;
-  disabled: boolean;
-  onSelect: () => void;
-}>) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      disabled={disabled}
-      aria-pressed={selected}
-      className={cn(
-        "h-11 rounded-full border px-4 text-sm font-medium transition-colors touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border/60 bg-background text-muted-foreground hover:bg-muted/50",
-      )}
-    >
-      {label}
     </button>
   );
 }
