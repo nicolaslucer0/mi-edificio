@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -27,6 +27,7 @@ import { notifyNewExpense, notifyPaymentResolved } from "@/lib/notifications";
 import { remainingCents } from "@/lib/payments";
 import { applyCreditToUnit, recomputeExpensePaid } from "@/lib/credits";
 import { splitAmount } from "@/lib/expenses-split";
+import { CONSORCIOS_TAG } from "@/lib/consorcio-context";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -377,6 +378,7 @@ export async function updatePaymentInfo(
       paymentCbu: parsed.data.paymentCbu.trim() || null,
     })
     .where(eq(consorcios.id, parsed.data.consorcioId));
+  updateTag(CONSORCIOS_TAG);
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
@@ -432,6 +434,7 @@ export async function updateDebtBoardSettings(
       debtOnHome: visibility === "off" ? false : parsed.data.onHome,
     })
     .where(eq(consorcios.id, parsed.data.consorcioId));
+  updateTag(CONSORCIOS_TAG);
 
   revalidatePath("/admin", "layout");
   revalidatePath("/balance");
@@ -480,6 +483,7 @@ export async function updateOpeningBalance(
       openingBalanceDate: new Date(parsed.data.openingBalanceDate),
     })
     .where(eq(consorcios.id, parsed.data.consorcioId));
+  updateTag(CONSORCIOS_TAG);
 
   revalidatePath("/admin", "layout");
   revalidatePath("/balance");
@@ -1240,6 +1244,7 @@ export async function createConsorcio(
     type: parsed.data.type,
     address: parsed.data.address?.trim() || null,
   });
+  updateTag(CONSORCIOS_TAG);
 
   revalidatePath("/admin", "layout");
   return { ok: true };

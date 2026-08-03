@@ -1,4 +1,5 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { amenities, amenityReservations, units, users } from "@/lib/db/schema";
@@ -32,22 +33,44 @@ function isConsorcioMember(user: CurrentUser, consorcioId: string): boolean {
   return user.memberships.some((m) => m.consorcioId === consorcioId);
 }
 
-/** ¿El consorcio tiene al menos una amenity reservable? Para mostrar la nav. */
+/**
+ * Tag único para todo el cache de amenities.
+ *
+ * Un tag por consorcio sería más fino, pero acá lo cacheado es un booleano que
+ * cambia cuando un admin crea o borra un espacio común —dos veces por año— y
+ * el costo de invalidar de más es recalcular una consulta trivial. La
+ * complejidad no se paga.
+ */
+export const AMENITIES_TAG = "amenities";
+
+const getCachedHasReservable = unstable_cache(
+  async (consorcioId: string): Promise<boolean> => {
+    const [row] = await db
+      .select({ id: amenities.id })
+      .from(amenities)
+      .where(
+        and(
+          eq(amenities.consorcioId, consorcioId),
+          eq(amenities.reservable, true),
+        ),
+      )
+      .limit(1);
+    return row != null;
+  },
+  ["has-reservable-amenities"],
+  { tags: [AMENITIES_TAG] },
+);
+
+/**
+ * Si el consorcio tiene algún espacio reservable. Decide si el ítem
+ * "Amenities" aparece en la navegación, así que corría en **cada** request del
+ * layout para un dato que cambia casi nunca.
+ */
 export async function hasReservableAmenities(
   consorcioId: string | null,
 ): Promise<boolean> {
   if (!consorcioId) return false;
-  const [row] = await db
-    .select({ id: amenities.id })
-    .from(amenities)
-    .where(
-      and(
-        eq(amenities.consorcioId, consorcioId),
-        eq(amenities.reservable, true),
-      ),
-    )
-    .limit(1);
-  return row != null;
+  return getCachedHasReservable(consorcioId);
 }
 
 /** Todas las amenities de un consorcio. El caller valida acceso al consorcio. */

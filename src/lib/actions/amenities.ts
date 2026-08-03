@@ -1,10 +1,11 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { amenities, amenityReservations } from "@/lib/db/schema";
+import { AMENITIES_TAG } from "@/lib/queries/amenities";
 import { getCurrentUser, type CurrentUser } from "@/lib/session";
 import {
   MAX_ACTIVE_RESERVATIONS_PER_AMENITY,
@@ -79,6 +80,8 @@ export async function createAmenity(
   });
 
   revalidatePath(`/admin/${consorcioId}/amenities`);
+
+  updateTag(AMENITIES_TAG);
   revalidatePath("/amenities");
   return { ok: true };
 }
@@ -122,6 +125,8 @@ export async function updateAmenity(
     .where(eq(amenities.id, id));
 
   revalidatePath(`/admin/${consorcioId}/amenities`);
+
+  updateTag(AMENITIES_TAG);
   revalidatePath("/amenities");
   return { ok: true };
 }
@@ -139,6 +144,8 @@ export async function deleteAmenity(amenityId: string): Promise<ActionResult> {
   await db.delete(amenities).where(eq(amenities.id, amenityId));
 
   revalidatePath(`/admin/${existing.consorcioId}/amenities`);
+
+  updateTag(AMENITIES_TAG);
   revalidatePath("/amenities");
   return { ok: true };
 }
