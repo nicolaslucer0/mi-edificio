@@ -29,6 +29,18 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
+  /**
+   * Sesión en un JWT y no en la base.
+   *
+   * Con estrategia `database` cada request de la app hacía una consulta a
+   * Postgres solo para resolver quién sos, antes de tocar nada de la página.
+   * El JWT viaja en la cookie y se valida sin salir del proceso.
+   *
+   * El adapter se mantiene porque el magic link lo necesita para los tokens de
+   * verificación y para los usuarios; lo que deja de usarse es la tabla
+   * `sessions` (se conserva por si alguna vez se vuelve atrás).
+   */
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
     verifyRequest: "/login/verificar",
@@ -43,9 +55,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         .limit(1);
       return existing.length > 0;
     },
-    session({ session, user }) {
-      if (session.user && user?.id) {
-        session.user.id = user.id;
+    // Con JWT el id del usuario viaja en `token.sub`, no en un `user` que
+    // venga de la base: Auth.js lo pone al firmar y no se vuelve a consultar.
+    session({ session, token }) {
+      if (session.user && token.sub) {
+        session.user.id = token.sub;
       }
       return session;
     },
