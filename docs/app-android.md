@@ -269,6 +269,34 @@ redirect y fallaba en silencio.
 
 ## Parte 3 — Empaquetado
 
+### Ya arreglado: el ícono maskable no existía
+
+Apareció corriendo el build de producción antes de pushear la Parte 2:
+**`/icon-maskable` daba 404**, y el manifest apuntaba ahí.
+
+Next solo reconoce `favicon`, `icon` y `apple-icon` como convención de metadata,
+y para tener varios usa sufijo numérico (`icon1`, `icon2` —
+`app-icons.md:24-26,64`). Un `icon-maskable.tsx` no genera ninguna ruta: no
+aparecía en el build. Android se quedaba sin ícono adaptativo y usaba el normal,
+con sus esquinas redondeadas, adentro de la máscara del launcher.
+
+Se movió a `app/icon-maskable/route.tsx` (route handler): misma URL, y el head
+queda limpio — con `icon1.tsx` Next inyectaría un `<link rel="icon">` y el
+navegador podría usar la baldosa a sangre como favicon de la pestaña. Los GET de
+route handler son dinámicos por default desde v15, así que el `Cache-Control` va
+explícito en la respuesta (un día: se pide al instalar y al empaquetar, no en
+cada carga; sin hash en la URL, `immutable` dejaría el ícono viejo pegado para
+siempre).
+
+De paso, el manifest declaraba `sizes: "any"` para PNGs de 512×512. `any` es para
+SVG o tamaño indeterminado (`app-icons.md:68`), y tanto Bubblewrap como Play
+buscan un 512×512 declarado: ahora va explícito.
+
+Verificado contra el build: 200, `image/png`, `cache-control: public,
+max-age=86400`, y el PNG mide 512×512 de verdad.
+
+### Lo que falta
+
 - `bubblewrap init` apuntando al manifest de producción. `applicationId` estilo
   `ar.com.miedificio.app` — se elige una vez y no se cambia nunca más.
 - **Notificaciones**: Android 13+ pide el permiso runtime `POST_NOTIFICATIONS`.
@@ -284,23 +312,33 @@ redirect y fallaba en silencio.
 
 ---
 
+## Decisiones tomadas sobre el borrado
+
+- **Todo lo anterior queda.** Ninguna reserva de amenities se borra, tampoco las
+  pasadas; lo único que cambia es que no se muestra quién la hizo. Las futuras se
+  cancelan igual, para no dejar un turno tomado por una cuenta que ya no existe.
+- **La anonimización es real: el nombre no queda para nadie, el admin incluido.**
+  Se evaluó conservarlo y esconderlo solo de los otros vecinos, y se descartó: si
+  el nombre sigue en la base y algunos lo ven, "borrar mi cuenta" no borra la
+  identidad, y eso no se sostiene al lado de una política de privacidad. La
+  necesidad de auditoría ya está cubierta por la decisión de conservar los
+  comprobantes: el admin que necesita rastrear un pago abre el comprobante, que
+  tiene el nombre y el CBU.
+- **Un pago pendiente de validación no bloquea el borrado.** Se avisa en la
+  pantalla de confirmación ("se va a resolver igual y se acredita a tu unidad") y
+  el claim queda en la cola del admin como "Cuenta dada de baja". Bloquear
+  dejaría al vecino esperando a un tercero por algo que Play pide que esté
+  siempre disponible. Los únicos bloqueos son `super_admin` y único `admin` de un
+  consorcio.
+
 ## Decisiones abiertas
 
-1. **Reservas de amenities pasadas**: ¿se borran también o se conservan por si
-   hay una discusión sobre quién usó el SUM? La propuesta cancela solo las
-   futuras.
-2. **Trazabilidad vs privacidad en gastos y comunicados**: un gasto con
-   comprobante cargado por un admin que después se da de baja queda como "Cuenta
-   dada de baja". ¿Alcanza, o para roles de admin conviene conservar el nombre
-   por auditoría?
-3. **Pago pendiente de validación**: ¿bloquea el borrado o solo se avisa? Yo
-   avisaría — bloquear deja al vecino rehén de que el admin resuelva.
-4. **Cuenta de Play personal u organización**: con personal, tu nombre y tu mail
+1. **Cuenta de Play personal u organización**: con personal, tu nombre y tu mail
    quedan públicos en el listing. Define también si hay que pasar por los 12
    testers.
-5. **Dominio de producción y `applicationId`**: los necesito para el
+2. **Dominio de producción y `applicationId`**: los necesito para el
    `assetlinks.json`.
-6. **OTP en vez de magic link**: mejora la UX del login (no hay que saltar a
+3. **OTP en vez de magic link**: mejora la UX del login (no hay que saltar a
    Gmail), pero no es requisito del TWA. ¿Entra acá o va aparte?
 
 ## Impacto en archivos
