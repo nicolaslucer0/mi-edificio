@@ -285,6 +285,85 @@ Adjuntamos el detalle en CSV (se abre con Excel o Google Sheets).`;
   });
 }
 
+/**
+ * Emails de los vecinos que reciben un comunicado: todo el consorcio, o solo
+ * los de una unidad.
+ */
+export async function getAnnouncementEmails(params: {
+  consorcioId: string;
+  unitId: string | null;
+  excludeUserId: string;
+}): Promise<string[]> {
+  const rows = await db
+    .select({ id: users.id, email: users.email })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(
+      and(
+        params.unitId
+          ? eq(memberships.unitId, params.unitId)
+          : eq(memberships.consorcioId, params.consorcioId),
+        or(eq(memberships.role, "owner"), eq(memberships.role, "tenant")),
+      ),
+    );
+
+  const seen = new Set<string>();
+  const emails: string[] = [];
+  for (const r of rows) {
+    if (!r.email || r.id === params.excludeUserId || seen.has(r.id)) continue;
+    seen.add(r.id);
+    emails.push(r.email);
+  }
+  return emails;
+}
+
+export type AnnouncementEmailParams = {
+  to: string[];
+  consorcioName: string;
+  title: string;
+  body: string;
+};
+
+/**
+ * El comunicado por mail. No consulta `notificationPrefs`: es el canal del
+ * administrador y no se silencia (ver docs/comunicados-y-consultas.md).
+ */
+export async function sendAnnouncementEmail(
+  params: AnnouncementEmailParams,
+): Promise<void> {
+  if (params.to.length === 0) return;
+
+  const from = process.env.AUTH_RESEND_FROM ?? "onboarding@resend.dev";
+  const subject = `${params.consorcioName}: ${params.title}`;
+
+  const text = `${params.title}
+
+${params.body}
+
+— Administración de ${params.consorcioName}
+Vas a encontrar este aviso en ${baseUrl}/comunicados`;
+
+  // El cuerpo lo escribe una persona en un textarea: se escapa y los saltos de
+  // línea se respetan como párrafos.
+  const bodyHtml = params.body
+    .split("\n")
+    .map((line) =>
+      line.trim()
+        ? `<p style="margin:0 0 12px;line-height:1.6;">${escapeHtml(line)}</p>`
+        : "",
+    )
+    .join("");
+
+  const html = `<div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#18181b;">
+<p style="margin:0 0 4px;font-size:13px;color:#71717a;">${escapeHtml(params.consorcioName)}</p>
+<h2 style="margin:0 0 16px;font-size:20px;">${escapeHtml(params.title)}</h2>
+${bodyHtml}
+<p style="margin-top:24px;color:#71717a;font-size:13px;line-height:1.5;">Este aviso también está en <a href="${baseUrl}/comunicados" style="color:#6435c0;">Mi edificio</a>.</p>
+</div>`;
+
+  await resend.emails.send({ from, to: params.to, subject, text, html });
+}
+
 export type PaymentRejectedParams = {
   to: string;
   period: string;

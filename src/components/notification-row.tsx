@@ -3,21 +3,18 @@ import {
   CalendarClock,
   CheckCircle2,
   Clock,
+  Megaphone,
   Receipt,
   XCircle,
   type LucideIcon,
 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/format";
+import type { NotificationType } from "@/lib/notification-types";
 import { cn } from "@/lib/utils";
 
 export type NotificationView = {
   id: string;
-  type:
-    | "claim_to_validate"
-    | "payment_confirmed"
-    | "payment_rejected"
-    | "new_expense"
-    | "due_reminder";
+  type: NotificationType;
   title: string;
   body: string | null;
   href: string | null;
@@ -26,7 +23,7 @@ export type NotificationView = {
 };
 
 const ICON_BY_TYPE: Record<
-  NotificationView["type"],
+  NotificationType,
   { icon: LucideIcon; classes: string }
 > = {
   claim_to_validate: { icon: Clock, classes: "bg-primary/10 text-primary" },
@@ -43,6 +40,11 @@ const ICON_BY_TYPE: Record<
   due_reminder: {
     icon: CalendarClock,
     classes: "bg-spot-amber-soft text-spot-amber",
+  },
+  // El canal del administrador: violeta, el color de la marca.
+  announcement: {
+    icon: Megaphone,
+    classes: "bg-spot-violet-soft text-spot-violet",
   },
 };
 

@@ -12,6 +12,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
+import { NOTIFICATION_TYPES } from "@/lib/notification-types";
 
 export const consorcioTypeEnum = pgEnum("consorcio_type", [
   "edificio",
@@ -71,13 +72,10 @@ export const debtVisibilityEnum = pgEnum("debt_visibility", [
   "por_unidad",
 ]);
 
-export const notificationTypeEnum = pgEnum("notification_type", [
-  "claim_to_validate",
-  "payment_confirmed",
-  "payment_rejected",
-  "new_expense",
-  "due_reminder",
-]);
+export const notificationTypeEnum = pgEnum(
+  "notification_type",
+  NOTIFICATION_TYPES,
+);
 
 export type NotificationPrefs = {
   newExpense: boolean;
@@ -345,6 +343,30 @@ export const notifications = pgTable(
     createdAt: timestamp().defaultNow().notNull(),
   },
   (t) => [index("notification_user_idx").on(t.userId)],
+);
+
+// Avisos que manda el administrador y que no son de plata: un corte de agua,
+// una asamblea, una encomienda para el 3° B. Ver
+// docs/comunicados-y-consultas.md.
+export const announcements = pgTable(
+  "announcement",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    consorcioId: uuid()
+      .notNull()
+      .references(() => consorcios.id, { onDelete: "cascade" }),
+    // Null = va a todo el consorcio.
+    unitId: uuid().references(() => units.id, { onDelete: "set null" }),
+    title: text().notNull(),
+    body: text().notNull(),
+    // Si además salió por mail. Lo decide el admin al mandarlo.
+    emailSent: boolean().notNull().default(false),
+    createdByUserId: text()
+      .notNull()
+      .references(() => users.id),
+    createdAt: timestamp().defaultNow().notNull(),
+  },
+  (t) => [index("announcement_consorcio_idx").on(t.consorcioId, t.createdAt)],
 );
 
 // Un dispositivo suscripto a las notificaciones push. El mismo vecino puede
