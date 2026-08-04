@@ -15,15 +15,18 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: "es-AR",
     scope: "/",
     categories: ["productivity", "finance"],
+    // Los tamaños van explícitos y no en "any": `any` es para SVG o cuando no
+    // se puede determinar el tamaño, y tanto Bubblewrap (para empaquetar el
+    // TWA) como Play buscan un ícono de 512×512 declarado como tal.
     icons: [
       {
         src: "/icon",
-        sizes: "any",
+        sizes: "512x512",
         type: "image/png",
       },
       {
         src: "/icon-maskable",
-        sizes: "any",
+        sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
       },
