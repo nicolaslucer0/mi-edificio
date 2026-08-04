@@ -14,6 +14,19 @@ declare module "next-auth" {
   }
 }
 
+/**
+ * Rutas a las que se entra sin sesión.
+ *
+ * `/privacidad` y `/borrar-cuenta` son requisito de Google Play: la política de
+ * privacidad y el pedido de baja de cuenta tienen que poder leerse **sin
+ * instalar la app**, así que las tiene que ver cualquiera, incluido un revisor
+ * de Google. Ver `docs/app-android.md`.
+ *
+ * Los assets públicos (`sw.js`, el manifest, los íconos, `.well-known`) no van
+ * acá: se excluyen del matcher en `src/proxy.ts` para que el proxy ni corra.
+ */
+const PUBLIC_PATHS = ["/login", "/privacidad", "/borrar-cuenta"];
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -65,7 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     authorized({ auth, request }) {
       const path = request.nextUrl.pathname;
-      if (path.startsWith("/login")) return true;
+      if (PUBLIC_PATHS.some((p) => path.startsWith(p))) return true;
       return !!auth?.user;
     },
   },
