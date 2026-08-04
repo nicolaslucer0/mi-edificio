@@ -31,16 +31,28 @@ export default async function AppLayout({
   // The "+" acts on the selected consorcio when the user administers it,
   // otherwise on the first one they administer.
   let fabConsorcioId: string | null = null;
+  let adminCount = 0;
   if (isAdmin) {
     const adminIds = getAccessibleConsorcioIds(user);
     if (adminIds === "all") {
       fabConsorcioId = currentConsorcioId ?? consorcios[0]?.id ?? null;
+      adminCount = consorcios.length;
     } else if (currentConsorcioId && adminIds.includes(currentConsorcioId)) {
       fabConsorcioId = currentConsorcioId;
+      adminCount = adminIds.length;
     } else {
       fabConsorcioId = adminIds[0] ?? null;
+      adminCount = adminIds.length;
     }
   }
+
+  /**
+   * Con un solo consorcio administrado, `/admin` no hace más que redirigir a
+   * `/admin/<id>`: un viaje al servidor entero para descubrir algo que acá ya
+   * sabemos. La navegación apunta derecho al panel del consorcio.
+   */
+  const adminHref =
+    adminCount === 1 && fabConsorcioId ? `/admin/${fabConsorcioId}` : "/admin";
 
   return (
     <div className="flex min-h-full lg:flex-row flex-col">
@@ -56,6 +68,7 @@ export default async function AppLayout({
         isAdmin={isAdmin}
         isSuperAdmin={user.isSuperAdmin}
         hasAmenities={hasAmenities}
+        adminHref={adminHref}
         consorcios={consorcios}
         currentConsorcioId={currentConsorcioId}
         notifications={recentNotifications}
@@ -72,14 +85,21 @@ export default async function AppLayout({
           notifications={recentNotifications}
           unreadCount={unreadCount}
         />
+        {/* El padding de abajo sale del alto real de la barra (ver
+            `--bottom-nav-h` en globals.css) más un poco de aire, en vez de un
+            `pb-24` que había que recalcular a mano. */}
         <div
           id="main-content"
           tabIndex={-1}
-          className="flex flex-1 flex-col pb-24 outline-none lg:pb-0"
+          className="flex flex-1 flex-col pb-[calc(var(--bottom-nav-h)+0.75rem)] outline-none lg:pb-0"
         >
           {children}
         </div>
-        <BottomNav isAdmin={isAdmin} hasAmenities={hasAmenities} />
+        <BottomNav
+          isAdmin={isAdmin}
+          hasAmenities={hasAmenities}
+          adminHref={adminHref}
+        />
       </div>
       {isAdmin && <ActionFab consorcioId={fabConsorcioId} />}
     </div>

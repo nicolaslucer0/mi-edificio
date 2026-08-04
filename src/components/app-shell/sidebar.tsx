@@ -9,7 +9,7 @@ import { UserMenu } from "./user-menu";
 import { ConsorcioSelector } from "./consorcio-selector";
 import { NotificationsBell } from "./notifications-bell";
 import { ThemeToggle } from "./theme-toggle";
-import { getNavItems } from "./nav-items";
+import { getNavItems, navDirection } from "./nav-items";
 import type { NotificationView } from "@/components/notification-row";
 
 type Props = {
@@ -18,6 +18,8 @@ type Props = {
   isAdmin: boolean;
   isSuperAdmin: boolean;
   hasAmenities: boolean;
+  /** A dónde va "Admin". Ver `getNavItems`. */
+  adminHref?: string;
   consorcios: Array<{ id: string; name: string }>;
   currentConsorcioId: string | null;
   notifications: NotificationView[];
@@ -30,20 +32,22 @@ export function Sidebar({
   isAdmin,
   isSuperAdmin,
   hasAmenities,
+  adminHref,
   consorcios,
   currentConsorcioId,
   notifications,
   unreadCount,
 }: Readonly<Props>) {
   const pathname = usePathname();
-  const items = getNavItems(isAdmin, hasAmenities);
+  const items = getNavItems(isAdmin, hasAmenities, adminHref);
+  const currentIndex = items.findIndex((item) => item.isActive(pathname));
   const display = name ?? email;
 
   return (
     <aside
       aria-label="Navegación principal"
       data-print-hide
-      className="hidden lg:flex sticky top-0 h-screen w-64 shrink-0 flex-col border-r border-border/50 bg-background/85 backdrop-blur-md supports-backdrop-filter:bg-background/70"
+      className="vt-sidebar hidden lg:flex sticky top-0 h-screen w-64 shrink-0 flex-col border-r border-border/50 bg-background/85 backdrop-blur-md supports-backdrop-filter:bg-background/70"
     >
       <Link
         href="/"
@@ -67,7 +71,7 @@ export function Sidebar({
 
       <nav className="flex-1 px-3">
         <ul className="flex flex-col gap-1">
-          {items.map((item) => {
+          {items.map((item, index) => {
             const active = item.isActive(pathname);
             const Icon = item.icon;
             return (
@@ -75,6 +79,7 @@ export function Sidebar({
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
+                  transitionTypes={navDirection(currentIndex, index)}
                   className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <SidebarItemVisual

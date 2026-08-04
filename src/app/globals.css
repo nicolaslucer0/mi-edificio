@@ -101,6 +101,10 @@
   --spot-teal: oklch(0.58 0.11 200);
   --spot-teal-soft: oklch(0.945 0.042 200);
   --radius: 1rem;
+  /* La luz que barre los bloques del skeleton. En claro es blanco casi opaco
+     sobre el gris de `muted`; en oscuro apenas se insinúa, porque ahí un
+     blanco fuerte encandila. */
+  --skeleton-sheen: oklch(1 0 0 / 0.65);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -149,6 +153,7 @@
   --spot-violet-soft: oklch(0.33 0.08 300);
   --spot-teal: oklch(0.72 0.11 200);
   --spot-teal-soft: oklch(0.31 0.05 200);
+  --skeleton-sheen: oklch(1 0 0 / 0.07);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -175,67 +180,154 @@
 @theme inline {
   --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  /* Frena pasándose un poco de largo, como algo que tiene peso. Para lo que
+     "aterriza" en un lugar: la pastilla de la barra de abajo. */
+  --ease-settle: cubic-bezier(0.34, 1.28, 0.64, 1);
+}
+
+/* Alto real de la barra de abajo, en un solo lugar.
+
+   1 px de borde + 8 de padding arriba + 65 del ítem (12 de padding + 36 de
+   pastilla + 6 de gap + 11 de etiqueta) + 8 de padding abajo = 82 px, más la
+   franja del gesto de home en los teléfonos sin botón. El contenido reserva
+   este alto y el "+" se apoya sobre él: antes eran dos números sueltos
+   (`pb-24` y `bottom-[5.25rem]`) que había que acordarse de mover juntos.
+
+   En desktop la barra no existe —la navegación vive en el sidebar— y vale 0. */
+:root {
+  --bottom-nav-h: calc(5.125rem + env(safe-area-inset-bottom));
+}
+
+@media (min-width: 64rem) {
+  :root {
+    --bottom-nav-h: 0px;
+  }
 }
 
 /* View Transitions al navegar.
 
-   La transición se aplica SOLO al área de contenido, no a la raíz. Animando
-   `root` se captura la pantalla entera —barra de arriba, sidebar y barra de
-   abajo incluidas— y toda la app se desvanece en cada toque de la navegación:
-   se siente como si recargara todo, aunque el ruteo no recargue nada. Con un
-   nombre propio en el contenedor del contenido, el shell queda fijo y solo
-   cambia lo que de verdad cambió. */
-#main-content {
-  view-transition-name: app-content;
-}
+   Quién nombra qué: el `<ViewTransition>` de `template.tsx` le pone nombre y
+   clase al contenedor del contenido, y estas reglas dicen cómo se mueve. Antes
+   el nombre lo ponía este archivo sobre `#main-content`, encima del que pone
+   React: quedaban dos capas nombradas animando los mismos píxeles con curvas
+   distintas y el movimiento se veía doble, medio fantasma.
 
+   El shell —barra de arriba, barra de abajo, "+" y sidebar— lleva nombre
+   propio para quedar FUERA del snapshot del contenido. Sin eso el contenido se
+   dibuja ENCIMA de la barra de abajo mientras dura la transición: la capa de
+   las view transitions va en el top layer, por arriba de cualquier z-index, y
+   el snapshot del contenido incluye lo que estaba detrás de la barra (que es
+   translúcida). Eso era lo que se veía como los skeletons pisando la barra. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
 }
 
-::view-transition-old(app-content),
-::view-transition-new(app-content) {
-  animation-duration: 220ms;
-  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+.vt-top-bar {
+  view-transition-name: shell-top;
 }
 
-::view-transition-old(app-content) {
-  animation-name: vt-fade-out;
+.vt-bottom-nav {
+  view-transition-name: shell-bottom;
 }
 
-::view-transition-new(app-content) {
-  animation-name: vt-fade-in-up;
+.vt-fab {
+  view-transition-name: shell-fab;
 }
 
-@keyframes vt-fade-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.vt-sidebar {
+  view-transition-name: shell-side;
+}
+
+/* El shell no viaja: se queda quieto y por encima del contenido. El `display:
+   none` en el viejo evita el cruce de dos copias idénticas, que se nota como
+   un parpadeo del borde. */
+::view-transition-group(shell-top),
+::view-transition-group(shell-bottom),
+::view-transition-group(shell-fab),
+::view-transition-group(shell-side) {
+  animation: none;
+  z-index: 100;
+}
+
+::view-transition-old(shell-top),
+::view-transition-old(shell-bottom),
+::view-transition-old(shell-fab),
+::view-transition-old(shell-side) {
+  display: none;
+}
+
+::view-transition-new(shell-top),
+::view-transition-new(shell-bottom),
+::view-transition-new(shell-fab),
+::view-transition-new(shell-side) {
+  animation: none;
+}
+
+/* El contenido: el viejo se va rápido y el nuevo entra después, con el lugar
+   ya despejado. Antes los dos se movían al mismo tiempo, medio transparentes y
+   para el mismo lado: se superponían y no se leía ni uno ni el otro. */
+::view-transition-group(.content) {
+  animation-duration: 300ms;
+}
+
+::view-transition-old(.content) {
+  animation: 130ms ease-in both content-out;
+}
+
+::view-transition-new(.content) {
+  animation: 200ms ease-out 100ms both content-in;
+}
+
+/* Con dirección: al ir "más adentro" el contenido se corre para la izquierda y
+   el nuevo entra desde la derecha; al volver, al revés. Es la convención de
+   siempre —adelante es hacia la izquierda— y le dice al ojo si avanzaste o
+   volviste sin tener que leer nada. 28 px alcanzan para contarlo: más es una
+   pantalla que se va de viaje. */
+::view-transition-old(.forward) {
+  --out-x: -28px;
+  --out-y: 0;
+}
+
+::view-transition-new(.forward) {
+  --in-x: 28px;
+  --in-y: 0;
+}
+
+::view-transition-old(.back) {
+  --out-x: 28px;
+  --out-y: 0;
+}
+
+::view-transition-new(.back) {
+  --in-x: -28px;
+  --in-y: 0;
+}
+
+/* Sin dirección (un link cualquiera, o el cambio de skeleton a contenido real):
+   solo un levantar corto, que es lo que ya se sentía bien. */
+@keyframes content-out {
   to {
     opacity: 0;
-    transform: translateY(-4px);
+    translate: var(--out-x, 0) var(--out-y, -6px);
   }
 }
 
-@keyframes vt-fade-in-up {
+@keyframes content-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+    translate: var(--in-x, 0) var(--in-y, 8px);
   }
 }
 
+/* El `*` de más abajo no alcanza para las view transitions: los selectores
+   universales no matchean pseudo-elementos, así que hay que apagarlas acá. */
 @media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(app-content),
-  ::view-transition-new(app-content) {
-    animation-duration: 0.01ms;
-    animation-name: -ua-view-transition-fade-in,
-      -ua-view-transition-fade-out;
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
   }
 }
 
@@ -254,6 +346,89 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Los bloques del skeleton: una luz que barre, en vez de la pantalla entera
+   latiendo al unísono. El latido decía "esperá" y nada más; el barrido tiene
+   una dirección y se lee como que algo está pasando.
+
+   Barre con `translate` y no con `background-position` para que lo haga el
+   compositor sin repintar: en el home hay treinta bloques a la vez. */
+[data-slot="skeleton"] {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-slot="skeleton"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-sheen),
+    transparent
+  );
+  animation: skeleton-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes skeleton-sweep {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 100% 0;
+  }
+}
+
+/* La línea de progreso de la barra de abajo.
+
+   Arranca invisible y se muestra a los 140 ms: si la página llegó antes, nadie
+   la vio y el toque no tuvo un parpadeo de más. Si tarda, aparece y barre —que
+   es justamente lo que faltaba: algo que diga "la estoy trayendo" antes de que
+   el contenido cambie.
+
+   Cuál ítem está cargando lo sabe cada ítem (`useLinkStatus` solo se puede leer
+   adentro de un Link), pero la línea cruza la barra entera. En vez de subir ese
+   estado con un efecto y un render de más, el ítem se marca con
+   `data-nav-pending` y la barra lo lee con `:has()`. La línea es el `::before`
+   de la barra, así que se posiciona contra ella y no contra la lista.
+
+   No necesita recorte: la barra ocupa todo el ancho de la pantalla, así que
+   antes de entrar y después de salir la línea queda fuera de cuadro. Y como la
+   barra es `fixed`, eso no agrega scroll horizontal. */
+.nav-progress::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 33%;
+  height: 2px;
+  border-radius: 9999px;
+  background-color: var(--foreground);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nav-progress:has([data-nav-pending])::before {
+  animation:
+    nav-progress-in 140ms ease-out 140ms both,
+    nav-progress-sweep 1.1s ease-in-out 140ms infinite;
+}
+
+@keyframes nav-progress-in {
+  to {
+    opacity: 0.55;
+  }
+}
+
+@keyframes nav-progress-sweep {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 300% 0;
   }
 }
 
@@ -392,6 +567,16 @@
 @media (prefers-reduced-motion: reduce) {
   [data-stagger] > * {
     animation: none;
+  }
+
+  /* Sin animación el barrido quedaría parado fuera de cuadro y no se vería
+     nada. Se reemplaza por una línea entera y quieta: sigue diciendo
+     "cargando", nada más que sin moverse. El fundido de aparición se queda
+     —es opacidad, no movimiento— y con él la espera de 140 ms que evita el
+     parpadeo en las navegaciones rápidas. */
+  .nav-progress:has([data-nav-pending])::before {
+    width: 100%;
+    animation: nav-progress-in 140ms ease-out 140ms both;
   }
 
   /* Safety net: kill any animation/transition the user didn't consent to */

@@ -71,11 +71,15 @@ export default async function MasPage() {
   );
 }
 
+/** Desde "Más" siempre se entra: la pantalla nueva viene desde la derecha. */
+const FORWARD = ["nav-forward"];
+
 function NavRow({ item }: Readonly<{ item: NavItem }>) {
   const Icon = item.icon;
   return (
     <Link
       href={item.href}
+      transitionTypes={FORWARD}
       className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-muted/40 touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span

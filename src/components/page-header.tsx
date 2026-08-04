@@ -15,6 +15,12 @@ type Props = {
 };
 
 /**
+ * Volver siempre es volver: la pantalla se corre para la derecha, al revés de
+ * cuando entrás. Es la misma pista que da el gesto de atrás del teléfono.
+ */
+const BACK = ["nav-back"];
+
+/**
  * Header consistente para las pantallas internas: botón volver + un tile
  * de ícono con el color de la sección (mismo código de colores que el
  * dashboard) + título y subtítulo opcional, con una acción a la derecha.
@@ -33,6 +39,7 @@ export function PageHeader({
       <Link
         href={backHref}
         aria-label={backLabel}
+        transitionTypes={BACK}
         className={cn(
           buttonVariants({ variant: "outline", size: "icon-lg" }),
           "touch-manipulation",

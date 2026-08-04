@@ -111,14 +111,22 @@ const MORE_ITEM: NavItem = {
   primary: true,
 };
 
-/** Todos los destinos, en orden. Lo que usa el sidebar, que tiene espacio. */
+/**
+ * Todos los destinos, en orden. Lo que usa el sidebar, que tiene espacio.
+ *
+ * `adminHref` existe porque `/admin` es una pantalla que, cuando administrás un
+ * solo consorcio, no hace más que redirigir a `/admin/<id>`: un viaje al
+ * servidor entero para que después arranque el que valía. El layout ya sabe
+ * cuál es el consorcio, así que la barra apunta derecho ahí.
+ */
 export function getNavItems(
   isAdmin: boolean,
   hasAmenities: boolean,
+  adminHref: string = ADMIN_ITEM.href,
 ): NavItem[] {
   const items = [...ITEMS];
   if (hasAmenities) items.push(AMENITIES_ITEM);
-  if (isAdmin) items.push(ADMIN_ITEM);
+  if (isAdmin) items.push({ ...ADMIN_ITEM, href: adminHref });
   return items;
 }
 
@@ -126,9 +134,10 @@ export function getNavItems(
 export function getPrimaryNavItems(
   isAdmin: boolean,
   hasAmenities: boolean,
+  adminHref?: string,
 ): NavItem[] {
   return [
-    ...getNavItems(isAdmin, hasAmenities).filter((i) => i.primary),
+    ...getNavItems(isAdmin, hasAmenities, adminHref).filter((i) => i.primary),
     MORE_ITEM,
   ];
 }
@@ -139,4 +148,26 @@ export function getSecondaryNavItems(
   hasAmenities: boolean,
 ): NavItem[] {
   return getNavItems(isAdmin, hasAmenities).filter((i) => !i.primary);
+}
+
+/**
+ * Hacia dónde se mueve el contenido al ir de un ítem de la navegación a otro.
+ *
+ * La dirección sale de la posición en la barra: si toqué un ítem que está a la
+ * derecha del actual, la pantalla nueva entra desde la derecha. Es lo que hace
+ * cualquier app con pestañas, y es la única pista que necesita el ojo para no
+ * perderse entre dos pantallas que se parecen.
+ *
+ * Los arrays son constantes a propósito: son props de `<Link>` y así no cambian
+ * de identidad en cada render.
+ */
+const FORWARD = ["nav-forward"];
+const BACK = ["nav-back"];
+
+export function navDirection(
+  fromIndex: number,
+  toIndex: number,
+): string[] | undefined {
+  if (fromIndex < 0 || fromIndex === toIndex) return undefined;
+  return toIndex > fromIndex ? FORWARD : BACK;
 }
