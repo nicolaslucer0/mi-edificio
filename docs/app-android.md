@@ -295,14 +295,92 @@ buscan un 512×512 declarado: ahora va explícito.
 Verificado contra el build: 200, `image/png`, `cache-control: public,
 max-age=86400`, y el PNG mide 512×512 de verdad.
 
+### El host canónico es `www`, y no es un detalle
+
+`mi-edificio.com.ar` **redirige todo al `www` con 307** (verificado en producción).
+Y la verificación de Digital Asset Links **no sigue redirects**: Android pide
+`https://<host>/.well-known/assetlinks.json` y exige un 200 directo.
+
+Consecuencias, todas en la misma dirección:
+
+- El host del TWA es **`www.mi-edificio.com.ar`**, que hoy ya sirve 200 en todo.
+  El apex no puede verificarse mientras redirija.
+- **`AUTH_URL` en Vercel tiene que apuntar al mismo host.** Si el magic link sale
+  con el apex, Android no lo reconoce como App Link verificado y lo abre en
+  Chrome en vez de la app. Con TWA entrás igual (misma cookie jar), pero se
+  pierde que abra la app directo — que es justo lo que queríamos del deeplink.
+- Si alguna vez se da vuelta el canónico al apex, hay que mover el `assetlinks`,
+  actualizar `AUTH_URL` y volver a verificar. No es gratis.
+
+### Decisiones del empaquetado
+
+- **Host**: `www.mi-edificio.com.ar`.
+- **`applicationId`**: `ar.com.miedificio.app`. Los segmentos de un package de
+  Android no admiten guiones, así que `mi-edificio` no se puede usar tal cual (el
+  default de Bubblewrap sería `ar.com.mi_edificio`). Se elige una vez y no se
+  cambia nunca más.
+
+### Las dos firmas del `assetlinks.json`
+
+El archivo acepta un **array** de fingerprints, y hacen falta dos momentos
+distintos:
+
+1. **El keystore de debug**, para el spike: probar en un teléfono propio que el
+   dominio verifica, que el magic link entra en la app y que el push llega.
+2. **La firma de Play App Signing**, para la app publicada: Play **re-firma** el
+   `.aab`, así que el fingerprint que vale en producción es el de Google, no el
+   local. Ese aparece recién cuando la app existe en Play Console.
+
+Cuando entre el de Play, **sacar el de debug**: mientras esté, cualquiera que
+tenga ese keystore puede publicar una app que reclame los links del dominio.
+
+### Herramientas
+
+Ya instalado: **Java 17**, **Android SDK** con `adb` en
+`~/Library/Android/sdk`. Falta `@bubblewrap/cli` (`npm i -g @bubblewrap/cli`).
+
+### Estado del spike: el `.apk` está armado y el dominio verifica
+
+El proyecto TWA vive **fuera de este repo**, en `~/Development/personal/mi-edificio-twa/`
+(tiene el keystore adentro: nunca se commitea).
+
+Hecho y verificado:
+
+| Qué | Cómo se verificó |
+|---|---|
+| `POST_NOTIFICATIONS` en el manifest | `AndroidManifest.xml:26` — sin esto el push falla en silencio en Android 13+ |
+| App Links con `autoVerify` sobre el host | `AndroidManifest.xml:147-152`, `app/build.gradle:25` |
+| `applicationId` | `app/build.gradle:57` → `ar.com.miedificio.app` |
+| APK y AAB firmados | `app-release-signed.apk` (1,2 MB), `app-release-bundle.aab` (1,3 MB) |
+| **El fingerprint del APK == el del `assetlinks.json`** | `apksigner verify --print-certs` vs el archivo: `835bc2d1…8bbd`. Es el error que falla en silencio |
+| `assetlinks.json` en producción | 200, `content-type: application/json`, sin redirect |
+| **Google lee y parsea la declaración** | `digitalassetlinks.googleapis.com/v1/statements:list` devuelve el statement sin errores |
+
+En vez de `bubblewrap init` (que hace ~15 preguntas interactivas) se escribió el
+`twa-manifest.json` a mano y se corrió `bubblewrap update`. Queda reproducible y
+revisable, que con un wizard no pasa.
+
+**Dos trampas del entorno**, porque van a volver a aparecer:
+
+1. En macOS Bubblewrap hace `jdkPath + "/Contents/Home/"` (`JdkHelper.js:71`) y
+   valida `JAVA_VERSION="17.0` (`:98`). El JDK de SDKMAN está plano y el de
+   Android Studio es 21, así que ninguno sirve tal cual: hay un shim en
+   `~/.bubblewrap/jdk-17/Contents/Home` → el Zulu 17. Apunta a la versión
+   concreta a propósito, para que un `sdk use java 11` no rompa el build en
+   silencio.
+2. Exige build-tools **36.1.0** exacto (`AndroidSdkTools.js:25`) y para
+   instalarla llama al `sdkmanager` viejo de `tools/`, que necesita `javax.xml.bind`
+   —fuera del JDK desde Java 11— y explota. Se instala a mano con el
+   `sdkmanager` de `cmdline-tools/latest` y Bubblewrap ya no lo intenta.
+
 ### Lo que falta
 
-- `bubblewrap init` apuntando al manifest de producción. `applicationId` estilo
-  `ar.com.miedificio.app` — se elige una vez y no se cambia nunca más.
-- **Notificaciones**: Android 13+ pide el permiso runtime `POST_NOTIFICATIONS`.
-  Bubblewrap lo agrega si se le pide notificaciones al generar el proyecto; si
-  no, la campanita falla en silencio en los teléfonos nuevos.
-- Play App Signing: el SHA-256 de la firma es lo que va en `assetlinks.json`.
+- **Probar en un teléfono** (`adb install app-release-signed.apk`): que no
+  aparezca la barra de URL, que el magic link abra la app, que llegue el push.
+- `appVersion` quedó en 2 porque `bubblewrap update` lo bumpeó solo. Para Play
+  conviene arrancar en 1.
+- Play App Signing: cuando la app exista, agregar **su** fingerprint al
+  `assetlinks.json` y **sacar el de debug**.
 - Cuenta de Play Console: US$ 25 una vez. Con cuenta **personal**, Google pide
   **12 testers durante 14 días corridos** en closed testing antes de habilitar
   producción. Para un edificio, arrancar por **internal testing** (hasta 100
@@ -336,9 +414,12 @@ max-age=86400`, y el PNG mide 512×512 de verdad.
 1. **Cuenta de Play personal u organización**: con personal, tu nombre y tu mail
    quedan públicos en el listing. Define también si hay que pasar por los 12
    testers.
-2. **Dominio de producción y `applicationId`**: los necesito para el
-   `assetlinks.json`.
-3. **OTP en vez de magic link**: mejora la UX del login (no hay que saltar a
+2. **Qué dice `AUTH_URL` en Vercel**: tiene que ser `https://www.mi-edificio.com.ar`
+   para que el magic link abra la app directo. Hay que mirarlo, no se puede
+   inferir desde afuera.
+3. **Dónde vive el proyecto del TWA**: es un directorio con `build.gradle` y el
+   keystore, no va adentro del repo web.
+4. **OTP en vez de magic link**: mejora la UX del login (no hay que saltar a
    Gmail), pero no es requisito del TWA. ¿Entra acá o va aparte?
 
 ## Impacto en archivos
