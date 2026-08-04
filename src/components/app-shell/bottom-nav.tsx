@@ -4,7 +4,7 @@ import Link, { useLinkStatus } from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNavItems } from "./nav-items";
+import { getPrimaryNavItems } from "./nav-items";
 
 type Props = {
   isAdmin: boolean;
@@ -13,7 +13,7 @@ type Props = {
 
 export function BottomNav({ isAdmin, hasAmenities }: Readonly<Props>) {
   const pathname = usePathname();
-  const items = getNavItems(isAdmin, hasAmenities);
+  const items = getPrimaryNavItems(isAdmin, hasAmenities);
 
   return (
     <nav
