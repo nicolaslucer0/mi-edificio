@@ -21,8 +21,18 @@ export async function markAllNotificationsRead(): Promise<void> {
   revalidatePath("/", "layout");
 }
 
-/** Los cinco avisos que la app puede mandar, y el orden en que se muestran. */
-export const NOTIFICATION_PREF_KEYS = [
+/**
+ * Los cinco avisos que la app puede mandar, y el orden en que se muestran.
+ *
+ * NO se exporta: este archivo es `"use server"` y ahí solo pueden salir
+ * funciones async. Exportar el array hacía fallar la evaluación del módulo de
+ * actions —que se arma por página e incluye este archivo porque la campanita
+ * del layout importa `markAllNotificationsRead`—, así que rompía TODOS los
+ * server actions de la app con "A use server file can only export async
+ * functions, found object". Si algún día lo necesita otro módulo, va a un
+ * archivo aparte, no acá.
+ */
+const NOTIFICATION_PREF_KEYS = [
   "newExpense",
   "dueDateReminder",
   "paymentConfirmed",
