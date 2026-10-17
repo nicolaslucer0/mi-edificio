@@ -21,6 +21,7 @@ export type AdminExpenseRow = {
   period: string;
   dueDate: Date;
   amountCents: number;
+  paidCents: number;
   type: (typeof expenseTypeEnum.enumValues)[number];
   status: (typeof expenseStatusEnum.enumValues)[number];
   description: string | null;
@@ -69,6 +70,7 @@ export async function getExpensesForAdmin(
         period: expenses.period,
         dueDate: expenses.dueDate,
         amountCents: expenses.amountCents,
+        paidCents: expenses.paidCents,
         type: expenses.type,
         status: expenses.status,
         description: expenses.description,
@@ -192,6 +194,7 @@ export async function getExpenseForAdmin(
       period: expenses.period,
       dueDate: expenses.dueDate,
       amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
       type: expenses.type,
       status: expenses.status,
       description: expenses.description,

@@ -245,6 +245,115 @@ export async function rejectClaim(
   return { ok: true };
 }
 
+/**
+ * El admin registra un pago que el vecino no informó (lo vio en el extracto,
+ * le pagaron en mano). Queda como un claim ya aprobado a nombre del admin, así
+ * la deuda, los reportes y el recibo lo tratan como cualquier pago validado.
+ */
+export async function registerPayment(
+  expenseId: string,
+  amountCents: number,
+): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const [expense] = await db
+    .select({
+      id: expenses.id,
+      unitId: expenses.unitId,
+      unitLabel: units.label,
+      consorcioId: units.consorcioId,
+      period: expenses.period,
+      amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
+      status: expenses.status,
+    })
+    .from(expenses)
+    .innerJoin(units, eq(units.id, expenses.unitId))
+    .where(eq(expenses.id, expenseId))
+    .limit(1);
+  if (!expense) return { ok: false, error: "La expensa no existe." };
+  if (!canAccessConsorcio(ctx, expense.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+  // Si el vecino ya lo informó, se valida ese claim: registrar otro lo
+  // contaría dos veces.
+  if (expense.status === "en_validacion") {
+    return {
+      ok: false,
+      error: "Un vecino ya informó este pago. Confirmalo desde Aprobar pagos.",
+    };
+  }
+  const remaining = remainingCents(expense.amountCents, expense.paidCents);
+  if (remaining <= 0) return { ok: false, error: "Esta expensa ya está paga." };
+  const minCents = Math.min(100, remaining);
+  if (!Number.isInteger(amountCents) || amountCents < minCents) {
+    return { ok: false, error: "Ingresá un monto de al menos $1." };
+  }
+  // Como en el flujo del vecino, no se registra de más (v1).
+  const applied = Math.min(amountCents, remaining);
+  const now = new Date();
+
+  await db.insert(paymentClaims).values({
+    expenseId: expense.id,
+    claimedByUserId: ctx.userId,
+    claimedAt: now,
+    amountCents: applied,
+    confirmedAmountCents: applied,
+    note: "Registrado por la administración.",
+    resolution: "approved",
+    resolvedByUserId: ctx.userId,
+    resolvedAt: now,
+  });
+  await recomputeExpensePaid(expense.id);
+
+  // Se avisa a todos los de la unidad: no sabemos quién pagó, y así nadie
+  // vuelve a apretar "Ya pagué".
+  const memberRows = await db
+    .select({
+      id: users.id,
+      email: users.email,
+      prefs: users.notificationPrefs,
+    })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(
+      and(
+        eq(memberships.unitId, expense.unitId),
+        inArray(memberships.role, ["owner", "tenant"]),
+      ),
+    );
+  const members = new Map(memberRows.map((m) => [m.id, m]));
+  for (const m of members.values()) {
+    if (m.email) {
+      try {
+        await sendPaymentConfirmedEmail({
+          to: m.email,
+          period: expense.period,
+          amountCents: applied,
+          unitLabel: expense.unitLabel,
+          notificationPrefs: m.prefs,
+        });
+      } catch (e) {
+        reportError(e, { scope: "email-payment-confirmed" });
+      }
+    }
+    await notifyPaymentResolved({
+      userId: m.id,
+      prefs: m.prefs,
+      resolution: "approved",
+      period: expense.period,
+      amountCents: applied,
+      unitLabel: expense.unitLabel,
+    });
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/expensas");
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export async function approveCreditDeposit(
   depositId: string,
 ): Promise<ActionResult> {

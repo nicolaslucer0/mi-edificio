@@ -118,6 +118,8 @@ export async function getMonthlyExpenseReportRows(
       .select({
         expenseId: paymentClaims.expenseId,
         resolvedAt: paymentClaims.resolvedAt,
+        claimedByUserId: paymentClaims.claimedByUserId,
+        resolvedByUserId: paymentClaims.resolvedByUserId,
         name: users.name,
         email: users.email,
       })
@@ -185,14 +187,28 @@ export async function getMonthlyExpenseReportRows(
       status: r.status,
       dueDate: r.dueDate,
       paidAt: r.status === "pagado" ? claim?.resolvedAt ?? null : null,
-      paidBy:
-        r.status === "pagado" ? claim?.name ?? claim?.email ?? null : null,
+      paidBy: r.status === "pagado" && claim ? paidByLabel(claim) : null,
       owners: names(unitPeople.owners),
       ownerEmails: emails(unitPeople.owners),
       tenants: names(unitPeople.tenants),
       tenantEmails: emails(unitPeople.tenants),
     };
   });
+}
+
+// Un pago que registró el admin (ver registerPayment) lo pide y lo aprueba la
+// misma persona: no sabemos qué vecino pagó, así que no se pone el nombre del
+// admin como si hubiera pagado él.
+function paidByLabel(claim: {
+  claimedByUserId: string;
+  resolvedByUserId: string | null;
+  name: string | null;
+  email: string | null;
+}): string | null {
+  if (claim.claimedByUserId === claim.resolvedByUserId) {
+    return "Registrado por la administración";
+  }
+  return claim.name ?? claim.email ?? null;
 }
 
 export async function getMonthlyExpenditureReportRows(

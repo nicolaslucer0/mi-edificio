@@ -14,6 +14,7 @@ import { ExpenseStatusBadge } from "@/components/expense-status-badge";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 import { DeleteExpenseButton } from "../../delete-expense-button";
+import { RegisterPaymentButton } from "../../register-payment-button";
 
 export const metadata: Metadata = {
   title: "Período — Mi edificio",
@@ -213,7 +214,29 @@ function ExpenseRow({
         </p>
       )}
 
-      <div className="flex items-center gap-1 self-end">
+      <div className="flex flex-wrap items-center justify-end gap-1">
+        {expense.status === "en_validacion" ? (
+          <Link
+            href={`/admin/${consorcioId}/aprobar-pagos`}
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "mr-auto h-11 px-4 text-sm touch-manipulation",
+            )}
+          >
+            Validar pago informado
+          </Link>
+        ) : (
+          expense.status !== "pagado" && (
+            <div className="mr-auto">
+              <RegisterPaymentButton
+                expenseId={expense.id}
+                amountCents={expense.amountCents}
+                paidCents={expense.paidCents}
+                label={deleteLabel}
+              />
+            </div>
+          )
+        )}
         <Link
           href={`/admin/${consorcioId}/expensas/${expense.id}/editar`}
           aria-label={`Editar expensa ${deleteLabel}`}
