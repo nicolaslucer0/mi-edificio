@@ -29,6 +29,7 @@ const STATUS_LABEL: Record<ExpenseStatus, string> = {
 };
 
 export type ReportRow = {
+  expenseId: string;
   floor: string | null;
   unitLabel: string;
   period: string;
@@ -178,6 +179,7 @@ export async function getMonthlyExpenseReportRows(
     const claim = claimByExpense.get(r.expenseId);
     const unitPeople = peopleByUnit.get(r.unitId) ?? { owners: [], tenants: [] };
     return {
+      expenseId: r.expenseId,
       floor: r.floor,
       unitLabel: r.unitLabel,
       period: r.period,

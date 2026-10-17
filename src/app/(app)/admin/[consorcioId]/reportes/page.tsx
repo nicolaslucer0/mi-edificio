@@ -172,7 +172,7 @@ export default async function ReportesPage({
                 </TableHeader>
                 <TableBody>
                   {rows.map((r) => (
-                    <TableRow key={`${r.unitLabel}-${r.type}`}>
+                    <TableRow key={r.expenseId}>
                       <TableCell className="text-muted-foreground">
                         {r.floor ?? "—"}
                       </TableCell>
