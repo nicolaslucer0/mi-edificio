@@ -4,10 +4,13 @@ import { db } from "@/lib/db";
 import {
   consorcios,
   expenses,
+  paymentClaims,
   units,
+  users,
   type expenseStatusEnum,
   type expenseTypeEnum,
 } from "@/lib/db/schema";
+import { claimValidatedCents } from "@/lib/payments";
 import type { CurrentUser } from "@/lib/session";
 import { getAccessibleConsorcioIds } from "./admin";
 
@@ -206,4 +209,59 @@ export async function getExpenseForAdmin(
     .limit(1);
 
   return row ?? null;
+}
+
+export type AdminPaymentRow = {
+  id: string;
+  expenseId: string;
+  amountCents: number;
+  resolvedAt: Date | null;
+  registeredByAdmin: boolean;
+  paidByName: string | null;
+};
+
+/**
+ * Pagos confirmados de esas expensas, para poder anular uno. Los ids vienen de
+ * una query ya scopeada a los consorcios del admin.
+ */
+export async function getApprovedPaymentsForExpenses(
+  expenseIds: string[],
+): Promise<AdminPaymentRow[]> {
+  if (expenseIds.length === 0) return [];
+
+  const rows = await db
+    .select({
+      id: paymentClaims.id,
+      expenseId: paymentClaims.expenseId,
+      amountCents: paymentClaims.amountCents,
+      confirmedAmountCents: paymentClaims.confirmedAmountCents,
+      expenseAmountCents: expenses.amountCents,
+      resolvedAt: paymentClaims.resolvedAt,
+      claimedByUserId: paymentClaims.claimedByUserId,
+      resolvedByUserId: paymentClaims.resolvedByUserId,
+      name: users.name,
+      email: users.email,
+    })
+    .from(paymentClaims)
+    .innerJoin(expenses, eq(expenses.id, paymentClaims.expenseId))
+    .innerJoin(users, eq(users.id, paymentClaims.claimedByUserId))
+    .where(
+      and(
+        inArray(paymentClaims.expenseId, expenseIds),
+        eq(paymentClaims.resolution, "approved"),
+      ),
+    )
+    .orderBy(paymentClaims.resolvedAt);
+
+  return rows
+    .map((r) => ({
+      id: r.id,
+      expenseId: r.expenseId,
+      amountCents: claimValidatedCents(r, r.expenseAmountCents),
+      resolvedAt: r.resolvedAt,
+      // Lo pidió y lo aprobó la misma persona: lo registró el admin.
+      registeredByAdmin: r.claimedByUserId === r.resolvedByUserId,
+      paidByName: r.name ?? r.email,
+    }))
+    .filter((p) => p.amountCents > 0);
 }

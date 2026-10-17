@@ -24,8 +24,12 @@ import {
   sendPaymentRejectedEmail,
 } from "@/lib/email";
 import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
-import { notifyNewExpense, notifyPaymentResolved } from "@/lib/notifications";
-import { remainingCents } from "@/lib/payments";
+import {
+  notifyNewExpense,
+  notifyPaymentResolved,
+  notifyPaymentVoided,
+} from "@/lib/notifications";
+import { claimValidatedCents, remainingCents } from "@/lib/payments";
 import {
   applyCreditToUnit,
   excessToCreditWrites,
@@ -75,6 +79,9 @@ async function loadClaimContext(claimId: string) {
       claimId: paymentClaims.id,
       resolution: paymentClaims.resolution,
       claimAmountCents: paymentClaims.amountCents,
+      confirmedAmountCents: paymentClaims.confirmedAmountCents,
+      resolvedByUserId: paymentClaims.resolvedByUserId,
+      receiptUrl: paymentClaims.receiptUrl,
       expenseId: expenses.id,
       unitId: expenses.unitId,
       period: expenses.period,
@@ -350,6 +357,114 @@ export async function registerPayment(
       period: expense.period,
       amountCents: applied,
       unitLabel: expense.unitLabel,
+    });
+  }
+
+  revalidatePath("/admin", "layout");
+  revalidatePath("/expensas");
+  revalidatePath("/");
+  return { ok: true };
+}
+
+const VOID_REASON = "La administración anuló la confirmación de este pago.";
+
+/**
+ * Deshace un pago confirmado por error. Si lo había registrado el admin, se
+ * borra: ese pago nunca existió. Si lo había informado un vecino, queda
+ * rechazado, como si el admin lo hubiera rechazado al validarlo, y el vecino
+ * lo puede volver a informar.
+ */
+export async function voidPayment(claimId: string): Promise<ActionResult> {
+  const ctx = await requireAdminContext();
+  if (!ctx) return { ok: false, error: "Sin permisos." };
+
+  const claim = await loadClaimContext(claimId);
+  if (!claim) return { ok: false, error: "El pago no existe." };
+  if (!canAccessConsorcio(ctx, claim.consorcioId)) {
+    return { ok: false, error: "No tenés permisos sobre ese consorcio." };
+  }
+  if (claim.resolution !== "approved") {
+    return { ok: false, error: "Este pago no está confirmado." };
+  }
+
+  // Lo que este pago dejó como saldo a favor pudo haberse usado en otras
+  // expensas: anularlo dejaría el saldo de la unidad en negativo.
+  const [credited] = await db
+    .select({ id: unitCredits.id })
+    .from(unitCredits)
+    .where(eq(unitCredits.relatedClaimId, claim.claimId))
+    .limit(1);
+  if (credited) {
+    return {
+      ok: false,
+      error:
+        "Parte de este pago pasó a saldo a favor de la unidad, así que no se puede anular.",
+    };
+  }
+
+  const amountCents = claimValidatedCents(
+    {
+      amountCents: claim.claimAmountCents,
+      confirmedAmountCents: claim.confirmedAmountCents,
+    },
+    claim.amountCents,
+  );
+  // Igual que en el reporte: lo pidió y lo aprobó la misma persona.
+  const registeredByAdmin = claim.claimerUserId === claim.resolvedByUserId;
+  const isApproved = and(
+    eq(paymentClaims.id, claim.claimId),
+    eq(paymentClaims.resolution, "approved"),
+  );
+
+  if (registeredByAdmin) {
+    await db.delete(paymentClaims).where(isApproved);
+    await deleteReceipt(claim.receiptUrl);
+  } else {
+    await db
+      .update(paymentClaims)
+      .set({
+        resolution: "rejected",
+        resolvedByUserId: ctx.userId,
+        resolvedAt: new Date(),
+        rejectionReason: VOID_REASON,
+      })
+      .where(isApproved);
+  }
+
+  await recomputeExpensePaid(claim.expenseId);
+  // La deuda que reabre puede cubrirse con saldo a favor existente.
+  await applyCreditToUnit(claim.unitId);
+
+  if (registeredByAdmin) {
+    await notifyPaymentVoided({
+      unitId: claim.unitId,
+      period: claim.period,
+      amountCents,
+      unitLabel: claim.unitLabel,
+    });
+  } else {
+    if (claim.claimerEmail) {
+      try {
+        await sendPaymentRejectedEmail({
+          to: claim.claimerEmail,
+          period: claim.period,
+          amountCents,
+          unitLabel: claim.unitLabel,
+          reason: VOID_REASON,
+          notificationPrefs: claim.claimerPrefs,
+        });
+      } catch (e) {
+        reportError(e, { scope: "email-payment-rejected" });
+      }
+    }
+    await notifyPaymentResolved({
+      userId: claim.claimerUserId,
+      prefs: claim.claimerPrefs,
+      resolution: "rejected",
+      period: claim.period,
+      amountCents,
+      unitLabel: claim.unitLabel,
+      reason: VOID_REASON,
     });
   }
 

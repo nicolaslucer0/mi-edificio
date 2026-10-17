@@ -4,8 +4,10 @@ import { FileText, Pencil, Plus } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import {
+  getApprovedPaymentsForExpenses,
   getExpensesForAdmin,
   type AdminExpenseRow,
+  type AdminPaymentRow,
 } from "@/lib/queries/expenses-admin";
 import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
@@ -15,6 +17,7 @@ import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 import { DeleteExpenseButton } from "../../delete-expense-button";
 import { RegisterPaymentButton } from "../../register-payment-button";
+import { VoidPaymentButton } from "../../void-payment-button";
 
 export const metadata: Metadata = {
   title: "Período — Mi edificio",
@@ -49,6 +52,16 @@ export default async function PeriodDetailPage({
   });
 
   if (paginated.items.length === 0) notFound();
+
+  const payments = await getApprovedPaymentsForExpenses(
+    paginated.items.map((e) => e.id),
+  );
+  const paymentsByExpense = new Map<string, AdminPaymentRow[]>();
+  for (const p of payments) {
+    const list = paymentsByExpense.get(p.expenseId) ?? [];
+    list.push(p);
+    paymentsByExpense.set(p.expenseId, list);
+  }
 
   const periodLabel = formatPeriod(period);
   const totalAmount = paginated.items.reduce(
@@ -94,7 +107,11 @@ export default async function PeriodDetailPage({
               key={g.unitId}
               style={{ "--stagger-index": idx } as React.CSSProperties}
             >
-              <UnitGroupCard group={g} consorcioId={consorcioId} />
+              <UnitGroupCard
+                group={g}
+                consorcioId={consorcioId}
+                paymentsByExpense={paymentsByExpense}
+              />
             </li>
           ))}
         </ul>
@@ -140,7 +157,12 @@ function byFloorLabel(a: UnitGroup, b: UnitGroup): number {
 function UnitGroupCard({
   group,
   consorcioId,
-}: Readonly<{ group: UnitGroup; consorcioId: string }>) {
+  paymentsByExpense,
+}: Readonly<{
+  group: UnitGroup;
+  consorcioId: string;
+  paymentsByExpense: Map<string, AdminPaymentRow[]>;
+}>) {
   const unitDisplay = group.unitFloor
     ? `Piso ${group.unitFloor} — Unidad ${group.unitLabel}`
     : `Unidad ${group.unitLabel}`;
@@ -162,6 +184,7 @@ function UnitGroupCard({
                 expense={expense}
                 unitDisplay={unitDisplay}
                 consorcioId={consorcioId}
+                payments={paymentsByExpense.get(expense.id) ?? []}
               />
             </li>
           ))}
@@ -175,10 +198,12 @@ function ExpenseRow({
   expense,
   unitDisplay,
   consorcioId,
+  payments,
 }: Readonly<{
   expense: AdminExpenseRow;
   unitDisplay: string;
   consorcioId: string;
+  payments: AdminPaymentRow[];
 }>) {
   const isExtraordinaria = expense.type === "extraordinaria";
   const deleteLabel = `${formatPeriod(expense.period)} · ${unitDisplay} · ${
@@ -215,28 +240,31 @@ function ExpenseRow({
       )}
 
       <div className="flex flex-wrap items-center justify-end gap-1">
-        {expense.status === "en_validacion" ? (
-          <Link
-            href={`/admin/${consorcioId}/aprobar-pagos`}
-            className={cn(
-              buttonVariants({ variant: "outline" }),
-              "mr-auto h-11 px-4 text-sm touch-manipulation",
-            )}
-          >
-            Validar pago informado
-          </Link>
-        ) : (
-          expense.status !== "pagado" && (
-            <div className="mr-auto">
+        <div className="mr-auto flex flex-wrap gap-2">
+          {expense.status === "en_validacion" ? (
+            <Link
+              href={`/admin/${consorcioId}/aprobar-pagos`}
+              className={cn(
+                buttonVariants({ variant: "outline" }),
+                "h-11 px-4 text-sm touch-manipulation",
+              )}
+            >
+              Validar pago informado
+            </Link>
+          ) : (
+            expense.status !== "pagado" && (
               <RegisterPaymentButton
                 expenseId={expense.id}
                 amountCents={expense.amountCents}
                 paidCents={expense.paidCents}
                 label={deleteLabel}
               />
-            </div>
-          )
-        )}
+            )
+          )}
+          {payments.length > 0 && (
+            <VoidPaymentButton payments={payments} label={deleteLabel} />
+          )}
+        </div>
         <Link
           href={`/admin/${consorcioId}/expensas/${expense.id}/editar`}
           aria-label={`Editar expensa ${deleteLabel}`}

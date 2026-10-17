@@ -106,8 +106,13 @@ se recalcula solo.
 2. **Admin ajusta el monto** confirmado al validar. Se guarda informado +
    confirmado para trazabilidad.
 3. **Pesos enteros, mínimo $1.**
-4. **v1:** iniciado por el vecino + validación del admin (con ajuste). _v2:_ el
-   admin registra un pago parcial a mano (sin claim del vecino).
+4. **v1:** iniciado por el vecino + validación del admin (con ajuste). _v2
+   (hecho):_ el admin registra un pago a mano sin claim del vecino ("Registrar
+   pago", `registerPayment`): queda como un claim aprobado que pidió y aprobó
+   el mismo admin. Un pago confirmado por error se deshace con "Anular pago"
+   (`voidPayment`): si lo registró el admin se borra; si lo informó un vecino
+   queda rechazado y el vecino recibe el aviso. No se puede anular un pago
+   que dejó saldo a favor, porque ese saldo pudo haberse usado en otra expensa.
 
 ## Casos borde
 
