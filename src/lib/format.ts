@@ -59,6 +59,11 @@ const DATE_FORMATTER = new Intl.DateTimeFormat("es-AR", {
   year: "numeric",
 });
 
+/** Valor para un `<input type="date">` ("YYYY-MM-DD"). */
+export function toDateInputValue(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export function formatDate(date: Date | string | null | undefined): string {
   if (!date) return "—";
   const d = typeof date === "string" ? new Date(date) : date;

@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { toDateInputValue } from "@/lib/format";
 
 type Props = {
   consorcioId: string;
@@ -17,10 +18,6 @@ type Props = {
   openingBalanceCents: number;
   openingBalanceDate: Date | null;
 };
-
-function toDateInputValue(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
 
 export function OpeningBalanceForm({
   consorcioId,

@@ -35,10 +35,6 @@ type Props = {
   defaultDescription: string;
 };
 
-function toDateInputValue(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
 export function ExpenseEditForm(props: Readonly<Props>) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<
@@ -189,5 +185,3 @@ export function ExpenseEditForm(props: Readonly<Props>) {
     </form>
   );
 }
-
-export { toDateInputValue };

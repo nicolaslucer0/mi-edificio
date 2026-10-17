@@ -10,7 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
-import { ExpenseEditForm, toDateInputValue } from "./expense-edit-form";
+import { toDateInputValue } from "@/lib/format";
+import { ExpenseEditForm } from "./expense-edit-form";
 
 export const metadata: Metadata = {
   title: "Editar expensa — Mi edificio",
