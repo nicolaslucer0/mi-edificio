@@ -69,6 +69,14 @@ Aplicar crédito **no** pasa por el admin: es plata ya validada.
   queda `pagado`/`parcial` sin necesidad de un `paymentClaim`.
 - **Deuda mostrada:** ya refleja el crédito aplicado (vía `paidCents`), así que
   el cálculo actual no cambia. Se **suma** mostrar el saldo disponible.
+- **El admin edita o borra una expensa con pagos:** la plata no se pierde.
+  Si el monto nuevo queda por debajo de lo pagado, o si la expensa se borra, el
+  excedente vuelve a saldo a favor (`excessToCreditWrites` en `credits.ts`):
+  primero se desaplica el crédito que tenía (un movimiento `application`
+  positivo) y después se baja lo validado de sus pagos, del más nuevo al más
+  viejo, con un `overpayment` por la diferencia, igual que un sobrepago al
+  aprobar. Si el monto sube, la expensa queda con saldo pendiente. No se puede
+  borrar una expensa con un pago informado sin resolver.
 
 ## UI
 

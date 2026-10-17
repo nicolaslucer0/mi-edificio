@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { and, eq, inArray } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -25,7 +26,11 @@ import {
 import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
 import { notifyNewExpense, notifyPaymentResolved } from "@/lib/notifications";
 import { remainingCents } from "@/lib/payments";
-import { applyCreditToUnit, recomputeExpensePaid } from "@/lib/credits";
+import {
+  applyCreditToUnit,
+  excessToCreditWrites,
+  recomputeExpensePaid,
+} from "@/lib/credits";
 import { splitAmount } from "@/lib/expenses-split";
 import { CONSORCIOS_TAG } from "@/lib/consorcio-context";
 
@@ -816,6 +821,7 @@ export async function updateExpense(
       consorcioId: units.consorcioId,
       currentPeriod: expenses.period,
       currentType: expenses.type,
+      currentAmountCents: expenses.amountCents,
     })
     .from(expenses)
     .innerJoin(units, eq(units.id, expenses.unitId))
@@ -851,16 +857,37 @@ export async function updateExpense(
     }
   }
 
-  await db
-    .update(expenses)
-    .set({
-      period: parsed.data.period,
-      dueDate: new Date(parsed.data.dueDate),
-      amountCents: parsed.data.amountPesos * 100,
-      type: parsed.data.type,
-      description: parsed.data.description?.trim() || null,
-    })
-    .where(eq(expenses.id, parsed.data.id));
+  // El form edita en pesos enteros y una expensa prorrateada puede tener
+  // centavos: si no tocaron el monto, se deja el original y no se redondea.
+  const amountCents =
+    parsed.data.amountPesos === Math.round(current.currentAmountCents / 100)
+      ? current.currentAmountCents
+      : parsed.data.amountPesos * 100;
+
+  // Si el monto nuevo queda por debajo de lo ya pagado, el excedente pasa a
+  // saldo a favor. Si sube, el recálculo la deja con saldo pendiente.
+  const { writes } = await excessToCreditWrites({
+    expenseId: current.id,
+    unitId: current.unitId,
+    amountCents: current.currentAmountCents,
+    keepCents: amountCents,
+    userId: ctx.userId,
+  });
+  await db.batch([
+    db
+      .update(expenses)
+      .set({
+        period: parsed.data.period,
+        dueDate: new Date(parsed.data.dueDate),
+        amountCents,
+        type: parsed.data.type,
+        description: parsed.data.description?.trim() || null,
+      })
+      .where(eq(expenses.id, current.id)),
+    ...writes,
+  ]);
+  await recomputeExpensePaid(current.id);
+  await applyCreditToUnit(current.unitId);
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
@@ -875,6 +902,8 @@ export async function deleteExpense(id: string): Promise<ActionResult> {
   const [current] = await db
     .select({
       id: expenses.id,
+      unitId: expenses.unitId,
+      amountCents: expenses.amountCents,
       consorcioId: units.consorcioId,
     })
     .from(expenses)
@@ -886,7 +915,42 @@ export async function deleteExpense(id: string): Promise<ActionResult> {
     return { ok: false, error: "No tenés permisos sobre ese consorcio." };
   }
 
-  await db.delete(expenses).where(eq(expenses.id, id));
+  // Borrarla se llevaría puesto el pago que el vecino informó.
+  const [pendingClaim] = await db
+    .select({ id: paymentClaims.id })
+    .from(paymentClaims)
+    .where(
+      and(
+        eq(paymentClaims.expenseId, current.id),
+        eq(paymentClaims.resolution, "pending"),
+      ),
+    )
+    .limit(1);
+  if (pendingClaim) {
+    return {
+      ok: false,
+      error:
+        "Un vecino informó un pago de esta expensa. Aprobalo o rechazalo antes de borrarla.",
+    };
+  }
+
+  // Los pagos se borran con la expensa, pero la plata no: lo pagado pasa a
+  // saldo a favor de la unidad.
+  const { writes, refundedCents } = await excessToCreditWrites({
+    expenseId: current.id,
+    unitId: current.unitId,
+    amountCents: current.amountCents,
+    keepCents: 0,
+    userId: ctx.userId,
+  });
+  // El delete va al final: las escrituras referencian a la expensa y a sus
+  // pagos.
+  const [first, ...rest]: BatchItem<"pg">[] = [
+    ...writes,
+    db.delete(expenses).where(eq(expenses.id, current.id)),
+  ];
+  await db.batch([first, ...rest]);
+  if (refundedCents > 0) await applyCreditToUnit(current.unitId);
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");

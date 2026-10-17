@@ -57,6 +57,7 @@ export default async function EditExpensePage({
               defaultPeriod={expense.period}
               defaultDueDate={toDateInputValue(expense.dueDate)}
               defaultAmountPesos={Math.round(expense.amountCents / 100)}
+              paidCents={expense.paidCents}
               defaultType={expense.type}
               defaultDescription={expense.description ?? ""}
             />

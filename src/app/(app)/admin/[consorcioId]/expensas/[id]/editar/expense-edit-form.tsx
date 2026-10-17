@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatCurrencyCents } from "@/lib/format";
 import {
   Select,
   SelectContent,
@@ -29,6 +30,7 @@ type Props = {
   defaultPeriod: string;
   defaultDueDate: string;
   defaultAmountPesos: number;
+  paidCents: number;
   defaultType: "ordinaria" | "extraordinaria";
   defaultDescription: string;
 };
@@ -111,7 +113,20 @@ export function ExpenseEditForm(props: Readonly<Props>) {
             defaultValue={props.defaultAmountPesos}
             className="h-12 text-base tabular-nums"
             disabled={pending}
+            aria-describedby={
+              props.paidCents > 0 ? "amountPesos-paid" : undefined
+            }
           />
+          {props.paidCents > 0 && (
+            <p
+              id="amountPesos-paid"
+              className="text-xs leading-relaxed text-muted-foreground"
+            >
+              Ya se pagaron {formatCurrencyCents(props.paidCents)}. Si el monto
+              queda por debajo, la diferencia pasa a saldo a favor de la
+              unidad.
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">

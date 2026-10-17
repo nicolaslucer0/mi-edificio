@@ -247,7 +247,11 @@ function ExpenseRow({
         >
           <Pencil aria-hidden="true" className="size-4" />
         </Link>
-        <DeleteExpenseButton expenseId={expense.id} label={deleteLabel} />
+        <DeleteExpenseButton
+          expenseId={expense.id}
+          label={deleteLabel}
+          paidCents={expense.paidCents}
+        />
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import "server-only";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import { db } from "@/lib/db";
 import { expenses, paymentClaims, unitCredits, units } from "@/lib/db/schema";
 import {
@@ -71,6 +72,110 @@ export async function recomputeExpensePaid(expenseId: string): Promise<void> {
     .update(expenses)
     .set({ paidCents, status })
     .where(eq(expenses.id, expenseId));
+}
+
+/**
+ * Las escrituras para que una expensa no quede con más pagado que `keepCents`,
+ * pasando el excedente a saldo a favor de la unidad: primero el crédito que se
+ * le había aplicado y, si no alcanza, lo validado en sus pagos (el más nuevo
+ * primero), igual que un sobrepago al aprobar. La plata no desaparece, cambia
+ * de lugar.
+ *
+ * No ejecuta nada: el llamador las manda en el mismo `db.batch` que el cambio
+ * que las origina (bajar el monto, borrar la expensa), así pasan todas o
+ * ninguna. Después hay que correr `recomputeExpensePaid` si la expensa sigue
+ * existiendo, y `applyCreditToUnit`.
+ */
+export async function excessToCreditWrites(params: {
+  expenseId: string;
+  unitId: string;
+  /** Monto de la expensa antes del cambio. */
+  amountCents: number;
+  keepCents: number;
+  userId: string;
+}): Promise<{ writes: BatchItem<"pg">[]; refundedCents: number }> {
+  const [claims, [creditRow]] = await Promise.all([
+    db
+      .select({
+        id: paymentClaims.id,
+        amountCents: paymentClaims.amountCents,
+        confirmedAmountCents: paymentClaims.confirmedAmountCents,
+      })
+      .from(paymentClaims)
+      .where(
+        and(
+          eq(paymentClaims.expenseId, params.expenseId),
+          eq(paymentClaims.resolution, "approved"),
+        ),
+      )
+      .orderBy(desc(paymentClaims.resolvedAt)),
+    db
+      .select({
+        applied: sql<number>`coalesce(sum(${unitCredits.amountCents}), 0)::int`,
+      })
+      .from(unitCredits)
+      .where(
+        and(
+          eq(unitCredits.relatedExpenseId, params.expenseId),
+          eq(unitCredits.reason, "application"),
+        ),
+      ),
+  ]);
+
+  const appliedCredit = -Number(creditRow?.applied ?? 0);
+  const validated = claims.map((c) => ({
+    id: c.id,
+    cents: claimValidatedCents(c, params.amountCents),
+    pinned: c.confirmedAmountCents !== null,
+  }));
+  const paid = validated.reduce((sum, c) => sum + c.cents, appliedCredit);
+  const refundedCents = Math.max(0, paid - params.keepCents);
+  let excess = refundedCents;
+  const writes: BatchItem<"pg">[] = [];
+
+  // Una aplicación positiva "desaplica" crédito: vuelve al saldo de la unidad
+  // y deja de contar como pagado en esta expensa.
+  const fromCredit = Math.min(excess, appliedCredit);
+  if (fromCredit > 0) {
+    writes.push(
+      db.insert(unitCredits).values({
+        unitId: params.unitId,
+        amountCents: fromCredit,
+        reason: "application",
+        relatedExpenseId: params.expenseId,
+        createdByUserId: params.userId,
+      }),
+    );
+    excess -= fromCredit;
+  }
+
+  for (const c of validated) {
+    const take = Math.min(excess, c.cents);
+    // Un claim legacy sin monto vale "la expensa entera": se le fija el valor
+    // para que no cambie solo cuando cambia el monto de la expensa.
+    if (take > 0 || !c.pinned) {
+      writes.push(
+        db
+          .update(paymentClaims)
+          .set({ confirmedAmountCents: c.cents - take })
+          .where(eq(paymentClaims.id, c.id)),
+      );
+    }
+    if (take > 0) {
+      writes.push(
+        db.insert(unitCredits).values({
+          unitId: params.unitId,
+          amountCents: take,
+          reason: "overpayment",
+          relatedClaimId: c.id,
+          createdByUserId: params.userId,
+        }),
+      );
+      excess -= take;
+    }
+  }
+
+  return { writes, refundedCents };
 }
 
 /** Recalcula el balance de saldo de la unidad desde el ledger y lo cachea. */
