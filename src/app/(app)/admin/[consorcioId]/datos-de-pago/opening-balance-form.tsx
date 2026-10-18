@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -8,9 +8,10 @@ import {
   type ActionResult,
 } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { toDateInputValue } from "@/lib/format";
+import { formatCurrencyCents, toDateInputValue } from "@/lib/format";
 
 type Props = {
   consorcioId: string;
@@ -30,6 +31,11 @@ export function OpeningBalanceForm({
     ActionResult | null,
     FormData
   >(updateOpeningBalance, null);
+  const savedPesos = Math.round(openingBalanceCents / 100);
+  const [pesos, setPesos] = useState(String(savedPesos));
+  // Cuánto se mueve la caja si guarda: el saldo inicial entra entero en la
+  // cuenta, así que cambiarlo cambia la plata del consorcio en lo mismo.
+  const deltaCents = (Number(pesos || 0) - savedPesos) * 100;
 
   useEffect(() => {
     if (state?.ok) {
@@ -49,10 +55,12 @@ export function OpeningBalanceForm({
         Editando:{" "}
         <span className="font-medium text-foreground">{consorcioName}</span>
       </p>
-      <p className="text-xs leading-relaxed text-muted-foreground">
-        Cargá la plata que tiene la caja del consorcio a la fecha que elijas. Se
-        usa como base del balance: a partir de ahí se suman las expensas
-        cobradas y se restan los gastos.
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Cargá la plata que había en la cuenta del consorcio el día que
+        empezaste a usar la app. Contá solo lo que estaba en la cuenta, no lo
+        que los vecinos debían: cuando paguen, esos pagos se suman solos y, si
+        ya los contaste acá, quedan contados dos veces. La caja es este saldo
+        más todos los pagos menos todos los gastos.
       </p>
 
       <div className="grid gap-5 sm:grid-cols-2">
@@ -60,18 +68,28 @@ export function OpeningBalanceForm({
           <Label htmlFor="openingBalancePesos" className="text-base">
             Saldo (en pesos)
           </Label>
-          <Input
+          <CurrencyInput
             id="openingBalancePesos"
             name="openingBalancePesos"
-            type="number"
-            required
-            min={0}
-            step={1}
-            defaultValue={Math.round(openingBalanceCents / 100)}
-            placeholder="350000"
-            className="h-12 text-base tabular-nums"
+            value={pesos}
+            onValueChange={setPesos}
+            placeholder="350.000"
             disabled={pending}
+            describedById="openingBalanceDelta"
           />
+          {deltaCents !== 0 && (
+            <p
+              id="openingBalanceDelta"
+              className="text-sm leading-relaxed text-muted-foreground"
+            >
+              Si guardás, la caja del consorcio{" "}
+              {deltaCents > 0 ? "sube" : "baja"}{" "}
+              <span className="font-semibold text-foreground">
+                {formatCurrencyCents(Math.abs(deltaCents))}
+              </span>
+              .
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-2">
@@ -102,7 +120,7 @@ export function OpeningBalanceForm({
 
       <Button
         type="submit"
-        disabled={pending}
+        disabled={pending || pesos === ""}
         className="h-12 text-base touch-manipulation"
       >
         {pending ? "Guardando…" : "Guardar saldo inicial"}
