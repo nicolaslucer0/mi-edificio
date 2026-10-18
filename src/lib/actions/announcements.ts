@@ -112,6 +112,7 @@ export async function createAnnouncement(
     consorcioId,
     unitId,
     title: cleanTitle,
+    body: cleanBody,
     authorUserId: user.id,
   });
 
