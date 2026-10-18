@@ -64,6 +64,7 @@ widget = agregar un archivo y una entrada.** `page.tsx` no se toca nunca más.
 |---|---|---|---|
 | 10 | `deuda` | full | el usuario tiene unidad |
 | 15 | `tu-anio` | full | tiene al menos una expensa en el año |
+| 18 | `push-prompt` | full | el push se puede activar en este dispositivo, no está activo y no se descartó (client) |
 | 20 | `estado-de-pagos` | half | `debtVisibility != 'off'` y `debtOnHome` |
 | 25 | `gastos-del-mes` | half | siempre (un mes sin gastos se muestra en cero) |
 | 30 | `install-prompt` | full | no instalada y no descartada (client) |
@@ -147,10 +148,10 @@ contenido → `footer` opcional debajo de la card.
 - El `action` renderiza un `<Link>`; acepta `ariaLabel` para cumplir la regla de
   copy ("Ver todo" en pantalla, "Ver todas las expensas" para el lector).
 
-**Excepción:** `install-prompt` no pasa por el shell. Decide en el cliente si
-corresponde mostrarse, así que ningún Server Component puede saber de antemano
-si va a ocupar una celda: dibuja su propia card con el `col-span` puesto, y
-`null` cuando está oculto.
+**Excepción:** `install-prompt` y `push-prompt` no pasan por el shell. Cada uno
+decide en el cliente si corresponde mostrarse, así que ningún Server Component
+puede saber de antemano si va a ocupar una celda: dibuja su propia card con el
+`col-span` puesto, y `null` cuando está oculto.
 
 ## Carga de datos
 

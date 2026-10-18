@@ -41,7 +41,11 @@ function isIos(): boolean {
   return /iPhone|iPad|iPod/.test(navigator.userAgent);
 }
 
-export function PushToggle() {
+/**
+ * El estado del push en este dispositivo y cómo activarlo o desactivarlo. Lo
+ * usan el botón de Mi cuenta y la tarjeta del inicio.
+ */
+export function usePushSubscription() {
   const [status, setStatus] = useState<Status>("checking");
   const [pending, setPending] = useState(false);
 
@@ -136,6 +140,12 @@ export function PushToggle() {
       setPending(false);
     }
   }
+
+  return { status, pending, activate, deactivate };
+}
+
+export function PushToggle() {
+  const { status, pending, activate, deactivate } = usePushSubscription();
 
   if (status === "checking") {
     return <p className="text-sm text-muted-foreground">Verificando…</p>;

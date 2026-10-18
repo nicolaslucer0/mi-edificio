@@ -3,6 +3,7 @@ import { DeudaWidget } from "./deuda";
 import { EstadoDePagosWidget } from "./estado-de-pagos";
 import { GastosDelMesWidget } from "./gastos-del-mes";
 import { InstallPromptWidget } from "./install-prompt";
+import { PushPromptWidget } from "./push-prompt";
 import { TuAnioWidget } from "./tu-anio";
 import { UltimosMovimientosWidget } from "./ultimos-movimientos";
 import type { WidgetDef } from "./types";
@@ -14,6 +15,7 @@ import type { WidgetDef } from "./types";
 const WIDGETS: readonly WidgetDef[] = [
   { id: "deuda", order: 10, Component: DeudaWidget },
   { id: "tu-anio", order: 15, Component: TuAnioWidget },
+  { id: "push-prompt", order: 18, Component: PushPromptWidget },
   { id: "estado-de-pagos", order: 20, Component: EstadoDePagosWidget },
   { id: "gastos-del-mes", order: 25, Component: GastosDelMesWidget },
   { id: "install-prompt", order: 30, Component: InstallPromptWidget },
