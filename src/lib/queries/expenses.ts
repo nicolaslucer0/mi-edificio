@@ -517,6 +517,40 @@ export async function getCreditForUser(
     .where(inArray(units.id, unitIds));
 }
 
+export type PendingDeposit = {
+  id: string;
+  amountCents: number;
+  createdAt: Date;
+};
+
+/**
+ * Adelantos que el vecino avisó y el admin todavía no validó. Se muestran en
+ * Expensas: si no aparecen, el vecino cree que no quedó registrado y vuelve a
+ * informar la misma plata con "Ya pagué".
+ */
+export async function getPendingDepositsForUser(
+  user: CurrentUser,
+  consorcioId?: string | null,
+): Promise<PendingDeposit[]> {
+  const { ownerUnits, tenantOnlyUnits } = getUnitAccess(user, consorcioId);
+  const unitIds = Array.from(new Set([...ownerUnits, ...tenantOnlyUnits]));
+  if (unitIds.length === 0) return [];
+  return db
+    .select({
+      id: creditDeposits.id,
+      amountCents: creditDeposits.amountCents,
+      createdAt: creditDeposits.createdAt,
+    })
+    .from(creditDeposits)
+    .where(
+      and(
+        inArray(creditDeposits.unitId, unitIds),
+        eq(creditDeposits.status, "pending"),
+      ),
+    )
+    .orderBy(desc(creditDeposits.createdAt));
+}
+
 /**
  * Receipt URL de un adelanto de saldo, solo si el usuario puede verlo: quien lo
  * pidió, un miembro de la unidad, o un admin del consorcio. Igual que

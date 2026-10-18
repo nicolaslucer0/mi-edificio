@@ -3,7 +3,12 @@ import { ChevronLeft, ChevronRight, Wallet } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
-import { getCreditForUser, getExpensesForUser } from "@/lib/queries/expenses";
+import {
+  getCreditForUser,
+  getDebtForUser,
+  getExpensesForUser,
+  getPendingDepositsForUser,
+} from "@/lib/queries/expenses";
 import { getPaymentInfoForUser } from "@/lib/queries/consorcios";
 import {
   formatCurrencyCents,
@@ -39,11 +44,14 @@ export default async function ExpensesPage({
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
   const consorcioId = await getCurrentConsorcioId(user);
 
-  const [paginated, paymentInfos, credits] = await Promise.all([
-    getExpensesForUser(user, { page, perPage: PER_PAGE, consorcioId }),
-    getPaymentInfoForUser(user, consorcioId),
-    getCreditForUser(user, consorcioId),
-  ]);
+  const [paginated, paymentInfos, credits, pendingDeposits, debt] =
+    await Promise.all([
+      getExpensesForUser(user, { page, perPage: PER_PAGE, consorcioId }),
+      getPaymentInfoForUser(user, consorcioId),
+      getCreditForUser(user, consorcioId),
+      getPendingDepositsForUser(user, consorcioId),
+      getDebtForUser(user, consorcioId),
+    ]);
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
@@ -60,7 +68,11 @@ export default async function ExpensesPage({
           <PaymentInfoCard key={info.consorcioId} consorcio={info} />
         ))}
 
-        <CreditPanel units={credits} />
+        <CreditPanel
+          units={credits}
+          pendingDeposits={pendingDeposits}
+          debtCents={debt.hasUnit ? debt.amountCents : 0}
+        />
 
         {paginated.items.length === 0 ? (
           <EmptyState

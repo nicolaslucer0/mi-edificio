@@ -133,16 +133,16 @@ export default async function ConsorcioDashboard({
             />
             <StatCard
               label="Pagos por validar"
-              value={String(stats.claimsPendingCount)}
+              value={String(stats.toValidateCount)}
               hint={
-                stats.claimsPendingCount === 0
+                stats.toValidateCount === 0
                   ? "Sin pendientes"
                   : "Tocá para revisar"
               }
               icon={<ShieldAlert aria-hidden="true" className="size-4" />}
-              tone={stats.claimsPendingCount > 0 ? "warning" : "neutral"}
+              tone={stats.toValidateCount > 0 ? "warning" : "neutral"}
               href={
-                stats.claimsPendingCount > 0
+                stats.toValidateCount > 0
                   ? `/admin/${consorcioId}/aprobar-pagos`
                   : undefined
               }
@@ -161,15 +161,15 @@ export default async function ConsorcioDashboard({
             Acciones
           </h2>
           <div className="grid gap-3 sm:grid-cols-2">
-            {stats.claimsPendingCount > 0 && (
+            {stats.toValidateCount > 0 && (
               <ActionCard
                 href={`/admin/${consorcioId}/aprobar-pagos`}
                 title="Aprobar pagos"
-                description={`${stats.claimsPendingCount} ${
-                  stats.claimsPendingCount === 1
-                    ? "pago esperando"
-                    : "pagos esperando"
-                } tu validación.`}
+                description={`${stats.toValidateCount} ${
+                  stats.toValidateCount === 1
+                    ? "aviso esperando"
+                    : "avisos esperando"
+                } tu validación: pagos y adelantos.`}
                 icon={<ShieldAlert className="size-5" />}
                 emphasis
               />

@@ -25,6 +25,7 @@ import {
 } from "@/lib/email";
 import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
 import {
+  notifyDepositResolved,
   notifyNewExpense,
   notifyPaymentResolved,
   notifyPaymentVoided,
@@ -507,9 +508,14 @@ export async function approveCreditDeposit(
       amountCents: creditDeposits.amountCents,
       status: creditDeposits.status,
       consorcioId: units.consorcioId,
+      unitLabel: units.label,
+      unitFloor: units.floor,
+      requesterId: users.id,
+      requesterPrefs: users.notificationPrefs,
     })
     .from(creditDeposits)
     .innerJoin(units, eq(units.id, creditDeposits.unitId))
+    .innerJoin(users, eq(users.id, creditDeposits.requestedByUserId))
     .where(eq(creditDeposits.id, depositId))
     .limit(1);
   if (!deposit) return { ok: false, error: "El adelanto no existe." };
@@ -538,6 +544,17 @@ export async function approveCreditDeposit(
   // El adelanto validado se aplica a las deudas de la unidad (si las hay).
   await applyCreditToUnit(deposit.unitId);
 
+  await notifyDepositResolved({
+    userId: deposit.requesterId,
+    prefs: deposit.requesterPrefs,
+    resolution: "approved",
+    amountCents: deposit.amountCents,
+    unitName: formatUnitWithFloor({
+      label: deposit.unitLabel,
+      floor: deposit.unitFloor,
+    }),
+  });
+
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");
   revalidatePath("/");
@@ -559,10 +576,16 @@ export async function rejectCreditDeposit(
   const [deposit] = await db
     .select({
       status: creditDeposits.status,
+      amountCents: creditDeposits.amountCents,
       consorcioId: units.consorcioId,
+      unitLabel: units.label,
+      unitFloor: units.floor,
+      requesterId: users.id,
+      requesterPrefs: users.notificationPrefs,
     })
     .from(creditDeposits)
     .innerJoin(units, eq(units.id, creditDeposits.unitId))
+    .innerJoin(users, eq(users.id, creditDeposits.requestedByUserId))
     .where(eq(creditDeposits.id, depositId))
     .limit(1);
   if (!deposit) return { ok: false, error: "El adelanto no existe." };
@@ -582,6 +605,20 @@ export async function rejectCreditDeposit(
       rejectionReason: trimmed.slice(0, 500),
     })
     .where(eq(creditDeposits.id, depositId));
+
+  // Sin este aviso el adelanto desaparecía de la pantalla del vecino sin que
+  // supiera por qué.
+  await notifyDepositResolved({
+    userId: deposit.requesterId,
+    prefs: deposit.requesterPrefs,
+    resolution: "rejected",
+    amountCents: deposit.amountCents,
+    unitName: formatUnitWithFloor({
+      label: deposit.unitLabel,
+      floor: deposit.unitFloor,
+    }),
+    reason: trimmed.slice(0, 500),
+  });
 
   revalidatePath("/admin", "layout");
   revalidatePath("/expensas");

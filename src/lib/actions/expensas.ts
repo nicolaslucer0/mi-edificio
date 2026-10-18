@@ -13,9 +13,12 @@ import {
   units,
   users,
 } from "@/lib/db/schema";
-import { sendClaimNotification } from "@/lib/email";
+import { sendClaimNotification, sendDepositNotification } from "@/lib/email";
 import { getReceiptFile, uploadReceipt } from "@/lib/receipts";
-import { notifyClaimToValidate } from "@/lib/notifications";
+import {
+  notifyClaimToValidate,
+  notifyDepositToValidate,
+} from "@/lib/notifications";
 import { remainingCents } from "@/lib/payments";
 import { formatUnitWithFloor } from "@/lib/format";
 
@@ -200,6 +203,46 @@ export async function requestCreditDeposit(
     receiptUrl,
   });
 
+  // Igual que un "Ya pagué": si el admin no se entera, el adelanto queda sin
+  // resolver y el vecino termina informando la misma plata dos veces.
+  const [context] = await db
+    .select({
+      unitLabel: units.label,
+      unitFloor: units.floor,
+      consorcioId: units.consorcioId,
+      actorName: users.name,
+      actorEmail: users.email,
+    })
+    .from(units)
+    .innerJoin(users, eq(users.id, userId))
+    .where(eq(units.id, unitId))
+    .limit(1);
+  if (context) {
+    const unitName = formatUnitWithFloor({
+      label: context.unitLabel,
+      floor: context.unitFloor,
+    });
+    const requestedBy = context.actorName ?? context.actorEmail ?? "Un vecino";
+    try {
+      await sendDepositNotification({
+        consorcioId: context.consorcioId,
+        unitName,
+        amountCents: rawAmount,
+        requestedBy,
+        note: note || null,
+      });
+    } catch (err) {
+      reportError(err, { scope: "deposit-notification" });
+    }
+    await notifyDepositToValidate({
+      consorcioId: context.consorcioId,
+      unitName,
+      amountCents: rawAmount,
+      requestedBy,
+    });
+  }
+
   revalidatePath("/expensas");
+  revalidatePath("/admin", "layout");
   return { ok: true };
 }

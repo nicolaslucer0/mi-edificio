@@ -191,7 +191,8 @@ export type ConsorcioDashboardStats = {
   openingBalanceDate: Date | null;
   pendingThisMonthCents: number;
   pendingThisMonthCount: number;
-  claimsPendingCount: number;
+  /** Pagos y adelantos que los vecinos avisaron y esperan validación. */
+  toValidateCount: number;
   unitCount: number;
   vecinoCount: number;
 };
@@ -218,6 +219,7 @@ export async function getConsorcioDashboardStats(
     spentSum,
     pendingMonth,
     claimsCount,
+    depositsCount,
     unitCount,
     vecinoCount,
   ] = await Promise.all([
@@ -262,6 +264,18 @@ export async function getConsorcioDashboardStats(
           eq(paymentClaims.resolution, "pending"),
         ),
       ),
+    // Los adelantos también esperan al admin: si no se cuentan, con solo
+    // adelantos pendientes el panel decía "Sin pendientes".
+    db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(creditDeposits)
+      .innerJoin(units, eq(units.id, creditDeposits.unitId))
+      .where(
+        and(
+          eq(units.consorcioId, consorcioId),
+          eq(creditDeposits.status, "pending"),
+        ),
+      ),
     db
       .select({ count: sql<number>`count(*)::int` })
       .from(units)
@@ -285,7 +299,8 @@ export async function getConsorcioDashboardStats(
     openingBalanceDate: consorcio.openingBalanceDate,
     pendingThisMonthCents: Number(pendingMonth[0]?.total ?? 0),
     pendingThisMonthCount: Number(pendingMonth[0]?.count ?? 0),
-    claimsPendingCount: Number(claimsCount[0]?.count ?? 0),
+    toValidateCount:
+      Number(claimsCount[0]?.count ?? 0) + Number(depositsCount[0]?.count ?? 0),
     unitCount: Number(unitCount[0]?.count ?? 0),
     vecinoCount: Number(vecinoCount[0]?.count ?? 0),
   };

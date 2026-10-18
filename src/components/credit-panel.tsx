@@ -19,7 +19,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { requestCreditDeposit } from "@/lib/actions/expensas";
-import { formatCurrencyCents, formatUnitWithFloor } from "@/lib/format";
+import {
+  formatCurrencyCents,
+  formatDate,
+  formatUnitWithFloor,
+} from "@/lib/format";
 
 type UnitCredit = {
   unitId: string;
@@ -28,7 +32,22 @@ type UnitCredit = {
   creditCents: number;
 };
 
-export function CreditPanel({ units }: Readonly<{ units: UnitCredit[] }>) {
+type PendingDeposit = {
+  id: string;
+  amountCents: number;
+  createdAt: Date;
+};
+
+export function CreditPanel({
+  units,
+  pendingDeposits,
+  debtCents,
+}: Readonly<{
+  units: UnitCredit[];
+  pendingDeposits: PendingDeposit[];
+  /** Lo que debe hoy: si es más que cero, el adelanto probablemente sea un pago. */
+  debtCents: number;
+}>) {
   const [open, setOpen] = useState(false);
   const [unitId, setUnitId] = useState(units[0]?.unitId ?? "");
   const [pesos, setPesos] = useState("");
@@ -97,6 +116,26 @@ export function CreditPanel({ units }: Readonly<{ units: UnitCredit[] }>) {
               )}
             </div>
           </div>
+          {pendingDeposits.length > 0 && (
+            <ul
+              aria-label="Adelantos en revisión"
+              className="flex w-full flex-col gap-1"
+            >
+              {pendingDeposits.map((d) => (
+                <li
+                  key={d.id}
+                  className="rounded-md bg-yellow-100 px-3 py-2 text-sm leading-relaxed text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+                >
+                  Avisaste un adelanto de{" "}
+                  <span className="font-semibold">
+                    {formatCurrencyCents(d.amountCents)}
+                  </span>{" "}
+                  el {formatDate(d.createdAt)}. El administrador lo está
+                  revisando.
+                </li>
+              ))}
+            </ul>
+          )}
           <Button
             variant="outline"
             onClick={() => setOpen(true)}
@@ -116,6 +155,20 @@ export function CreditPanel({ units }: Readonly<{ units: UnitCredit[] }>) {
               Informá un adelanto. El administrador lo valida y queda como saldo
               para tus próximas expensas.
             </ResponsiveDialogDescription>
+            {debtCents > 0 && (
+              <p
+                role="note"
+                className="rounded-md bg-yellow-100 px-3 py-2 text-sm leading-relaxed text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+              >
+                Tenés{" "}
+                <span className="font-semibold">
+                  {formatCurrencyCents(debtCents)}
+                </span>{" "}
+                de expensas sin pagar. Si esta plata es para eso, cerrá esto y
+                tocá «Ya pagué» en cada expensa: si la avisás acá y también
+                ahí, se cuenta dos veces.
+              </p>
+            )}
           </ResponsiveDialogHeader>
           <form action={handleSubmit} className="contents">
             <ResponsiveDialogBody className="gap-4">

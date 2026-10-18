@@ -194,6 +194,47 @@ ${noteHtml}
   await resend.emails.send({ from, to, subject, text, html });
 }
 
+export type DepositNotificationParams = {
+  consorcioId: string;
+  unitName: string;
+  amountCents: number;
+  requestedBy: string;
+  note: string | null;
+};
+
+/** Mail a los admins cuando un vecino avisa un adelanto de saldo. */
+export async function sendDepositNotification(
+  params: DepositNotificationParams,
+): Promise<void> {
+  const to = await getAdminEmails(params.consorcioId, "newClaimToValidate");
+  if (to.length === 0) return;
+
+  const from = process.env.AUTH_RESEND_FROM ?? "onboarding@resend.dev";
+  const amountLabel = formatCurrencyCents(params.amountCents);
+
+  const subject = `Adelanto por validar: ${amountLabel} — ${params.unitName}`;
+
+  const noteLine = params.note ? `\nNotas del vecino: ${params.note}\n` : "";
+  const text = `${params.requestedBy} avisó un adelanto de ${amountLabel} en ${params.unitName}.
+${noteLine}
+Ingresá a Mi edificio para validar contra el extracto bancario:
+${baseUrl}/`;
+
+  const noteHtml = params.note
+    ? `<p style="line-height:1.6;"><strong>Notas:</strong> ${escapeHtml(params.note)}</p>`
+    : "";
+
+  const html = `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#18181b;">
+<h2 style="margin:0 0 16px;font-size:20px;">Adelanto por validar</h2>
+<p style="line-height:1.6;"><strong>${escapeHtml(params.requestedBy)}</strong> avisó un adelanto de <strong>${amountLabel}</strong> en <strong>${escapeHtml(params.unitName)}</strong>.</p>
+${noteHtml}
+<p style="margin-top:24px;"><a href="${baseUrl}/" style="display:inline-block;padding:12px 24px;background:#18181b;color:#ffffff;border-radius:8px;text-decoration:none;font-weight:500;">Validar en Mi edificio</a></p>
+<p style="color:#71717a;font-size:13px;line-height:1.5;margin-top:24px;">Validá contra tu extracto bancario antes de confirmar el adelanto.</p>
+</div>`;
+
+  await resend.emails.send({ from, to, subject, text, html });
+}
+
 function shouldNotify(
   prefs: NotificationPrefs | null | undefined,
   key: keyof NotificationPrefs,
