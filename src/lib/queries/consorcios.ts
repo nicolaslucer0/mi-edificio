@@ -1,7 +1,7 @@
 import "server-only";
 import { inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { consorcios } from "@/lib/db/schema";
+import { consorcios, units } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
 
 export type PaymentInfo = {
@@ -10,6 +10,8 @@ export type PaymentInfo = {
   alias: string | null;
   cbu: string | null;
   holderName: string | null;
+  /** Las unidades del vecino en el consorcio, para armar el concepto. */
+  units: { label: string; floor: string | null }[];
 };
 
 export async function getPaymentInfoForUser(
@@ -31,16 +33,37 @@ export async function getPaymentInfoForUser(
 
   if (consorcioIds.length === 0) return [];
 
-  const rows = await db
-    .select({
-      id: consorcios.id,
-      name: consorcios.name,
-      paymentAlias: consorcios.paymentAlias,
-      paymentCbu: consorcios.paymentCbu,
-      paymentHolderName: consorcios.paymentHolderName,
-    })
-    .from(consorcios)
-    .where(inArray(consorcios.id, consorcioIds));
+  const unitIds = Array.from(
+    new Set(
+      user.memberships
+        .filter((m) => m.unitId !== null)
+        .map((m) => m.unitId as string),
+    ),
+  );
+
+  const [rows, unitRows] = await Promise.all([
+    db
+      .select({
+        id: consorcios.id,
+        name: consorcios.name,
+        paymentAlias: consorcios.paymentAlias,
+        paymentCbu: consorcios.paymentCbu,
+        paymentHolderName: consorcios.paymentHolderName,
+      })
+      .from(consorcios)
+      .where(inArray(consorcios.id, consorcioIds)),
+    unitIds.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({
+            consorcioId: units.consorcioId,
+            label: units.label,
+            floor: units.floor,
+          })
+          .from(units)
+          .where(inArray(units.id, unitIds))
+          .orderBy(units.floor, units.label),
+  ]);
 
   return rows.map((r) => ({
     consorcioId: r.id,
@@ -48,5 +71,8 @@ export async function getPaymentInfoForUser(
     alias: r.paymentAlias,
     cbu: r.paymentCbu,
     holderName: r.paymentHolderName,
+    units: unitRows
+      .filter((u) => u.consorcioId === r.id)
+      .map((u) => ({ label: u.label, floor: u.floor })),
   }));
 }

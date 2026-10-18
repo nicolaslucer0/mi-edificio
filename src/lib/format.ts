@@ -147,3 +147,15 @@ export function formatUnitWithFloor(unit: {
   if (!unit.floor) return `Unidad ${unit.label}`;
   return `Piso ${unit.floor} — Unidad ${unit.label}`;
 }
+
+/**
+ * La unidad en pocos caracteres ("326-5"), para el concepto de una
+ * transferencia: los bancos cortan el concepto, y con dos edificios
+ * numerados igual el número solo no alcanza.
+ */
+export function formatUnitShort(unit: {
+  label: string;
+  floor: string | null;
+}): string {
+  return unit.floor ? `${unit.floor}-${unit.label}` : unit.label;
+}

@@ -6,11 +6,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import type { PaymentInfo } from "@/lib/queries/consorcios";
+import { CopyButton } from "@/components/copy-button";
+import { currentPeriod, formatPeriod, formatUnitShort } from "@/lib/format";
 
 export function PaymentInfoCard({
   consorcio,
 }: Readonly<{ consorcio: PaymentInfo }>) {
   const hasInfo = Boolean(consorcio.alias ?? consorcio.cbu);
+  // Qué poner en el concepto: la unidad y el mes. Con dos edificios
+  // numerados igual, es lo que le dice al admin de quién es la transferencia.
+  const month = formatPeriod(currentPeriod());
+  const concepts = consorcio.units.map((u) => `${formatUnitShort(u)} ${month}`);
 
   if (!hasInfo) {
     return (
@@ -56,11 +62,19 @@ export function PaymentInfoCard({
             <PaymentField label="Titular" value={consorcio.holderName} />
           )}
           {consorcio.alias && (
-            <PaymentField label="Alias" value={consorcio.alias} mono />
+            <PaymentField label="Alias" value={consorcio.alias} mono copy="alias" />
           )}
           {consorcio.cbu && (
-            <PaymentField label="CBU" value={consorcio.cbu} mono />
+            <PaymentField label="CBU" value={consorcio.cbu} mono copy="CBU" />
           )}
+          {concepts.map((concept) => (
+            <PaymentField
+              key={concept}
+              label="En el concepto poné"
+              value={concept}
+              copy="concepto"
+            />
+          ))}
         </dl>
         <p className="rounded-md bg-muted/50 p-3 text-xs leading-relaxed text-muted-foreground">
           Después de transferir, volvé acá y apretá{" "}
@@ -76,20 +90,30 @@ function PaymentField({
   label,
   value,
   mono = false,
-}: Readonly<{ label: string; value: string; mono?: boolean }>) {
+  copy,
+}: Readonly<{
+  label: string;
+  value: string;
+  mono?: boolean;
+  /** Si va botón de copiar, qué se copia (para el aria-label). */
+  copy?: string;
+}>) {
   return (
     <div className="flex flex-col gap-1">
       <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
         {label}
       </dt>
-      <dd
-        className={
-          mono
-            ? "break-all font-mono text-base tabular-nums select-all"
-            : "text-base font-medium select-all"
-        }
-      >
-        {value}
+      <dd className="flex items-center justify-between gap-3">
+        <span
+          className={
+            mono
+              ? "min-w-0 break-all font-mono text-base tabular-nums select-all"
+              : "min-w-0 text-base font-medium select-all"
+          }
+        >
+          {value}
+        </span>
+        {copy && <CopyButton value={value} label={copy} />}
       </dd>
     </div>
   );
