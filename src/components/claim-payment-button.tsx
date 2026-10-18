@@ -27,6 +27,8 @@ type Props = {
   amountCents: number;
   paidCents?: number;
   isFuture?: boolean;
+  /** Abre el diálogo al entrar: el link del aviso "¿ya pagaste?". */
+  defaultOpen?: boolean;
 };
 
 export function ClaimPaymentButton({
@@ -35,8 +37,9 @@ export function ClaimPaymentButton({
   amountCents,
   paidCents = 0,
   isFuture = false,
+  defaultOpen = false,
 }: Readonly<Props>) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [submitted, setSubmitted] = useState(false);
   const [mode, setMode] = useState<"full" | "partial">("full");
   const [partialPesos, setPartialPesos] = useState("");

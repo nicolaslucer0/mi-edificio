@@ -40,7 +40,8 @@ const PER_PAGE = 6;
 export default async function ExpensesPage({
   searchParams,
 }: Readonly<{
-  searchParams: Promise<{ page?: string }>;
+  /** `avisar`: abre el aviso de pago de esa expensa (link del "¿ya pagaste?"). */
+  searchParams: Promise<{ page?: string; avisar?: string }>;
 }>) {
   const user = await requireUser();
   const params = await searchParams;
@@ -110,6 +111,7 @@ export default async function ExpensesPage({
                 }
                 items={toPay}
                 claimInfo={claimInfo}
+                autoOpenId={params.avisar}
               />
             ) : (
               <p className="rounded-md bg-success/10 p-4 text-base font-medium text-success">
@@ -132,6 +134,7 @@ export default async function ExpensesPage({
                 subtitle="Todavía no vencen. Si querés, las podés adelantar."
                 items={upcoming}
                 claimInfo={claimInfo}
+                autoOpenId={params.avisar}
               />
             )}
 
@@ -154,12 +157,14 @@ function ExpenseSection({
   subtitle,
   items,
   claimInfo,
+  autoOpenId,
   children,
 }: Readonly<{
   title: string;
   subtitle?: string;
   items: ExpenseRow[];
   claimInfo?: Map<string, ExpenseClaimInfo>;
+  autoOpenId?: string;
   children?: React.ReactNode;
 }>) {
   return (
@@ -179,6 +184,7 @@ function ExpenseSection({
             expense={expense}
             index={idx}
             claims={claimInfo?.get(expense.id)}
+            autoOpen={expense.id === autoOpenId}
           />
         ))}
       </ul>
@@ -191,10 +197,12 @@ function ExpenseListItem({
   expense,
   index,
   claims,
+  autoOpen = false,
 }: Readonly<{
   expense: ExpenseRow;
   index: number;
   claims?: ExpenseClaimInfo;
+  autoOpen?: boolean;
 }>) {
   const canClaim =
     expense.status === "pendiente" ||
@@ -305,6 +313,7 @@ function ExpenseListItem({
                 amountCents={expense.amountCents}
                 paidCents={expense.paidCents}
                 isFuture={isFuture}
+                defaultOpen={autoOpen}
               />
             )}
             {isPaid && (
