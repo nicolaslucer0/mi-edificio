@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import {
   ResponsiveDialog,
+  ResponsiveDialogBody,
   ResponsiveDialogContent,
   ResponsiveDialogDescription,
   ResponsiveDialogFooter,
@@ -28,6 +29,7 @@ import {
   ResponsiveDialogTitle,
 } from "@/components/ui/responsive-dialog";
 import { formatCurrencyCents, formatUnitWithFloor } from "@/lib/format";
+import { splitAmount } from "@/lib/expenses-split";
 import { cn } from "@/lib/utils";
 import type { AdminUnit } from "@/lib/queries/admin";
 
@@ -144,6 +146,31 @@ export function ExpenseForm({
     units.length > 0 && Number(total) > 0
       ? Math.round(Number(total) / units.length)
       : 0;
+
+  // La misma cuenta que hace el servidor al crear, para que el admin vea
+  // cuánto le toca a cada depto antes de que les llegue el aviso a todos. Un
+  // coeficiente mal tipeado (1,03 en vez de 10,30) se ve acá y no después.
+  const coefficientSum = allHaveCoef
+    ? units.reduce((sum, u) => sum + Number(u.coefficient), 0)
+    : 0;
+  const splitPreview =
+    mode === "split" && Number(total) > 0
+      ? (() => {
+          const shares = splitAmount(
+            Number(total) * 100,
+            units.map((u) => (allHaveCoef ? Number(u.coefficient) : 1)),
+          );
+          return units
+            .map((u, i) => ({
+              id: u.id,
+              name: formatUnitWithFloor(u),
+              cents: shares[i],
+            }))
+            .sort((a, b) =>
+              a.name.localeCompare(b.name, "es", { numeric: true }),
+            );
+        })()
+      : [];
 
   return (
     <>
@@ -383,6 +410,41 @@ export function ExpenseForm({
                   }.`}
             </ResponsiveDialogDescription>
           </ResponsiveDialogHeader>
+          {splitPreview.length > 0 && (
+            <ResponsiveDialogBody className="gap-3">
+              {allHaveCoef && Math.abs(coefficientSum - 100) > 0.5 && (
+                <p
+                  role="note"
+                  className="rounded-md bg-yellow-100 px-3 py-2 text-sm leading-relaxed text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
+                >
+                  Los coeficientes suman{" "}
+                  <span className="font-semibold">
+                    {coefficientSum.toLocaleString("es-AR", {
+                      maximumFractionDigits: 2,
+                    })}
+                    %
+                  </span>
+                  , no 100%. Revisá que estén bien cargados en Unidades.
+                </p>
+              )}
+              <ul
+                aria-label="Cuánto le toca a cada departamento"
+                className="flex max-h-72 flex-col divide-y divide-border/60 overflow-y-auto rounded-md border border-border/60"
+              >
+                {splitPreview.map((row) => (
+                  <li
+                    key={row.id}
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                  >
+                    <span>{row.name}</span>
+                    <span className="font-semibold tabular-nums">
+                      {formatCurrencyCents(row.cents)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </ResponsiveDialogBody>
+          )}
           <ResponsiveDialogFooter>
             <Button
               type="button"
