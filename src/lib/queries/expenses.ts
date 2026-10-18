@@ -50,7 +50,12 @@ function getUnitAccess(
   };
 }
 
-function buildExpenseAccessCondition(
+/**
+ * Qué expensas ve el usuario: todas las de las unidades de las que es
+ * propietario, y solo las ordinarias de las que es inquilino (las
+ * extraordinarias las paga el propietario).
+ */
+export function buildExpenseAccessCondition(
   user: CurrentUser,
   consorcioId?: string | null,
 ): SQL | null {

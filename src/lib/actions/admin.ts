@@ -83,6 +83,7 @@ async function loadClaimContext(claimId: string) {
       resolvedByUserId: paymentClaims.resolvedByUserId,
       receiptUrl: paymentClaims.receiptUrl,
       expenseId: expenses.id,
+      expenseType: expenses.type,
       unitId: expenses.unitId,
       period: expenses.period,
       amountCents: expenses.amountCents,
@@ -276,6 +277,7 @@ export async function registerPayment(
       unitLabel: units.label,
       consorcioId: units.consorcioId,
       period: expenses.period,
+      type: expenses.type,
       amountCents: expenses.amountCents,
       paidCents: expenses.paidCents,
       status: expenses.status,
@@ -319,7 +321,8 @@ export async function registerPayment(
   });
   await recomputeExpensePaid(expense.id);
 
-  // Se avisa a todos los de la unidad: no sabemos quién pagó, y así nadie
+  // Se avisa a todos los de la unidad a los que les toca la expensa (la
+  // extraordinaria, solo al propietario): no sabemos quién pagó, y así nadie
   // vuelve a apretar "Ya pagué".
   const memberRows = await db
     .select({
@@ -332,7 +335,10 @@ export async function registerPayment(
     .where(
       and(
         eq(memberships.unitId, expense.unitId),
-        inArray(memberships.role, ["owner", "tenant"]),
+        inArray(
+          memberships.role,
+          expense.type === "extraordinaria" ? ["owner"] : ["owner", "tenant"],
+        ),
       ),
     );
   const members = new Map(memberRows.map((m) => [m.id, m]));
@@ -441,6 +447,7 @@ export async function voidPayment(claimId: string): Promise<ActionResult> {
       period: claim.period,
       amountCents,
       unitLabel: claim.unitLabel,
+      type: claim.expenseType,
     });
   } else {
     if (claim.claimerEmail) {
@@ -884,7 +891,12 @@ export async function createExpense(
     unitIdsByAmount.set(t.amountCents, list);
   }
   for (const [amountCents, unitIds] of unitIdsByAmount) {
-    await notifyNewExpense({ unitIds, period: d.period, amountCents });
+    await notifyNewExpense({
+      unitIds,
+      period: d.period,
+      amountCents,
+      type: d.type,
+    });
   }
 
   revalidatePath("/admin", "layout");

@@ -44,6 +44,7 @@ export async function GET(request: Request) {
       id: expenses.id,
       unitId: expenses.unitId,
       period: expenses.period,
+      type: expenses.type,
       amountCents: expenses.amountCents,
       paidCents: expenses.paidCents,
     })
@@ -88,15 +89,25 @@ export async function GET(request: Request) {
     return Response.json({ ok: true, reminded: 0, skipped });
   }
 
-  // Un aviso por período y monto, para que el texto diga el importe correcto.
-  const groups = new Map<string, { period: string; amountCents: number; unitIds: string[] }>();
+  // Un aviso por período, tipo y monto: el texto dice el importe correcto, y
+  // el tipo decide a quién le llega (la extraordinaria, solo al propietario).
+  const groups = new Map<
+    string,
+    {
+      period: string;
+      type: (typeof pending)[number]["type"];
+      amountCents: number;
+      unitIds: string[];
+    }
+  >();
   for (const item of pending) {
-    const key = `${item.period}·${item.amountCents}`;
+    const key = `${item.period}·${item.type}·${item.amountCents}`;
     const group = groups.get(key);
     if (group) group.unitIds.push(item.unitId);
     else
       groups.set(key, {
         period: item.period,
+        type: item.type,
         amountCents: item.amountCents,
         unitIds: [item.unitId],
       });

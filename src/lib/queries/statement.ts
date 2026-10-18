@@ -16,7 +16,7 @@ import {
   claimValidatedCents,
   remainingCents,
 } from "@/lib/payments";
-import { getPendingClaimCents } from "./expenses";
+import { buildExpenseAccessCondition, getPendingClaimCents } from "./expenses";
 
 export type StatementMovement = {
   id: string;
@@ -67,7 +67,10 @@ export async function getAccountStatement(
         .map((m) => m.unitId as string),
     ),
   );
-  if (unitIds.length === 0) return [];
+  // Las mismas expensas que ve en Expensas: al inquilino no se le muestran
+  // ni se le suman las extraordinarias.
+  const access = buildExpenseAccessCondition(user, consorcioId);
+  if (unitIds.length === 0 || !access) return [];
 
   const [unitRows, expenseRows, claimRows, creditRows] = await Promise.all([
     db
@@ -86,7 +89,7 @@ export async function getAccountStatement(
         status: expenses.status,
       })
       .from(expenses)
-      .where(inArray(expenses.unitId, unitIds)),
+      .where(access),
     db
       .select({
         id: paymentClaims.id,
@@ -104,7 +107,7 @@ export async function getAccountStatement(
       .innerJoin(expenses, eq(expenses.id, paymentClaims.expenseId))
       .where(
         and(
-          inArray(expenses.unitId, unitIds),
+          access,
           inArray(paymentClaims.resolution, ["approved", "pending"]),
         ),
       ),
@@ -121,12 +124,7 @@ export async function getAccountStatement(
       })
       .from(unitCredits)
       .innerJoin(expenses, eq(expenses.id, unitCredits.relatedExpenseId))
-      .where(
-        and(
-          inArray(expenses.unitId, unitIds),
-          eq(unitCredits.reason, "application"),
-        ),
-      ),
+      .where(and(access, eq(unitCredits.reason, "application"))),
   ]);
   const pendingByExpense = await getPendingClaimCents(expenseRows);
 
