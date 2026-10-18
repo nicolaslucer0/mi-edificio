@@ -353,6 +353,89 @@ export async function getOpenExpensesForUser(
     .orderBy(expenses.period, expenses.type, expenses.dueDate);
 }
 
+export type ExpenseClaimInfo = {
+  /** Lo avisado que espera validación, del más nuevo al más viejo. */
+  pending: {
+    id: string;
+    amountCents: number;
+    claimedAt: Date;
+    hasReceipt: boolean;
+    /** Si lo avisó este usuario: solo quien avisó lo puede borrar. */
+    mine: boolean;
+  }[];
+  /** El último aviso rechazado, con el motivo. */
+  rejection: {
+    amountCents: number;
+    reason: string | null;
+    resolvedAt: Date | null;
+  } | null;
+};
+
+/**
+ * Qué avisó el vecino de cada expensa y qué le contestaron. Sin esto, la
+ * tarjeta decía "el administrador está revisando tu pago" sin decir cuánto
+ * ni cuándo, y el motivo de un rechazo solo viajaba en la notificación.
+ */
+export async function getClaimInfoForExpenses(
+  user: CurrentUser,
+  rows: { id: string; amountCents: number }[],
+): Promise<Map<string, ExpenseClaimInfo>> {
+  const byExpense = new Map<string, ExpenseClaimInfo>();
+  if (rows.length === 0) return byExpense;
+
+  const claims = await db
+    .select({
+      id: paymentClaims.id,
+      expenseId: paymentClaims.expenseId,
+      amountCents: paymentClaims.amountCents,
+      resolution: paymentClaims.resolution,
+      claimedAt: paymentClaims.claimedAt,
+      resolvedAt: paymentClaims.resolvedAt,
+      receiptUrl: paymentClaims.receiptUrl,
+      rejectionReason: paymentClaims.rejectionReason,
+      claimedByUserId: paymentClaims.claimedByUserId,
+    })
+    .from(paymentClaims)
+    .where(
+      and(
+        inArray(
+          paymentClaims.expenseId,
+          rows.map((r) => r.id),
+        ),
+        inArray(paymentClaims.resolution, ["pending", "rejected"]),
+      ),
+    )
+    .orderBy(desc(paymentClaims.claimedAt));
+
+  const amountById = new Map(rows.map((r) => [r.id, r.amountCents]));
+  for (const c of claims) {
+    const info = byExpense.get(c.expenseId) ?? { pending: [], rejection: null };
+    const amountCents = claimInformedCents(c, amountById.get(c.expenseId) ?? 0);
+    if (c.resolution === "pending") {
+      info.pending.push({
+        id: c.id,
+        amountCents,
+        claimedAt: c.claimedAt,
+        hasReceipt: Boolean(c.receiptUrl),
+        mine: c.claimedByUserId === user.id,
+      });
+    } else if (
+      !info.rejection ||
+      (c.resolvedAt &&
+        info.rejection.resolvedAt &&
+        c.resolvedAt > info.rejection.resolvedAt)
+    ) {
+      info.rejection = {
+        amountCents,
+        reason: c.rejectionReason,
+        resolvedAt: c.resolvedAt,
+      };
+    }
+    byExpense.set(c.expenseId, info);
+  }
+  return byExpense;
+}
+
 /** Las pagadas, de la más nueva a la más vieja y paginadas. */
 export async function getPaidExpensesForUser(
   user: CurrentUser,

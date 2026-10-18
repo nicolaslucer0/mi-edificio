@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import {
+  getClaimInfoForExpenses,
   getCreditForUser,
   getDebtForUser,
   getOpenExpensesForUser,
@@ -26,7 +27,8 @@ import { EmptyState } from "@/components/empty-state";
 import { PageHeader } from "@/components/page-header";
 import { ExpenseStatusBadge } from "@/components/expense-status-badge";
 import { PaymentInfoCard } from "@/components/payment-info-card";
-import type { ExpenseRow } from "@/lib/queries/expenses";
+import type { ExpenseClaimInfo, ExpenseRow } from "@/lib/queries/expenses";
+import { CancelClaimButton } from "@/components/cancel-claim-button";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -54,6 +56,8 @@ export default async function ExpensesPage({
       getPendingDepositsForUser(user, consorcioId),
       getDebtForUser(user, consorcioId),
     ]);
+
+  const claimInfo = await getClaimInfoForExpenses(user, open);
 
   // Lo que debe va primero y entero: quien avisa varios meses juntos no
   // tiene que paginar para encontrarlos. Las pagadas, al final y paginadas.
@@ -105,6 +109,7 @@ export default async function ExpensesPage({
                     : undefined
                 }
                 items={toPay}
+                claimInfo={claimInfo}
               />
             ) : (
               <p className="rounded-md bg-success/10 p-4 text-base font-medium text-success">
@@ -117,6 +122,7 @@ export default async function ExpensesPage({
                 title="Esperando confirmación"
                 subtitle="Avisaste que las pagaste y el administrador las está revisando."
                 items={inReview}
+                claimInfo={claimInfo}
               />
             )}
 
@@ -125,6 +131,7 @@ export default async function ExpensesPage({
                 title="Próximas"
                 subtitle="Todavía no vencen. Si querés, las podés adelantar."
                 items={upcoming}
+                claimInfo={claimInfo}
               />
             )}
 
@@ -146,11 +153,13 @@ function ExpenseSection({
   title,
   subtitle,
   items,
+  claimInfo,
   children,
 }: Readonly<{
   title: string;
   subtitle?: string;
   items: ExpenseRow[];
+  claimInfo?: Map<string, ExpenseClaimInfo>;
   children?: React.ReactNode;
 }>) {
   return (
@@ -165,7 +174,12 @@ function ExpenseSection({
       </div>
       <ul data-stagger className="flex flex-col gap-3">
         {items.map((expense, idx) => (
-          <ExpenseListItem key={expense.id} expense={expense} index={idx} />
+          <ExpenseListItem
+            key={expense.id}
+            expense={expense}
+            index={idx}
+            claims={claimInfo?.get(expense.id)}
+          />
         ))}
       </ul>
       {children}
@@ -176,7 +190,12 @@ function ExpenseSection({
 function ExpenseListItem({
   expense,
   index,
-}: Readonly<{ expense: ExpenseRow; index: number }>) {
+  claims,
+}: Readonly<{
+  expense: ExpenseRow;
+  index: number;
+  claims?: ExpenseClaimInfo;
+}>) {
   const canClaim =
     expense.status === "pendiente" ||
     expense.status === "rechazado" ||
@@ -269,6 +288,13 @@ function ExpenseListItem({
                 </div>
               </div>
             )}
+
+            {(isInValidation || expense.status === "rechazado") && claims && (
+              <ClaimStatus
+                claims={claims}
+                showRejection={expense.status === "rechazado"}
+              />
+            )}
           </div>
 
           <div className="sm:shrink-0">
@@ -293,7 +319,7 @@ function ExpenseListItem({
                 Ver comprobante
               </Link>
             )}
-            {isInValidation && (
+            {isInValidation && !claims?.pending.length && (
               <p className="text-sm text-muted-foreground sm:text-right">
                 El administrador
                 <br className="hidden sm:inline" /> está revisando tu pago.
@@ -304,6 +330,56 @@ function ExpenseListItem({
       </Card>
     </li>
   );
+}
+
+/**
+ * Lo que el vecino avisó y está en revisión, o por qué se lo rechazaron. Sin
+ * el motivo a la vista, el vecino volvía a avisar lo mismo y lo volvían a
+ * rechazar.
+ */
+function ClaimStatus({
+  claims,
+  showRejection,
+}: Readonly<{ claims: ExpenseClaimInfo; showRejection: boolean }>) {
+  if (claims.pending.length > 0) {
+    return (
+      <ul className="flex flex-col gap-2" aria-label="Pagos avisados">
+        {claims.pending.map((p) => (
+          <li
+            key={p.id}
+            className="flex flex-col gap-1 rounded-md bg-yellow-100 px-3 py-2 text-sm leading-relaxed text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <span>
+              Avisaste{" "}
+              <span className="font-semibold">
+                {formatCurrencyCents(p.amountCents)}
+              </span>{" "}
+              el {formatDate(p.claimedAt)}
+              {p.hasReceipt ? ", con comprobante" : ", sin comprobante"}. El
+              administrador lo está revisando.
+            </span>
+            {p.mine && <CancelClaimButton claimId={p.id} />}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (showRejection && claims.rejection) {
+    return (
+      <p
+        role="note"
+        className="rounded-md bg-destructive/10 px-3 py-2 text-sm leading-relaxed text-destructive"
+      >
+        El administrador no confirmó tu aviso de{" "}
+        <span className="font-semibold">
+          {formatCurrencyCents(claims.rejection.amountCents)}
+        </span>
+        {claims.rejection.reason ? `: «${claims.rejection.reason}»` : ""}. Si ya
+        pagaste, volvé a avisar y adjuntá el comprobante.
+      </p>
+    );
+  }
+  return null;
 }
 
 function Pagination({

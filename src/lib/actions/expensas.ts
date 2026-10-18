@@ -14,7 +14,8 @@ import {
   users,
 } from "@/lib/db/schema";
 import { sendClaimNotification, sendDepositNotification } from "@/lib/email";
-import { getReceiptFile, uploadReceipt } from "@/lib/receipts";
+import { deleteReceipt, getReceiptFile, uploadReceipt } from "@/lib/receipts";
+import { recomputeExpensePaid } from "@/lib/credits";
 import {
   notifyClaimToValidate,
   notifyDepositToValidate,
@@ -243,6 +244,57 @@ export async function requestCreditDeposit(
   }
 
   revalidatePath("/expensas");
+  revalidatePath("/admin", "layout");
+  return { ok: true };
+}
+
+/**
+ * El vecino borra un aviso de pago que todavía no se validó ("me
+ * equivoqué"). Solo quien lo avisó, y solo mientras esté pendiente: un aviso
+ * duplicado o con el monto mal lo puede limpiar él, sin que lo tenga que
+ * rechazar el admin.
+ */
+export async function cancelClaim(claimId: string): Promise<ClaimResult> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { ok: false, error: "No tenés sesión activa." };
+  }
+
+  const [claim] = await db
+    .select({
+      expenseId: paymentClaims.expenseId,
+      claimedByUserId: paymentClaims.claimedByUserId,
+      resolution: paymentClaims.resolution,
+      receiptUrl: paymentClaims.receiptUrl,
+    })
+    .from(paymentClaims)
+    .where(eq(paymentClaims.id, claimId))
+    .limit(1);
+  if (!claim || claim.claimedByUserId !== session.user.id) {
+    return { ok: false, error: "No encontramos ese aviso." };
+  }
+  if (claim.resolution !== "pending") {
+    return {
+      ok: false,
+      error: "El administrador ya lo revisó, así que no se puede borrar.",
+    };
+  }
+
+  await db
+    .delete(paymentClaims)
+    .where(
+      and(
+        eq(paymentClaims.id, claimId),
+        eq(paymentClaims.resolution, "pending"),
+      ),
+    );
+  await deleteReceipt(claim.receiptUrl);
+  // La expensa vuelve a como estaba antes del aviso (pendiente, parcial o
+  // rechazada).
+  await recomputeExpensePaid(claim.expenseId);
+
+  revalidatePath("/expensas");
+  revalidatePath("/");
   revalidatePath("/admin", "layout");
   return { ok: true };
 }
