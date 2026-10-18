@@ -321,16 +321,50 @@ export async function getRecentExpensesForUser(
     .limit(limit);
 }
 
-export async function getExpensesForUser(
+/**
+ * Las que no están pagadas, todas y sin paginar, de la más vieja a la más
+ * nueva (la ordinaria antes que la extraordinaria del mismo mes). Van arriba
+ * en Expensas: quien informa varios meses juntos no tiene que buscar en la
+ * página 2.
+ */
+export async function getOpenExpensesForUser(
+  user: CurrentUser,
+  consorcioId?: string | null,
+): Promise<ExpenseRow[]> {
+  const visible = buildExpenseAccessCondition(user, consorcioId);
+  if (!visible) return [];
+
+  return db
+    .select({
+      id: expenses.id,
+      unitId: expenses.unitId,
+      unitLabel: units.label,
+      period: expenses.period,
+      dueDate: expenses.dueDate,
+      amountCents: expenses.amountCents,
+      paidCents: expenses.paidCents,
+      type: expenses.type,
+      status: expenses.status,
+      description: expenses.description,
+    })
+    .from(expenses)
+    .innerJoin(units, eq(units.id, expenses.unitId))
+    .where(and(visible, notInArray(expenses.status, ["pagado"])))
+    .orderBy(expenses.period, expenses.type, expenses.dueDate);
+}
+
+/** Las pagadas, de la más nueva a la más vieja y paginadas. */
+export async function getPaidExpensesForUser(
   user: CurrentUser,
   options: { page: number; perPage: number; consorcioId?: string | null },
 ): Promise<PaginatedExpenses> {
   const { page, perPage, consorcioId } = options;
-  const access = buildExpenseAccessCondition(user, consorcioId);
+  const visible = buildExpenseAccessCondition(user, consorcioId);
 
-  if (!access) {
+  if (!visible) {
     return { items: [], total: 0, page, perPage, totalPages: 0 };
   }
+  const access = and(visible, eq(expenses.status, "pagado"));
 
   const offset = (page - 1) * perPage;
 

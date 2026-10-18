@@ -6,7 +6,8 @@ import { getCurrentConsorcioId } from "@/lib/consorcio-context";
 import {
   getCreditForUser,
   getDebtForUser,
-  getExpensesForUser,
+  getOpenExpensesForUser,
+  getPaidExpensesForUser,
   getPendingDepositsForUser,
 } from "@/lib/queries/expenses";
 import { getPaymentInfoForUser } from "@/lib/queries/consorcios";
@@ -44,14 +45,26 @@ export default async function ExpensesPage({
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
   const consorcioId = await getCurrentConsorcioId(user);
 
-  const [paginated, paymentInfos, credits, pendingDeposits, debt] =
+  const [open, paid, paymentInfos, credits, pendingDeposits, debt] =
     await Promise.all([
-      getExpensesForUser(user, { page, perPage: PER_PAGE, consorcioId }),
+      getOpenExpensesForUser(user, consorcioId),
+      getPaidExpensesForUser(user, { page, perPage: PER_PAGE, consorcioId }),
       getPaymentInfoForUser(user, consorcioId),
       getCreditForUser(user, consorcioId),
       getPendingDepositsForUser(user, consorcioId),
       getDebtForUser(user, consorcioId),
     ]);
+
+  // Lo que debe va primero y entero: quien avisa varios meses juntos no
+  // tiene que paginar para encontrarlos. Las pagadas, al final y paginadas.
+  const inReview = open.filter((e) => e.status === "en_validacion");
+  const toPay = open.filter(
+    (e) => e.status !== "en_validacion" && !isFuturePeriod(e.period),
+  );
+  const upcoming = open.filter(
+    (e) => e.status !== "en_validacion" && isFuturePeriod(e.period),
+  );
+  const hasAny = open.length > 0 || paid.total > 0;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">
@@ -74,7 +87,7 @@ export default async function ExpensesPage({
           debtCents={debt.hasUnit ? debt.amountCents : 0}
         />
 
-        {paginated.items.length === 0 ? (
+        {!hasAny ? (
           <EmptyState
             icon={Wallet}
             tone="green"
@@ -83,30 +96,80 @@ export default async function ExpensesPage({
           />
         ) : (
           <>
-            <ul
-              data-stagger
-              className="flex flex-col gap-3"
-              aria-label="Lista de expensas"
-            >
-              {paginated.items.map((expense, idx) => (
-                <ExpenseListItem
-                  key={expense.id}
-                  expense={expense}
-                  index={idx}
-                />
-              ))}
-            </ul>
-
-            {paginated.totalPages > 1 && (
-              <Pagination
-                page={paginated.page}
-                totalPages={paginated.totalPages}
+            {toPay.length > 0 ? (
+              <ExpenseSection
+                title="Para pagar"
+                subtitle={
+                  debt.hasUnit && debt.amountCents > 0
+                    ? `En total debés ${formatCurrencyCents(debt.amountCents)}`
+                    : undefined
+                }
+                items={toPay}
               />
+            ) : (
+              <p className="rounded-md bg-success/10 p-4 text-base font-medium text-success">
+                No tenés expensas para pagar.
+              </p>
+            )}
+
+            {inReview.length > 0 && (
+              <ExpenseSection
+                title="Esperando confirmación"
+                subtitle="Avisaste que las pagaste y el administrador las está revisando."
+                items={inReview}
+              />
+            )}
+
+            {upcoming.length > 0 && (
+              <ExpenseSection
+                title="Próximas"
+                subtitle="Todavía no vencen. Si querés, las podés adelantar."
+                items={upcoming}
+              />
+            )}
+
+            {paid.items.length > 0 && (
+              <ExpenseSection title="Pagadas" items={paid.items}>
+                {paid.totalPages > 1 && (
+                  <Pagination page={paid.page} totalPages={paid.totalPages} />
+                )}
+              </ExpenseSection>
             )}
           </>
         )}
       </div>
     </main>
+  );
+}
+
+function ExpenseSection({
+  title,
+  subtitle,
+  items,
+  children,
+}: Readonly<{
+  title: string;
+  subtitle?: string;
+  items: ExpenseRow[];
+  children?: React.ReactNode;
+}>) {
+  return (
+    <section className="flex flex-col gap-3" aria-label={title}>
+      <div className="flex flex-col gap-0.5">
+        <h2 className="text-lg font-semibold">{title}</h2>
+        {subtitle && (
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {subtitle}
+          </p>
+        )}
+      </div>
+      <ul data-stagger className="flex flex-col gap-3">
+        {items.map((expense, idx) => (
+          <ExpenseListItem key={expense.id} expense={expense} index={idx} />
+        ))}
+      </ul>
+      {children}
+    </section>
   );
 }
 
@@ -146,6 +209,10 @@ function ExpenseListItem({
             <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-start sm:gap-3">
               <p className="text-lg font-semibold text-balance">
                 {formatPeriod(expense.period)}
+                <span className="font-normal text-muted-foreground">
+                  {" · "}
+                  {isExtraordinaria ? "Extraordinaria" : "Ordinaria"}
+                </span>
               </p>
               <ExpenseStatusBadge status={expense.status} period={expense.period} />
             </div>
@@ -167,16 +234,14 @@ function ExpenseListItem({
               )}
               <p className="text-sm text-muted-foreground">
                 Vence el {formatDate(expense.dueDate)}
-                {expense.type === "extraordinaria" && (
-                  <>
-                    {" · "}
-                    <span className="font-medium text-foreground">
-                      Extraordinaria
-                    </span>
-                  </>
-                )}
               </p>
             </div>
+
+            {expense.description && (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                {expense.description}
+              </p>
+            )}
 
             {isPartiallyPaid && (
               <div className="flex flex-col gap-1.5">
@@ -229,7 +294,7 @@ function ExpenseListItem({
               </Link>
             )}
             {isInValidation && (
-              <p className="text-xs text-muted-foreground sm:text-right">
+              <p className="text-sm text-muted-foreground sm:text-right">
                 El administrador
                 <br className="hidden sm:inline" /> está revisando tu pago.
               </p>
