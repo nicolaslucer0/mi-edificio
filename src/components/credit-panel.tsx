@@ -18,6 +18,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ReceiptInput } from "@/components/receipt-input";
 import { requestCreditDeposit } from "@/lib/actions/expensas";
 import {
   formatCurrencyCents,
@@ -226,16 +227,9 @@ export function CreditPanel({
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="credit-receipt" className="text-sm">
-                  Comprobante (opcional)
+                  Foto o captura del comprobante
                 </Label>
-                <Input
-                  id="credit-receipt"
-                  name="receipt"
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="h-12 text-base file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-muted/80"
-                  disabled={isPending}
-                />
+                <ReceiptInput id="credit-receipt" disabled={isPending} />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="credit-note" className="text-sm">

@@ -10,7 +10,11 @@ export type UploadReceiptResult =
 
 export async function uploadReceipt(file: File): Promise<UploadReceiptResult> {
   if (file.size > MAX_RECEIPT_SIZE) {
-    return { ok: false, error: "El comprobante supera los 4MB." };
+    return {
+      ok: false,
+      error:
+        "El archivo es muy pesado. Probá con una captura de pantalla del comprobante.",
+    };
   }
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
     return {

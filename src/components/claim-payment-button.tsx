@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ReceiptInput } from "@/components/receipt-input";
 import { claimPayment } from "@/lib/actions/expensas";
 import { formatCurrencyCents, formatPeriod } from "@/lib/format";
 
@@ -40,6 +41,7 @@ export function ClaimPaymentButton({
   const [mode, setMode] = useState<"full" | "partial">("full");
   const [partialPesos, setPartialPesos] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -55,11 +57,13 @@ export function ClaimPaymentButton({
     : remaining;
 
   function handleOpenChange(next: boolean) {
+    if (isPending) return;
     setOpen(next);
     if (!next) {
       setMode("full");
       setPartialPesos("");
       setError(null);
+      setSubmitError(null);
     }
   }
 
@@ -74,18 +78,20 @@ export function ClaimPaymentButton({
     }
     formData.set("amountCents", String(amount));
     setError(null);
-    setSubmitted(true);
-    setOpen(false);
+    // El diálogo queda abierto hasta que conteste el servidor: si algo falla
+    // (la foto, la conexión), lo que escribió sigue ahí y el error se ve al
+    // lado, en vez de cerrarse como si hubiera salido bien.
     startTransition(async () => {
       const result = await claimPayment(expenseId, formData);
       if (result.ok) {
+        setSubmitted(true);
+        setOpen(false);
         toast.success("Listo. El administrador va a validar tu pago.", {
           duration: 5000,
         });
         router.refresh();
       } else {
-        setSubmitted(false);
-        toast.error(result.error);
+        setSubmitError(result.error);
       }
     });
   }
@@ -229,19 +235,19 @@ export function ClaimPaymentButton({
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="receipt" className="text-sm">
-                  Comprobante (opcional)
+                  Foto o captura del comprobante
                 </Label>
-                <Input
+                <ReceiptInput
                   id="receipt"
-                  name="receipt"
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="h-12 text-base file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-muted/80"
                   disabled={isPending}
+                  hintId="receipt-hint"
                 />
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Sacale una foto o subí el comprobante de la transferencia.
-                  Imagen o PDF, hasta 4MB.
+                <p
+                  id="receipt-hint"
+                  className="text-sm text-muted-foreground leading-relaxed"
+                >
+                  Con el comprobante, el administrador te lo confirma más
+                  rápido. Si no lo tenés, podés avisar igual.
                 </p>
               </div>
               <div className="flex flex-col gap-2">
@@ -257,6 +263,14 @@ export function ClaimPaymentButton({
                   disabled={isPending}
                 />
               </div>
+              {submitError && (
+                <p
+                  role="alert"
+                  className="text-sm text-destructive leading-relaxed"
+                >
+                  {submitError}
+                </p>
+              )}
             </ResponsiveDialogBody>
             <ResponsiveDialogFooter>
               <Button

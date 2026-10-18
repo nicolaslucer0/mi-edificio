@@ -13,6 +13,7 @@ import { CurrencyInput } from "@/components/ui/currency-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { ReceiptInput } from "@/components/receipt-input";
 import {
   Select,
   SelectContent,
@@ -324,16 +325,12 @@ export function ExpenditureForm({
             Ver comprobante actual
           </a>
         )}
-        <Input
-          id="receipt"
-          name="receipt"
-          type="file"
-          accept="image/*,application/pdf"
-          className="h-12 text-base file:mr-3 file:rounded-md file:border-0 file:bg-muted file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-muted/80"
-          disabled={pending}
-        />
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          Imagen o PDF, hasta 4MB.
+        <ReceiptInput id="receipt" disabled={pending} hintId="receipt-hint" />
+        <p
+          id="receipt-hint"
+          className="text-sm text-muted-foreground leading-relaxed"
+        >
+          Foto, captura o PDF.
           {initialValues?.receiptUrl &&
             " Si subís uno nuevo, reemplaza al actual."}
         </p>
