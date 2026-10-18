@@ -110,7 +110,7 @@ export function DepositDecisionCard({
             <p className="text-sm leading-relaxed">{note}</p>
           </div>
         )}
-        {receiptUrl && (
+        {receiptUrl ? (
           <a
             href={`/api/receipts/deposit/${depositId}`}
             target="_blank"
@@ -120,6 +120,12 @@ export function DepositDecisionCard({
             <Paperclip aria-hidden="true" className="size-4" />
             Ver comprobante adjunto
           </a>
+        ) : (
+          // Sin comprobante no hay con qué comparar: que se note antes de
+          // confirmar, no después.
+          <p className="rounded-md bg-amber-100 px-3 py-2 text-sm leading-relaxed text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
+            Sin comprobante: buscalo en el extracto antes de confirmar.
+          </p>
         )}
         <p className="text-xs text-muted-foreground">
           Informado el {createdAt.toLocaleString("es-AR")}
