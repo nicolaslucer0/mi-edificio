@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -36,6 +36,7 @@ import {
   applyCreditToUnit,
   excessToCreditWrites,
   recomputeExpensePaid,
+  recomputeUnitCredit,
 } from "@/lib/credits";
 import { splitAmount } from "@/lib/expenses-split";
 import { CONSORCIOS_TAG } from "@/lib/consorcio-context";
@@ -315,26 +316,43 @@ export async function registerPayment(
   if (!Number.isInteger(amountCents) || amountCents < minCents) {
     return { ok: false, error: "Ingresá un monto de al menos $1." };
   }
-  // Como en el flujo del vecino, no se registra de más (v1).
+  // Lo que cabe en la expensa. El resto —pagó de más, o la transferencia
+  // cubría otras expensas— pasa a saldo a favor y se aplica solo, igual que
+  // al aprobar un pago.
   const applied = Math.min(amountCents, remaining);
+  const excess = amountCents - applied;
   const unitName = formatUnitWithFloor({
     label: expense.unitLabel,
     floor: expense.unitFloor,
   });
   const now = new Date();
 
-  await db.insert(paymentClaims).values({
-    expenseId: expense.id,
-    claimedByUserId: ctx.userId,
-    claimedAt: now,
-    amountCents: applied,
-    confirmedAmountCents: applied,
-    note: "Registrado por la administración.",
-    resolution: "approved",
-    resolvedByUserId: ctx.userId,
-    resolvedAt: now,
-  });
+  const [registered] = await db
+    .insert(paymentClaims)
+    .values({
+      expenseId: expense.id,
+      claimedByUserId: ctx.userId,
+      claimedAt: now,
+      amountCents,
+      confirmedAmountCents: applied,
+      note: "Registrado por la administración.",
+      resolution: "approved",
+      resolvedByUserId: ctx.userId,
+      resolvedAt: now,
+    })
+    .returning({ id: paymentClaims.id });
   await recomputeExpensePaid(expense.id);
+
+  if (excess > 0) {
+    await db.insert(unitCredits).values({
+      unitId: expense.unitId,
+      amountCents: excess,
+      reason: "overpayment",
+      relatedClaimId: registered.id,
+      createdByUserId: ctx.userId,
+    });
+    await applyCreditToUnit(expense.unitId);
+  }
 
   // Se avisa a todos los de la unidad a los que les toca la expensa (la
   // extraordinaria, solo al propietario): no sabemos quién pagó, y así nadie
@@ -363,7 +381,8 @@ export async function registerPayment(
         await sendPaymentConfirmedEmail({
           to: m.email,
           period: expense.period,
-          amountCents: applied,
+          // Todo lo que pagó, aunque una parte haya ido a saldo a favor.
+          amountCents,
           unitName,
           notificationPrefs: m.prefs,
         });
@@ -376,7 +395,7 @@ export async function registerPayment(
       prefs: m.prefs,
       resolution: "approved",
       period: expense.period,
-      amountCents: applied,
+      amountCents,
       unitName,
     });
   }
@@ -408,19 +427,34 @@ export async function voidPayment(claimId: string): Promise<ActionResult> {
     return { ok: false, error: "Este pago no está confirmado." };
   }
 
-  // Lo que este pago dejó como saldo a favor pudo haberse usado en otras
-  // expensas: anularlo dejaría el saldo de la unidad en negativo.
-  const [credited] = await db
-    .select({ id: unitCredits.id })
+  // Lo que este pago dejó como saldo a favor (lo que sobró). Si la unidad
+  // todavía lo tiene, se descuenta junto con el pago. Si ya se usó en otras
+  // expensas, anularlo dejaría el saldo de la unidad en negativo.
+  const [creditRow] = await db
+    .select({
+      total: sql<number>`coalesce(sum(${unitCredits.amountCents}), 0)::int`,
+    })
     .from(unitCredits)
-    .where(eq(unitCredits.relatedClaimId, claim.claimId))
-    .limit(1);
-  if (credited) {
-    return {
-      ok: false,
-      error:
-        "Parte de este pago pasó a saldo a favor de la unidad, así que no se puede anular.",
-    };
+    .where(eq(unitCredits.relatedClaimId, claim.claimId));
+  const creditedCents = Number(creditRow?.total ?? 0);
+  if (creditedCents > 0) {
+    const balance = await recomputeUnitCredit(claim.unitId);
+    if (balance < creditedCents) {
+      return {
+        ok: false,
+        error:
+          "Lo que sobró de este pago ya se usó como saldo a favor en otras expensas de la unidad, así que no se puede anular.",
+      };
+    }
+    // Antes de borrar o rechazar el pago, que todavía existe para la FK.
+    await db.insert(unitCredits).values({
+      unitId: claim.unitId,
+      amountCents: -creditedCents,
+      reason: "adjustment",
+      relatedClaimId: claim.claimId,
+      createdByUserId: ctx.userId,
+    });
+    await recomputeUnitCredit(claim.unitId);
   }
 
   const amountCents = claimValidatedCents(

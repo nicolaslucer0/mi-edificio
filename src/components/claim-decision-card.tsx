@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/responsive-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -62,23 +62,30 @@ export function ClaimDecisionCard({
   // Monto informado por el vecino (legacy sin monto = expensa completa).
   const informedCents = claimAmountCents ?? amountCents;
   const maxForThis = Math.max(0, amountCents - paidCents);
-  const [confirmedPesos, setConfirmedPesos] = useState(
-    String(Math.round(informedCents / 100)),
-  );
+  const informedPesos = String(Math.round(informedCents / 100));
+  const [confirmedPesos, setConfirmedPesos] = useState(informedPesos);
+  // El campo es en pesos enteros: si lo dejó como estaba, se confirma lo
+  // informado exacto, sin redondear centavos.
+  const confirmCents =
+    confirmedPesos === informedPesos
+      ? informedCents
+      : Number(confirmedPesos || 0) * 100;
+  // Lo que no entra en esta expensa no se pierde: el servidor lo pasa a
+  // saldo a favor de la unidad y lo aplica a lo que deba.
+  const excessCents = Math.max(0, confirmCents - maxForThis);
   const [rejectState, rejectAction, rejectPending] = useActionState<
     ActionResult | null,
     FormData
   >(rejectClaim, null);
 
   function handleApprove() {
-    const cents = Math.round(Number(confirmedPesos) * 100);
-    if (!Number.isFinite(cents) || cents <= 0) {
+    if (confirmCents <= 0) {
       toast.error("Ingresá un monto válido para confirmar.");
       return;
     }
     setHidden(true);
     startApprove(async () => {
-      const result = await approveClaim(claimId, Math.min(cents, maxForThis));
+      const result = await approveClaim(claimId, confirmCents);
       if (result.ok) {
         toast.success("Pago confirmado. El vecino recibió el aviso.");
         router.refresh();
@@ -160,23 +167,31 @@ export function ClaimDecisionCard({
           >
             Monto a confirmar
           </Label>
-          <div className="relative sm:w-44">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
-              $
-            </span>
-            <Input
+          <div className="sm:w-52">
+            <CurrencyInput
               id={`confirm-${claimId}`}
-              type="number"
-              inputMode="numeric"
-              min={1}
-              max={Math.round(maxForThis / 100)}
-              step={1}
+              name="confirmedPesos"
               value={confirmedPesos}
-              onChange={(e) => setConfirmedPesos(e.target.value)}
+              onValueChange={setConfirmedPesos}
               disabled={approvePending}
-              className="h-11 pl-7 text-base"
+              describedById={
+                excessCents > 0 ? `confirm-${claimId}-excess` : undefined
+              }
             />
           </div>
+          {excessCents > 0 && (
+            <p
+              id={`confirm-${claimId}-excess`}
+              className="text-sm leading-relaxed text-muted-foreground"
+            >
+              Cubre lo que falta de esta expensa (
+              {formatCurrencyCents(maxForThis)}) y quedan{" "}
+              <span className="font-semibold text-foreground">
+                {formatCurrencyCents(excessCents)}
+              </span>{" "}
+              a favor de la unidad, que se usan solos en lo que deba.
+            </p>
+          )}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button

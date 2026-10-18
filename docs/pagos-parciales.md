@@ -101,8 +101,11 @@ se recalcula solo.
 
 ## Decisiones tomadas
 
-1. **Sobrepago:** se capa al saldo restante en la v1. _Futuro:_ pago adelantado /
-   saldo a favor como feature aparte.
+1. **Sobrepago:** el vecino no puede informar más de lo que falta en la
+   expensa; si lo escribe, se le avisa que avise cada expensa por separado. El
+   admin sí puede confirmar o registrar más: lo que no entra en la expensa
+   pasa a saldo a favor y se aplica solo (ver [saldo a favor](./saldo-a-favor.md)).
+   "Anular pago" descuenta ese saldo si la unidad todavía no lo usó.
 2. **Admin ajusta el monto** confirmado al validar. Se guarda informado +
    confirmado para trazabilidad.
 3. **Pesos enteros, mínimo $1.**

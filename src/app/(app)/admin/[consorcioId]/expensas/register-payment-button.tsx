@@ -42,10 +42,11 @@ export function RegisterPaymentButton({
   // El input es en pesos enteros; si dejó lo que falta tal cual, se manda el
   // saldo exacto para no dejar centavos colgados.
   const enteredCents =
-    pesos === remainingPesos
-      ? remaining
-      : Math.min(Number(pesos) * 100, remaining);
-  const wouldRemain = remaining - enteredCents;
+    pesos === remainingPesos ? remaining : Number(pesos || 0) * 100;
+  const wouldRemain = Math.max(0, remaining - enteredCents);
+  // Si pagó más (o la transferencia cubría otras expensas), el resto pasa a
+  // saldo a favor de la unidad y se aplica solo.
+  const excessCents = Math.max(0, enteredCents - remaining);
 
   // Se precarga lo que falta al abrir: después de un pago parcial cambia.
   function handleOpenChange(next: boolean) {
@@ -120,7 +121,15 @@ export function RegisterPaymentButton({
               id={`register-${expenseId}-hint`}
               className="text-xs text-muted-foreground leading-relaxed"
             >
-              {enteredCents > 0 && wouldRemain > 0 ? (
+              {excessCents > 0 ? (
+                <>
+                  Cubre lo que falta y quedan{" "}
+                  <span className="font-semibold text-foreground">
+                    {formatCurrencyCents(excessCents)}
+                  </span>{" "}
+                  a favor de la unidad, que se usan solos en lo que deba.
+                </>
+              ) : enteredCents > 0 && wouldRemain > 0 ? (
                 <>
                   Va a quedar pendiente{" "}
                   <span className="font-semibold text-foreground">
@@ -129,7 +138,7 @@ export function RegisterPaymentButton({
                   .
                 </>
               ) : (
-                "Si pagó una parte, poné solo lo que pagó."
+                "Poné lo que transfirió. Si fue más, lo que sobra queda a favor de la unidad."
               )}
             </p>
             {error && (

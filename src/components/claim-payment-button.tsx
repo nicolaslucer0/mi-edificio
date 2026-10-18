@@ -55,6 +55,9 @@ export function ClaimPaymentButton({
   const wouldRemain = enteredValid
     ? Math.max(0, remaining - Math.min(enteredCents, remaining))
     : remaining;
+  // Una transferencia que cubre varias expensas se avisa expensa por expensa;
+  // antes el monto se recortaba en silencio y el resto se perdía.
+  const overCents = enteredValid ? Math.max(0, enteredCents - remaining) : 0;
 
   function handleOpenChange(next: boolean) {
     if (isPending) return;
@@ -201,7 +204,6 @@ export function ClaimPaymentButton({
                         type="number"
                         inputMode="numeric"
                         min={1}
-                        max={remainingPesos}
                         step={1}
                         value={partialPesos}
                         onChange={(e) => {
@@ -213,13 +215,23 @@ export function ClaimPaymentButton({
                         disabled={isPending}
                       />
                     </div>
-                    {enteredValid && (
-                      <p className="text-xs text-muted-foreground leading-relaxed">
-                        Te va a quedar pendiente{" "}
-                        <span className="font-semibold text-foreground">
-                          {formatCurrencyCents(wouldRemain)}
-                        </span>
+                    {overCents > 0 ? (
+                      <p className="rounded-md bg-yellow-100 px-3 py-2 text-sm leading-relaxed text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300">
+                        Escribiste más de lo que falta en esta expensa (
+                        {formatCurrencyCents(remaining)}). Si la transferencia
+                        también pagaba otras expensas, avisá cada una con «Ya
+                        pagué», y en las notas poné cuánto transferiste en
+                        total.
                       </p>
+                    ) : (
+                      enteredValid && (
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                          Te va a quedar pendiente{" "}
+                          <span className="font-semibold text-foreground">
+                            {formatCurrencyCents(wouldRemain)}
+                          </span>
+                        </p>
+                      )
                     )}
                     {error && (
                       <p
