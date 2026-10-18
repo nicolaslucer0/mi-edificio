@@ -46,3 +46,24 @@ export function computeExpenseStatus(input: {
   if (input.hasRejectedClaim) return "rechazado";
   return "pendiente";
 }
+
+const DAY_MS = 86_400_000;
+
+/**
+ * La fecha de la transferencia que manda un formulario ("YYYY-MM-DD"). Vacía
+ * es null: el campo es opcional y los avisos viejos no la tienen. Se guarda
+ * igual que los vencimientos (`new Date("YYYY-MM-DD")`). No puede ser futura:
+ * un día de margen por la diferencia horaria con UTC.
+ */
+export function parseTransferDate(
+  raw: FormDataEntryValue | null,
+): Date | null | "invalid" {
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (!value) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "invalid";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "invalid";
+  if (date.getTime() > Date.now() + DAY_MS) return "invalid";
+  if (date.getUTCFullYear() < 2020) return "invalid";
+  return date;
+}

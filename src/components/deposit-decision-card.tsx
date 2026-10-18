@@ -31,6 +31,8 @@ type Props = {
   note: string | null;
   receiptUrl: string | null;
   createdAt: Date;
+  /** Qué día transfirió, ya formateado en el servidor. */
+  transferredLabel: string | null;
 };
 
 export function DepositDecisionCard({
@@ -43,6 +45,7 @@ export function DepositDecisionCard({
   note,
   receiptUrl,
   createdAt,
+  transferredLabel,
 }: Readonly<Props>) {
   const router = useRouter();
   const [approvePending, startApprove] = useTransition();
@@ -102,6 +105,11 @@ export function DepositDecisionCard({
           </p>
           <span className="text-sm text-muted-foreground">de adelanto</span>
         </div>
+        {transferredLabel && (
+          <p className="text-base font-semibold">
+            Transfirió el {transferredLabel}
+          </p>
+        )}
         {note && (
           <div className="rounded-md bg-muted/50 p-3">
             <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">

@@ -20,7 +20,7 @@ import {
   notifyClaimToValidate,
   notifyDepositToValidate,
 } from "@/lib/notifications";
-import { remainingCents } from "@/lib/payments";
+import { parseTransferDate, remainingCents } from "@/lib/payments";
 import { formatUnitWithFloor } from "@/lib/format";
 
 export type ClaimResult = { ok: true } | { ok: false; error: string };
@@ -41,6 +41,13 @@ export async function claimPayment(
   );
   const requestedCents =
     Number.isFinite(rawAmount) && rawAmount > 0 ? rawAmount : null;
+  const transferredAt = parseTransferDate(formData.get("transferredAt"));
+  if (transferredAt === "invalid") {
+    return {
+      ok: false,
+      error: "Revisá la fecha de la transferencia: no puede ser una fecha futura.",
+    };
+  }
 
   const [expense] = await db
     .select({
@@ -111,6 +118,7 @@ export async function claimPayment(
   await db.insert(paymentClaims).values({
     expenseId,
     claimedByUserId: userId,
+    transferredAt,
     amountCents,
     note: note || null,
     receiptUrl,
@@ -187,6 +195,13 @@ export async function requestCreditDeposit(
     return { ok: false, error: "Ingresá un monto válido." };
   }
   const note = (formData.get("note")?.toString() ?? "").trim();
+  const transferredAt = parseTransferDate(formData.get("transferredAt"));
+  if (transferredAt === "invalid") {
+    return {
+      ok: false,
+      error: "Revisá la fecha de la transferencia: no puede ser una fecha futura.",
+    };
+  }
 
   let receiptUrl: string | null = null;
   const file = getReceiptFile(formData);
@@ -200,6 +215,7 @@ export async function requestCreditDeposit(
     unitId,
     requestedByUserId: userId,
     amountCents: rawAmount,
+    transferredAt,
     note: note || null,
     receiptUrl,
   });

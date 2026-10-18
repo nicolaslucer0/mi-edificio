@@ -1,7 +1,7 @@
 import { ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
-import { formatUnitWithFloor } from "@/lib/format";
+import { formatDate, formatUnitWithFloor } from "@/lib/format";
 import {
   getPendingClaimsForAdmin,
   getPendingCreditDepositsForAdmin,
@@ -86,6 +86,11 @@ export default async function AprobarPagosPage({
                         note={deposit.note}
                         receiptUrl={deposit.receiptUrl}
                         createdAt={deposit.createdAt}
+                        transferredLabel={
+                          deposit.transferredAt
+                            ? formatDate(deposit.transferredAt)
+                            : null
+                        }
                       />
                     </li>
                   ))}
@@ -126,6 +131,11 @@ export default async function AprobarPagosPage({
                         note={claim.note}
                         receiptUrl={claim.receiptUrl}
                         claimedAt={claim.claimedAt}
+                        transferredLabel={
+                          claim.transferredAt
+                            ? formatDate(claim.transferredAt)
+                            : null
+                        }
                       />
                     </li>
                   ))}

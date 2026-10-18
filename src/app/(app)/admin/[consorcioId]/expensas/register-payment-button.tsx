@@ -16,7 +16,8 @@ import { Button } from "@/components/ui/button";
 import { CurrencyInput } from "@/components/ui/currency-input";
 import { Label } from "@/components/ui/label";
 import { registerPayment } from "@/lib/actions/admin";
-import { formatCurrencyCents } from "@/lib/format";
+import { formatCurrencyCents, toDateInputValue } from "@/lib/format";
+import { Input } from "@/components/ui/input";
 
 type Props = {
   expenseId: string;
@@ -38,6 +39,8 @@ export function RegisterPaymentButton({
   const remainingPesos = String(Math.round(remaining / 100));
   const [pesos, setPesos] = useState(remainingPesos);
   const [error, setError] = useState<string | null>(null);
+  const today = toDateInputValue(new Date());
+  const [transferredAt, setTransferredAt] = useState(today);
 
   // El input es en pesos enteros; si dejó lo que falta tal cual, se manda el
   // saldo exacto para no dejar centavos colgados.
@@ -52,6 +55,7 @@ export function RegisterPaymentButton({
   function handleOpenChange(next: boolean) {
     if (next) {
       setPesos(remainingPesos);
+      setTransferredAt(today);
       setError(null);
     }
     setOpen(next);
@@ -64,7 +68,11 @@ export function RegisterPaymentButton({
     }
     setError(null);
     startTransition(async () => {
-      const result = await registerPayment(expenseId, enteredCents);
+      const result = await registerPayment(
+        expenseId,
+        enteredCents,
+        transferredAt,
+      );
       if (result.ok) {
         toast.success("Pago registrado. Le avisamos a la unidad.");
         setOpen(false);
@@ -141,6 +149,21 @@ export function RegisterPaymentButton({
                 "Poné lo que transfirió. Si fue más, lo que sobra queda a favor de la unidad."
               )}
             </p>
+            <Label
+              htmlFor={`register-${expenseId}-date`}
+              className="mt-2 text-sm"
+            >
+              ¿Qué día transfirió?
+            </Label>
+            <Input
+              id={`register-${expenseId}-date`}
+              type="date"
+              value={transferredAt}
+              max={today}
+              onChange={(e) => setTransferredAt(e.target.value)}
+              disabled={pending}
+              className="h-12 text-base"
+            />
             {error && (
               <p
                 role="alert"

@@ -39,6 +39,11 @@ type Props = {
   note: string | null;
   receiptUrl: string | null;
   claimedAt: Date;
+  /**
+   * Qué día dice el vecino que transfirió, ya formateado en el servidor (en
+   * el navegador una fecha a medianoche UTC se vería un día antes).
+   */
+  transferredLabel: string | null;
 };
 
 export function ClaimDecisionCard({
@@ -54,6 +59,7 @@ export function ClaimDecisionCard({
   note,
   receiptUrl,
   claimedAt,
+  transferredLabel,
 }: Readonly<Props>) {
   const router = useRouter();
   const [approvePending, startApprove] = useTransition();
@@ -130,6 +136,11 @@ export function ClaimDecisionCard({
               {formatPeriod(period)}
             </p>
           </div>
+          {transferredLabel && (
+            <p className="text-base font-semibold">
+              Transfirió el {transferredLabel}
+            </p>
+          )}
           {(informedCents < amountCents || paidCents > 0) && (
             <p className="text-xs text-muted-foreground">
               Sobre un total de {formatCurrencyCents(amountCents)}

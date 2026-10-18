@@ -30,7 +30,11 @@ import {
   notifyPaymentResolved,
   notifyPaymentVoided,
 } from "@/lib/notifications";
-import { claimValidatedCents, remainingCents } from "@/lib/payments";
+import {
+  claimValidatedCents,
+  parseTransferDate,
+  remainingCents,
+} from "@/lib/payments";
 import { formatUnitWithFloor } from "@/lib/format";
 import {
   applyCreditToUnit,
@@ -277,9 +281,18 @@ export async function rejectClaim(
 export async function registerPayment(
   expenseId: string,
   amountCents: number,
+  /** "YYYY-MM-DD": qué día transfirió, para cruzarlo con el extracto. */
+  transferredAtRaw?: string,
 ): Promise<ActionResult> {
   const ctx = await requireAdminContext();
   if (!ctx) return { ok: false, error: "Sin permisos." };
+  const transferredAt = parseTransferDate(transferredAtRaw ?? null);
+  if (transferredAt === "invalid") {
+    return {
+      ok: false,
+      error: "Revisá la fecha de la transferencia: no puede ser una fecha futura.",
+    };
+  }
 
   const [expense] = await db
     .select({
@@ -333,6 +346,7 @@ export async function registerPayment(
       expenseId: expense.id,
       claimedByUserId: ctx.userId,
       claimedAt: now,
+      transferredAt,
       amountCents,
       confirmedAmountCents: applied,
       note: "Registrado por la administración.",

@@ -44,6 +44,7 @@ export async function getPendingClaimsForAdmin(
     .select({
       claimId: paymentClaims.id,
       claimedAt: paymentClaims.claimedAt,
+      transferredAt: paymentClaims.transferredAt,
       claimAmountCents: paymentClaims.amountCents,
       note: paymentClaims.note,
       receiptUrl: paymentClaims.receiptUrl,
@@ -90,6 +91,7 @@ export async function getPendingCreditDepositsForAdmin(
       note: creditDeposits.note,
       receiptUrl: creditDeposits.receiptUrl,
       createdAt: creditDeposits.createdAt,
+      transferredAt: creditDeposits.transferredAt,
       unitLabel: units.label,
       unitFloor: units.floor,
       consorcioId: consorcios.id,

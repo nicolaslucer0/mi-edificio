@@ -260,6 +260,9 @@ export const paymentClaims = pgTable(
       .notNull()
       .references(() => users.id),
     claimedAt: timestamp().defaultNow().notNull(),
+    // Qué día dice el vecino que transfirió: es lo que se busca en el
+    // extracto. Null en los avisos anteriores a que se pidiera.
+    transferredAt: timestamp({ mode: "date" }),
     // Monto que informa el vecino en este pago. Null en claims legacy
     // (previos a pagos parciales) → se interpreta como la expensa completa.
     amountCents: integer(),
@@ -314,6 +317,8 @@ export const creditDeposits = pgTable(
       .notNull()
       .references(() => users.id),
     amountCents: integer().notNull(),
+    // Qué día transfirió, como en payment_claim.
+    transferredAt: timestamp({ mode: "date" }),
     receiptUrl: text(),
     note: text(),
     status: claimResolutionEnum().notNull().default("pending"),

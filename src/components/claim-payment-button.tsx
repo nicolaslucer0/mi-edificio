@@ -19,7 +19,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ReceiptInput } from "@/components/receipt-input";
 import { claimPayment } from "@/lib/actions/expensas";
-import { formatCurrencyCents, formatPeriod } from "@/lib/format";
+import {
+  formatCurrencyCents,
+  formatPeriod,
+  toDateInputValue,
+} from "@/lib/format";
 
 type Props = {
   expenseId: string;
@@ -49,6 +53,8 @@ export function ClaimPaymentButton({
   const router = useRouter();
 
   const remaining = Math.max(0, amountCents - paidCents);
+  // Hoy, en la hora del teléfono: lo más común es avisar el mismo día.
+  const today = toDateInputValue(new Date());
   const isPartiallyPaid = paidCents > 0;
   const remainingPesos = Math.round(remaining / 100);
 
@@ -247,6 +253,21 @@ export function ClaimPaymentButton({
                   </div>
                 )}
               </fieldset>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="transferred-at" className="text-sm">
+                  ¿Qué día transferiste?
+                </Label>
+                <Input
+                  id="transferred-at"
+                  name="transferredAt"
+                  type="date"
+                  defaultValue={today}
+                  max={today}
+                  className="h-12 text-base"
+                  disabled={isPending}
+                />
+              </div>
 
               <div className="flex flex-col gap-2">
                 <Label htmlFor="receipt" className="text-sm">

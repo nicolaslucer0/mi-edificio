@@ -24,6 +24,7 @@ import {
   formatCurrencyCents,
   formatDate,
   formatUnitWithFloor,
+  toDateInputValue,
 } from "@/lib/format";
 
 type UnitCredit = {
@@ -59,6 +60,7 @@ export function CreditPanel({
   if (units.length === 0) return null;
 
   const total = units.reduce((s, u) => s + u.creditCents, 0);
+  const today = toDateInputValue(new Date());
 
   function handleOpenChange(next: boolean) {
     setOpen(next);
@@ -224,6 +226,20 @@ export function CreditPanel({
                     {error}
                   </p>
                 )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="credit-transferred-at" className="text-sm">
+                  ¿Qué día transferiste?
+                </Label>
+                <Input
+                  id="credit-transferred-at"
+                  name="transferredAt"
+                  type="date"
+                  defaultValue={today}
+                  max={today}
+                  className="h-12 text-base"
+                  disabled={isPending}
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="credit-receipt" className="text-sm">
