@@ -4,11 +4,19 @@ import { db } from "@/lib/db";
 import {
   expenses,
   paymentClaims,
+  unitCredits,
   units,
   type expenseStatusEnum,
+  type expenseTypeEnum,
 } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
 import { formatPeriod, isFuturePeriod } from "@/lib/format";
+import {
+  claimInformedCents,
+  claimValidatedCents,
+  remainingCents,
+} from "@/lib/payments";
+import { getPendingClaimCents } from "./expenses";
 
 export type StatementMovement = {
   id: string;
@@ -18,19 +26,33 @@ export type StatementMovement = {
   amountCents: number;
   status?: (typeof expenseStatusEnum.enumValues)[number];
   period?: string;
+  /** Pago que avisó el vecino y el admin todavía no validó. */
+  pending?: boolean;
 };
 
 export type UnitStatement = {
   unitId: string;
   unitLabel: string;
   balanceCents: number;
+  /** Lo avisado que está en revisión. Ya está descontado de `balanceCents`. */
+  pendingCents: number;
   movements: StatementMovement[];
 };
 
+function expenseName(
+  period: string,
+  type: (typeof expenseTypeEnum.enumValues)[number],
+): string {
+  return `${formatPeriod(period)}${
+    type === "extraordinaria" ? " · Extraordinaria" : ""
+  }`;
+}
+
 /**
  * Bank-statement-style ledger per unit the user holds in the given consorcio:
- * charges (expenses) and credits (approved payments), most recent first, plus
- * the outstanding balance (sum of expenses not yet marked `pagado`).
+ * charges (expenses) and credits (payments, credit applied), most recent
+ * first. The outstanding balance is the same number the home shows: what is
+ * left of each due expense, minus what the vecino reported and is pending.
  */
 export async function getAccountStatement(
   user: CurrentUser,
@@ -47,7 +69,7 @@ export async function getAccountStatement(
   );
   if (unitIds.length === 0) return [];
 
-  const [unitRows, expenseRows, paymentRows] = await Promise.all([
+  const [unitRows, expenseRows, claimRows, creditRows] = await Promise.all([
     db
       .select({ id: units.id, label: units.label })
       .from(units)
@@ -59,6 +81,7 @@ export async function getAccountStatement(
         period: expenses.period,
         dueDate: expenses.dueDate,
         amountCents: expenses.amountCents,
+        paidCents: expenses.paidCents,
         type: expenses.type,
         status: expenses.status,
       })
@@ -69,7 +92,12 @@ export async function getAccountStatement(
         id: paymentClaims.id,
         unitId: expenses.unitId,
         period: expenses.period,
-        amountCents: expenses.amountCents,
+        type: expenses.type,
+        expenseAmountCents: expenses.amountCents,
+        amountCents: paymentClaims.amountCents,
+        confirmedAmountCents: paymentClaims.confirmedAmountCents,
+        resolution: paymentClaims.resolution,
+        claimedAt: paymentClaims.claimedAt,
         resolvedAt: paymentClaims.resolvedAt,
       })
       .from(paymentClaims)
@@ -77,10 +105,30 @@ export async function getAccountStatement(
       .where(
         and(
           inArray(expenses.unitId, unitIds),
-          eq(paymentClaims.resolution, "approved"),
+          inArray(paymentClaims.resolution, ["approved", "pending"]),
+        ),
+      ),
+    // Lo que se cubrió con saldo a favor: movimientos `application` del
+    // ledger (negativos al aplicar, positivos si después se devolvió).
+    db
+      .select({
+        expenseId: expenses.id,
+        unitId: expenses.unitId,
+        period: expenses.period,
+        type: expenses.type,
+        amountCents: unitCredits.amountCents,
+        createdAt: unitCredits.createdAt,
+      })
+      .from(unitCredits)
+      .innerJoin(expenses, eq(expenses.id, unitCredits.relatedExpenseId))
+      .where(
+        and(
+          inArray(expenses.unitId, unitIds),
+          eq(unitCredits.reason, "application"),
         ),
       ),
   ]);
+  const pendingByExpense = await getPendingClaimCents(expenseRows);
 
   const byUnit = new Map<string, UnitStatement>();
   for (const u of unitRows) {
@@ -88,6 +136,7 @@ export async function getAccountStatement(
       unitId: u.id,
       unitLabel: u.label,
       balanceCents: 0,
+      pendingCents: 0,
       movements: [],
     });
   }
@@ -99,28 +148,76 @@ export async function getAccountStatement(
       id: `e-${e.id}`,
       kind: "cargo",
       date: e.dueDate,
-      concept: `Expensa ${formatPeriod(e.period)}${
-        e.type === "extraordinaria" ? " · Extraordinaria" : ""
-      }`,
+      concept: `Expensa ${expenseName(e.period, e.type)}`,
       amountCents: e.amountCents,
       status: e.status,
       period: e.period,
     });
     // Las expensas de meses futuros se listan, pero no suman al saldo aún.
-    if (e.status !== "pagado" && !isFuturePeriod(e.period)) {
-      unit.balanceCents += e.amountCents;
-    }
+    if (isFuturePeriod(e.period)) continue;
+    const remaining = remainingCents(e.amountCents, e.paidCents);
+    const pending = Math.min(pendingByExpense.get(e.id) ?? 0, remaining);
+    unit.pendingCents += pending;
+    unit.balanceCents += remaining - pending;
   }
 
-  for (const p of paymentRows) {
-    const unit = byUnit.get(p.unitId);
+  for (const c of claimRows) {
+    const unit = byUnit.get(c.unitId);
     if (!unit) continue;
+    if (c.resolution === "pending") {
+      unit.movements.push({
+        id: `a-${c.id}`,
+        kind: "pago",
+        date: c.claimedAt,
+        concept: `Avisaste un pago de ${expenseName(c.period, c.type)}`,
+        amountCents: claimInformedCents(c, c.expenseAmountCents),
+        status: "en_validacion",
+        pending: true,
+      });
+      continue;
+    }
+    // Lo validado, no el monto de la expensa: un pago parcial figura por lo
+    // que se pagó.
+    const amountCents = claimValidatedCents(c, c.expenseAmountCents);
+    if (amountCents <= 0) continue;
     unit.movements.push({
-      id: `p-${p.id}`,
+      id: `p-${c.id}`,
       kind: "pago",
-      date: p.resolvedAt ?? new Date(),
-      concept: `Pago de ${formatPeriod(p.period)}`,
-      amountCents: p.amountCents,
+      date: c.resolvedAt ?? c.claimedAt,
+      concept: `Pago de ${expenseName(c.period, c.type)}`,
+      amountCents,
+    });
+  }
+
+  type CreditApplied = {
+    unitId: string;
+    period: string;
+    type: (typeof expenseTypeEnum.enumValues)[number];
+    cents: number;
+    date: Date;
+  };
+  const creditByExpense = new Map<string, CreditApplied>();
+  for (const r of creditRows) {
+    const entry = creditByExpense.get(r.expenseId) ?? {
+      unitId: r.unitId,
+      period: r.period,
+      type: r.type,
+      cents: 0,
+      date: r.createdAt,
+    };
+    entry.cents -= r.amountCents;
+    if (r.createdAt < entry.date) entry.date = r.createdAt;
+    creditByExpense.set(r.expenseId, entry);
+  }
+  for (const [expenseId, c] of creditByExpense) {
+    const unit = byUnit.get(c.unitId);
+    if (!unit || c.cents <= 0) continue;
+    unit.movements.push({
+      id: `s-${expenseId}`,
+      kind: "pago",
+      date: c.date,
+      concept: `Pagado con saldo a favor · ${expenseName(c.period, c.type)}`,
+      amountCents: c.cents,
     });
   }
 

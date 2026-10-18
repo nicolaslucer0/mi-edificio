@@ -3,6 +3,7 @@ import {
   CalendarCheck,
   Check,
   Clock,
+  Hourglass,
   PieChart,
   type LucideIcon,
 } from "lucide-react";
@@ -36,6 +37,13 @@ const STATE_DISPLAY: Record<
     classes: "bg-success/15 text-success",
     icon: Check,
   },
+  avisado: {
+    // El mismo amarillo que "En validación" en la lista de expensas.
+    label: "Avisaste el pago",
+    classes:
+      "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300",
+    icon: Hourglass,
+  },
   parcial: {
     label: "Pago parcial",
     classes:
@@ -63,6 +71,7 @@ const STATE_DISPLAY: Record<
 /** Orden de la referencia: los estados que importan primero. */
 const LEGEND_ORDER: MonthPaymentState[] = [
   "pagado",
+  "avisado",
   "parcial",
   "debe",
   "pendiente",

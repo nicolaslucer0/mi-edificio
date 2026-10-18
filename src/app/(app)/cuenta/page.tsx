@@ -119,6 +119,15 @@ function UnitStatementCard({ unit }: Readonly<{ unit: UnitStatement }>) {
             <p className="text-sm text-muted-foreground">
               {settled ? "Sin saldo pendiente" : "Saldo pendiente"}
             </p>
+            {unit.pendingCents > 0 && (
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                Avisaste{" "}
+                <span className="font-semibold text-foreground">
+                  {formatCurrencyCents(unit.pendingCents)}
+                </span>{" "}
+                que el administrador está revisando.
+              </p>
+            )}
           </div>
           <p
             className={cn(
@@ -181,7 +190,9 @@ function MovementRow({
       <p
         className={cn(
           "shrink-0 text-sm font-bold tabular-nums",
-          isPago ? "text-success" : "text-foreground",
+          isPago && !movement.pending && "text-success",
+          isPago && movement.pending && "text-muted-foreground",
+          !isPago && "text-foreground",
         )}
       >
         {isPago ? "−" : "+"}

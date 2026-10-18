@@ -30,7 +30,11 @@ export async function DeudaWidget({ user, consorcioId }: Readonly<WidgetProps>) 
         </Link>
       }
     >
-      {debt.amountCents === 0 ? <UpToDateCard /> : <DebtCard debt={debt} />}
+      {debt.amountCents === 0 ? (
+        <UpToDateCard pendingCents={debt.pendingCents} />
+      ) : (
+        <DebtCard debt={debt} />
+      )}
     </WidgetCard>
   );
 }
@@ -43,7 +47,12 @@ export async function DeudaWidget({ user, consorcioId }: Readonly<WidgetProps>) 
 function DebtCard({
   debt,
 }: Readonly<{
-  debt: { amountCents: number; count: number; nextDueDate: Date | null };
+  debt: {
+    amountCents: number;
+    count: number;
+    nextDueDate: Date | null;
+    pendingCents: number;
+  };
 }>) {
   const urgency = debt.nextDueDate ? formatDueUrgency(debt.nextDueDate) : null;
 
@@ -86,6 +95,12 @@ function DebtCard({
               </>
             )}
           </p>
+          {debt.pendingCents > 0 && (
+            <p className="text-sm text-muted-foreground">
+              Y avisaste {formatCurrencyCents(debt.pendingCents)} que está en
+              revisión
+            </p>
+          )}
         </div>
 
         <Link
@@ -108,8 +123,11 @@ function DebtCard({
  * La contracara: acá el espacio es el mensaje. Aire, una ilustración grande
  * que respira despacio y una línea que dice que no hace falta estar
  * revisando — que es lo que de verdad baja la ansiedad.
+ *
+ * Si está al día porque avisó un pago que todavía no se validó, se dice: es
+ * la misma cuenta que el estado de cuenta, y así los dos números coinciden.
  */
-function UpToDateCard() {
+function UpToDateCard({ pendingCents }: Readonly<{ pendingCents: number }>) {
   return (
     <Card
       role="region"
@@ -123,8 +141,9 @@ function UpToDateCard() {
             Estás al día 🎉
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground text-balance">
-            Te avisamos cuando llegue la próxima. No hace falta que entres a
-            chequear.
+            {pendingCents > 0
+              ? `Avisaste ${formatCurrencyCents(pendingCents)} que el administrador está revisando. Te avisamos cuando lo confirme.`
+              : "Te avisamos cuando llegue la próxima. No hace falta que entres a chequear."}
           </p>
         </div>
       </CardContent>

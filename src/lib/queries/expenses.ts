@@ -24,6 +24,7 @@ import {
   type expenseTypeEnum,
 } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
+import { claimInformedCents, remainingCents } from "@/lib/payments";
 
 type UnitAccess = {
   ownerUnits: string[];
@@ -78,7 +79,43 @@ export type DebtSummary =
       amountCents: number;
       count: number;
       nextDueDate: Date | null;
+      /** Lo que avisó que pagó y el admin todavía no validó. */
+      pendingCents: number;
     };
+
+/**
+ * Lo que el vecino avisó que pagó y el admin todavía no validó, por expensa.
+ * Es la misma cuenta en todas las pantallas que dicen cuánto se debe: se
+ * descuenta de la deuda (optimista) y, si el admin lo rechaza, vuelve.
+ */
+export async function getPendingClaimCents(
+  rows: { id: string; amountCents: number }[],
+): Promise<Map<string, number>> {
+  const byExpense = new Map<string, number>();
+  if (rows.length === 0) return byExpense;
+
+  const pending = await db
+    .select({
+      expenseId: paymentClaims.expenseId,
+      amountCents: paymentClaims.amountCents,
+    })
+    .from(paymentClaims)
+    .where(
+      and(
+        inArray(
+          paymentClaims.expenseId,
+          rows.map((r) => r.id),
+        ),
+        eq(paymentClaims.resolution, "pending"),
+      ),
+    );
+  const amountById = new Map(rows.map((r) => [r.id, r.amountCents]));
+  for (const p of pending) {
+    const informed = claimInformedCents(p, amountById.get(p.expenseId) ?? 0);
+    byExpense.set(p.expenseId, (byExpense.get(p.expenseId) ?? 0) + informed);
+  }
+  return byExpense;
+}
 
 /**
  * Cacheada por request: el home la consulta desde el saludo y desde el widget
@@ -109,55 +146,38 @@ export const getDebtForUser = cache(async function getDebtForUser(
     );
 
   if (rows.length === 0) {
-    return { hasUnit: true, amountCents: 0, count: 0, nextDueDate: null };
+    return {
+      hasUnit: true,
+      amountCents: 0,
+      count: 0,
+      nextDueDate: null,
+      pendingCents: 0,
+    };
   }
 
-  // Pagos pendientes de validación: se descuentan de la deuda mostrada
-  // (comportamiento optimista). Si el admin los rechaza, la deuda reaparece.
-  const pending = await db
-    .select({
-      expenseId: paymentClaims.expenseId,
-      amountCents: paymentClaims.amountCents,
-    })
-    .from(paymentClaims)
-    .where(
-      and(
-        inArray(
-          paymentClaims.expenseId,
-          rows.map((r) => r.id),
-        ),
-        eq(paymentClaims.resolution, "pending"),
-      ),
-    );
-  const amountById = new Map(rows.map((r) => [r.id, r.amountCents]));
-  const pendingByExpense = new Map<string, number>();
-  for (const p of pending) {
-    const informed = p.amountCents ?? amountById.get(p.expenseId) ?? 0;
-    pendingByExpense.set(
-      p.expenseId,
-      (pendingByExpense.get(p.expenseId) ?? 0) + informed,
-    );
-  }
+  const pendingByExpense = await getPendingClaimCents(rows);
 
   let amountCents = 0;
   let count = 0;
   let nextDueDate: Date | null = null;
+  let pendingCents = 0;
   for (const r of rows) {
-    const owed = Math.max(
-      0,
-      r.amountCents - r.paidCents - (pendingByExpense.get(r.id) ?? 0),
-    );
+    const remaining = remainingCents(r.amountCents, r.paidCents);
+    const pending = Math.min(pendingByExpense.get(r.id) ?? 0, remaining);
+    pendingCents += pending;
+    const owed = remaining - pending;
     if (owed <= 0) continue;
     amountCents += owed;
     count += 1;
     if (!nextDueDate || r.dueDate < nextDueDate) nextDueDate = r.dueDate;
   }
-  return { hasUnit: true, amountCents, count, nextDueDate };
+  return { hasUnit: true, amountCents, count, nextDueDate, pendingCents };
 });
 
 /**
  * Cómo le fue al vecino en un mes:
  * - `pagado`: cubrió todo lo emitido.
+ * - `avisado`: avisó que pagó lo que faltaba y el admin todavía no lo validó.
  * - `parcial`: pagó una parte.
  * - `debe`: venció y no pagó nada.
  * - `pendiente`: emitida pero todavía no vencida.
@@ -165,6 +185,7 @@ export const getDebtForUser = cache(async function getDebtForUser(
  */
 export type MonthPaymentState =
   | "pagado"
+  | "avisado"
   | "parcial"
   | "debe"
   | "pendiente"
@@ -195,6 +216,7 @@ export async function getYearOverviewForUser(
 
   const rows = await db
     .select({
+      id: expenses.id,
       period: expenses.period,
       amountCents: expenses.amountCents,
       paidCents: expenses.paidCents,
@@ -202,14 +224,20 @@ export async function getYearOverviewForUser(
     })
     .from(expenses)
     .where(and(access, gte(expenses.period, cutoff)));
+  const pendingByExpense = await getPendingClaimCents(rows);
 
-  type Bucket = { billed: number; paid: number; allFuture: boolean };
+  type Bucket = {
+    billed: number;
+    paid: number;
+    pending: number;
+    allFuture: boolean;
+  };
   const months = new Map<string, Bucket>();
   for (let i = 11; i >= 0; i -= 1) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.set(
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
-      { billed: 0, paid: 0, allFuture: true },
+      { billed: 0, paid: 0, pending: 0, allFuture: true },
     );
   }
 
@@ -218,6 +246,10 @@ export async function getYearOverviewForUser(
     if (!month) continue;
     month.billed += row.amountCents;
     month.paid += Math.min(row.paidCents, row.amountCents);
+    month.pending += Math.min(
+      pendingByExpense.get(row.id) ?? 0,
+      remainingCents(row.amountCents, row.paidCents),
+    );
     if (row.dueDate.getTime() <= now.getTime()) month.allFuture = false;
   }
 
@@ -225,9 +257,11 @@ export async function getYearOverviewForUser(
     const state = ((): MonthPaymentState => {
       if (m.billed === 0) return "sin";
       if (m.paid >= m.billed) return "pagado";
+      // Lo que falta ya lo avisó: igual que el inicio, no se pinta de rojo.
+      if (m.paid + m.pending >= m.billed) return "avisado";
       // Nada vencido todavía: no es deuda, está por vencer.
       if (m.allFuture) return "pendiente";
-      return m.paid > 0 ? "parcial" : "debe";
+      return m.paid + m.pending > 0 ? "parcial" : "debe";
     })();
     return { period, state, billedCents: m.billed, paidCents: m.paid };
   });
