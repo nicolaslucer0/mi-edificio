@@ -114,7 +114,7 @@ function UnitStatementCard({ unit }: Readonly<{ unit: UnitStatement }>) {
         <CardContent className="flex items-center justify-between gap-4 p-5">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Unidad {unit.unitLabel}
+              {unit.unitName}
             </p>
             <p className="text-sm text-muted-foreground">
               {settled ? "Sin saldo pendiente" : "Saldo pendiente"}
@@ -143,7 +143,7 @@ function UnitStatementCard({ unit }: Readonly<{ unit: UnitStatement }>) {
       {unit.movements.length > 0 && (
         <Card>
           <CardContent className="px-5 py-1">
-            <ul aria-label={`Movimientos de la unidad ${unit.unitLabel}`}>
+            <ul aria-label={`Movimientos de ${unit.unitName}`}>
               {unit.movements.map((m, idx) => (
                 <MovementRow
                   key={m.id}

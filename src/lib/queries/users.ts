@@ -38,6 +38,7 @@ export type UserMembershipRow = {
   consorcioName: string | null;
   unitId: string | null;
   unitLabel: string | null;
+  unitFloor: string | null;
 };
 
 export type UserWithMemberships = {
@@ -105,6 +106,7 @@ export async function getUsersForAdmin(
       consorcioName: consorcios.name,
       unitId: memberships.unitId,
       unitLabel: units.label,
+      unitFloor: units.floor,
     })
     .from(memberships)
     .leftJoin(consorcios, eq(consorcios.id, memberships.consorcioId))
@@ -121,6 +123,7 @@ export async function getUsersForAdmin(
       consorcioName: row.consorcioName,
       unitId: row.unitId,
       unitLabel: row.unitLabel,
+      unitFloor: row.unitFloor,
     });
     byUser.set(row.userId, list);
   }

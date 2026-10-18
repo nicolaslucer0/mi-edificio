@@ -6,10 +6,16 @@ import { requireUser } from "@/lib/session";
 import {
   getApprovedPaymentsForExpenses,
   getExpensesForAdmin,
+  getUnitPeople,
   type AdminExpenseRow,
   type AdminPaymentRow,
 } from "@/lib/queries/expenses-admin";
-import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
+import {
+  formatCurrencyCents,
+  formatDate,
+  formatPeriod,
+  formatUnitWithFloor,
+} from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ExpenseStatusBadge } from "@/components/expense-status-badge";
@@ -53,9 +59,10 @@ export default async function PeriodDetailPage({
 
   if (paginated.items.length === 0) notFound();
 
-  const payments = await getApprovedPaymentsForExpenses(
-    paginated.items.map((e) => e.id),
-  );
+  const [payments, peopleByUnit] = await Promise.all([
+    getApprovedPaymentsForExpenses(paginated.items.map((e) => e.id)),
+    getUnitPeople(Array.from(new Set(paginated.items.map((e) => e.unitId)))),
+  ]);
   const paymentsByExpense = new Map<string, AdminPaymentRow[]>();
   for (const p of payments) {
     const list = paymentsByExpense.get(p.expenseId) ?? [];
@@ -110,6 +117,7 @@ export default async function PeriodDetailPage({
               <UnitGroupCard
                 group={g}
                 consorcioId={consorcioId}
+                people={peopleByUnit.get(g.unitId) ?? null}
                 paymentsByExpense={paymentsByExpense}
               />
             </li>
@@ -157,21 +165,27 @@ function byFloorLabel(a: UnitGroup, b: UnitGroup): number {
 function UnitGroupCard({
   group,
   consorcioId,
+  people,
   paymentsByExpense,
 }: Readonly<{
   group: UnitGroup;
   consorcioId: string;
+  people: string | null;
   paymentsByExpense: Map<string, AdminPaymentRow[]>;
 }>) {
-  const unitDisplay = group.unitFloor
-    ? `Piso ${group.unitFloor} — Unidad ${group.unitLabel}`
-    : `Unidad ${group.unitLabel}`;
+  const unitDisplay = formatUnitWithFloor({
+    label: group.unitLabel,
+    floor: group.unitFloor,
+  });
 
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 p-5">
         <div className="flex flex-col gap-0.5">
           <p className="text-sm font-semibold leading-tight">{unitDisplay}</p>
+          {people && (
+            <p className="text-sm text-muted-foreground">{people}</p>
+          )}
         </div>
 
         <ul
@@ -183,6 +197,7 @@ function UnitGroupCard({
               <ExpenseRow
                 expense={expense}
                 unitDisplay={unitDisplay}
+                people={people}
                 consorcioId={consorcioId}
                 payments={paymentsByExpense.get(expense.id) ?? []}
               />
@@ -197,14 +212,20 @@ function UnitGroupCard({
 function ExpenseRow({
   expense,
   unitDisplay,
+  people,
   consorcioId,
   payments,
 }: Readonly<{
   expense: AdminExpenseRow;
   unitDisplay: string;
+  people: string | null;
   consorcioId: string;
   payments: AdminPaymentRow[];
 }>) {
+  // En los diálogos de plata va también quién vive ahí: es lo que distingue
+  // la 326-5 de la 330-5.
+  const paymentLabel = (label: string) =>
+    people ? `${label} — ${people}` : label;
   const isExtraordinaria = expense.type === "extraordinaria";
   const deleteLabel = `${formatPeriod(expense.period)} · ${unitDisplay} · ${
     isExtraordinaria ? "Extraordinaria" : "Ordinaria"
@@ -257,12 +278,15 @@ function ExpenseRow({
                 expenseId={expense.id}
                 amountCents={expense.amountCents}
                 paidCents={expense.paidCents}
-                label={deleteLabel}
+                label={paymentLabel(deleteLabel)}
               />
             )
           )}
           {payments.length > 0 && (
-            <VoidPaymentButton payments={payments} label={deleteLabel} />
+            <VoidPaymentButton
+              payments={payments}
+              label={paymentLabel(deleteLabel)}
+            />
           )}
         </div>
         <Link

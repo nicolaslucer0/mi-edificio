@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import {
   consorcios,
   expenses,
+  memberships,
   paymentClaims,
   units,
   users,
@@ -264,4 +265,51 @@ export async function getApprovedPaymentsForExpenses(
       paidByName: r.name ?? r.email,
     }))
     .filter((p) => p.amountCents > 0);
+}
+
+/**
+ * Quién vive en cada unidad ("Silvia, Paula Ponce (inquilino)"). Con dos
+ * edificios numerados igual, el nombre es lo que evita registrar o anular un
+ * pago en la unidad equivocada.
+ */
+export async function getUnitPeople(
+  unitIds: string[],
+): Promise<Map<string, string>> {
+  const byUnit = new Map<string, string>();
+  if (unitIds.length === 0) return byUnit;
+
+  const rows = await db
+    .select({
+      unitId: memberships.unitId,
+      role: memberships.role,
+      name: users.name,
+      email: users.email,
+    })
+    .from(memberships)
+    .innerJoin(users, eq(users.id, memberships.userId))
+    .where(
+      and(
+        inArray(memberships.unitId, unitIds),
+        inArray(memberships.role, ["owner", "tenant"]),
+      ),
+    )
+    .orderBy(memberships.role, users.name);
+
+  const people = new Map<string, { owners: string[]; tenants: string[] }>();
+  for (const r of rows) {
+    const person = r.name ?? r.email;
+    if (!r.unitId || !person) continue;
+    const entry = people.get(r.unitId) ?? { owners: [], tenants: [] };
+    const list = r.role === "tenant" ? entry.tenants : entry.owners;
+    // Una persona puede tener más de una membresía sobre la misma unidad.
+    if (!list.includes(person)) list.push(person);
+    people.set(r.unitId, entry);
+  }
+  for (const [unitId, { owners, tenants }] of people) {
+    byUnit.set(
+      unitId,
+      [...owners, ...tenants.map((t) => `${t} (inquilino)`)].join(", "),
+    );
+  }
+  return byUnit;
 }

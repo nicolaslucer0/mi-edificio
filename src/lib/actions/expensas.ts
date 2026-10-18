@@ -17,6 +17,7 @@ import { sendClaimNotification } from "@/lib/email";
 import { getReceiptFile, uploadReceipt } from "@/lib/receipts";
 import { notifyClaimToValidate } from "@/lib/notifications";
 import { remainingCents } from "@/lib/payments";
+import { formatUnitWithFloor } from "@/lib/format";
 
 export type ClaimResult = { ok: true } | { ok: false; error: string };
 
@@ -42,6 +43,7 @@ export async function claimPayment(
       id: expenses.id,
       unitId: expenses.unitId,
       unitLabel: units.label,
+      unitFloor: units.floor,
       consorcioId: units.consorcioId,
       period: expenses.period,
       amountCents: expenses.amountCents,
@@ -115,10 +117,17 @@ export async function claimPayment(
     .set({ status: "en_validacion" })
     .where(eq(expenses.id, expenseId));
 
+  // Con edificio o piso: con dos edificios numerados igual, "Unidad 5" no le
+  // dice al admin de quién es el pago.
+  const unitName = formatUnitWithFloor({
+    label: expense.unitLabel,
+    floor: expense.unitFloor,
+  });
+
   try {
     await sendClaimNotification({
       consorcioId: expense.consorcioId,
-      unitLabel: expense.unitLabel,
+      unitName,
       period: expense.period,
       amountCents,
       claimedBy: actor?.name ?? actor?.email ?? "Un vecino",
@@ -130,9 +139,10 @@ export async function claimPayment(
 
   await notifyClaimToValidate({
     consorcioId: expense.consorcioId,
-    unitLabel: expense.unitLabel,
+    unitName,
     period: expense.period,
-    amountCents: expense.amountCents,
+    // Lo que informó el vecino, igual que el mail (no el total de la expensa).
+    amountCents,
     claimedBy: actor?.name ?? actor?.email ?? "Un vecino",
   });
 

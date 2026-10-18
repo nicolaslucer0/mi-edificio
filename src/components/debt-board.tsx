@@ -1,4 +1,4 @@
-import { formatCurrencyCents } from "@/lib/format";
+import { formatCurrencyCents, formatUnitWithFloor } from "@/lib/format";
 import { Card, CardContent } from "@/components/ui/card";
 import type { DebtBoard, DebtBoardUnit } from "@/lib/queries/debt-board";
 import { cn } from "@/lib/utils";
@@ -57,7 +57,7 @@ export function DebtBoardUnits({
           >
             <div className="min-w-0">
               <p className="text-sm font-medium">
-                {unit.label}
+                {formatUnitWithFloor(unit)}
                 {unit.isMine && (
                   <span className="ml-2 align-middle text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                     Tu unidad

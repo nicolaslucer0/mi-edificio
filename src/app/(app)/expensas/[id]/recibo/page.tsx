@@ -3,7 +3,12 @@ import { Building2, Check, Paperclip, Receipt } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
 import { getReceiptData } from "@/lib/queries/expenses";
-import { formatCurrencyCents, formatDate, formatPeriod } from "@/lib/format";
+import {
+  formatCurrencyCents,
+  formatDate,
+  formatPeriod,
+  formatUnitWithFloor,
+} from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
@@ -56,7 +61,13 @@ export default async function ReceiptPage({
 
             <dl className="flex flex-col divide-y divide-border/60 border-y border-border/60">
               <ReceiptRow label="Consorcio" value={receipt.consorcioName} />
-              <ReceiptRow label="Unidad" value={receipt.unitLabel} />
+              <ReceiptRow
+                label="Unidad"
+                value={formatUnitWithFloor({
+                  label: receipt.unitLabel,
+                  floor: receipt.unitFloor,
+                })}
+              />
               <ReceiptRow
                 label="Período"
                 value={formatPeriod(receipt.period)}

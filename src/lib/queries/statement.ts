@@ -10,7 +10,11 @@ import {
   type expenseTypeEnum,
 } from "@/lib/db/schema";
 import type { CurrentUser } from "@/lib/session";
-import { formatPeriod, isFuturePeriod } from "@/lib/format";
+import {
+  formatPeriod,
+  formatUnitWithFloor,
+  isFuturePeriod,
+} from "@/lib/format";
 import {
   claimInformedCents,
   claimValidatedCents,
@@ -32,7 +36,8 @@ export type StatementMovement = {
 
 export type UnitStatement = {
   unitId: string;
-  unitLabel: string;
+  /** Con edificio o piso (formatUnitWithFloor). */
+  unitName: string;
   balanceCents: number;
   /** Lo avisado que está en revisión. Ya está descontado de `balanceCents`. */
   pendingCents: number;
@@ -74,7 +79,7 @@ export async function getAccountStatement(
 
   const [unitRows, expenseRows, claimRows, creditRows] = await Promise.all([
     db
-      .select({ id: units.id, label: units.label })
+      .select({ id: units.id, label: units.label, floor: units.floor })
       .from(units)
       .where(inArray(units.id, unitIds)),
     db
@@ -132,7 +137,7 @@ export async function getAccountStatement(
   for (const u of unitRows) {
     byUnit.set(u.id, {
       unitId: u.id,
-      unitLabel: u.label,
+      unitName: formatUnitWithFloor(u),
       balanceCents: 0,
       pendingCents: 0,
       movements: [],
@@ -224,6 +229,6 @@ export async function getAccountStatement(
   }
 
   return Array.from(byUnit.values()).sort((a, b) =>
-    a.unitLabel.localeCompare(b.unitLabel),
+    a.unitName.localeCompare(b.unitName, "es", { numeric: true }),
   );
 }

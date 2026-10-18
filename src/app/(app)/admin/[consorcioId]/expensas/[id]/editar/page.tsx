@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PageHeader } from "@/components/page-header";
-import { toDateInputValue } from "@/lib/format";
+import { formatUnitWithFloor, toDateInputValue } from "@/lib/format";
 import { ExpenseEditForm } from "./expense-edit-form";
 
 export const metadata: Metadata = {
@@ -28,9 +28,10 @@ export default async function EditExpensePage({
   if (!expense) notFound();
   if (expense.consorcioId !== consorcioId) notFound();
 
-  const unitDisplay = expense.unitFloor
-    ? `Piso ${expense.unitFloor} — Unidad ${expense.unitLabel}`
-    : `Unidad ${expense.unitLabel}`;
+  const unitDisplay = formatUnitWithFloor({
+    label: expense.unitLabel,
+    floor: expense.unitFloor,
+  });
 
   return (
     <main className="flex flex-1 flex-col items-center gap-6 px-4 py-8 sm:px-6">

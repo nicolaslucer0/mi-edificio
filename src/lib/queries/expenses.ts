@@ -372,6 +372,7 @@ export type ReceiptData = {
   consorcioName: string;
   holderName: string | null;
   unitLabel: string;
+  unitFloor: string | null;
   period: string;
   amountCents: number;
   type: (typeof expenseTypeEnum.enumValues)[number];
@@ -404,6 +405,7 @@ export async function getReceiptData(
       consorcioName: consorcios.name,
       holderName: consorcios.paymentHolderName,
       unitLabel: units.label,
+      unitFloor: units.floor,
       period: expenses.period,
       amountCents: expenses.amountCents,
       type: expenses.type,
@@ -492,6 +494,7 @@ export async function getClaimReceiptUrl(
 export type UnitCredit = {
   unitId: string;
   unitLabel: string;
+  unitFloor: string | null;
   creditCents: number;
 };
 
@@ -507,6 +510,7 @@ export async function getCreditForUser(
     .select({
       unitId: units.id,
       unitLabel: units.label,
+      unitFloor: units.floor,
       creditCents: units.creditCents,
     })
     .from(units)

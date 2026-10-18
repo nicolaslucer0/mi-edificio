@@ -30,6 +30,7 @@ import {
   notifyPaymentVoided,
 } from "@/lib/notifications";
 import { claimValidatedCents, remainingCents } from "@/lib/payments";
+import { formatUnitWithFloor } from "@/lib/format";
 import {
   applyCreditToUnit,
   excessToCreditWrites,
@@ -89,6 +90,7 @@ async function loadClaimContext(claimId: string) {
       amountCents: expenses.amountCents,
       paidCents: expenses.paidCents,
       unitLabel: units.label,
+      unitFloor: units.floor,
       consorcioId: units.consorcioId,
       claimerUserId: paymentClaims.claimedByUserId,
       claimerEmail: users.email,
@@ -100,7 +102,14 @@ async function loadClaimContext(claimId: string) {
     .innerJoin(users, eq(users.id, paymentClaims.claimedByUserId))
     .where(eq(paymentClaims.id, claimId))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  // Con edificio o piso: con dos edificios numerados igual, "Unidad 5" es
+  // ambiguo en un aviso.
+  const unitName = formatUnitWithFloor({
+    label: row.unitLabel,
+    floor: row.unitFloor,
+  });
+  return { ...row, unitName };
 }
 
 export async function approveClaim(
@@ -156,7 +165,7 @@ export async function approveClaim(
         to: claim.claimerEmail,
         period: claim.period,
         amountCents: appliedToExpense,
-        unitLabel: claim.unitLabel,
+        unitName: claim.unitName,
         notificationPrefs: claim.claimerPrefs,
       });
     } catch (e) {
@@ -170,7 +179,7 @@ export async function approveClaim(
     resolution: "approved",
     period: claim.period,
     amountCents: appliedToExpense,
-    unitLabel: claim.unitLabel,
+    unitName: claim.unitName,
   });
 
   revalidatePath("/admin", "layout");
@@ -233,7 +242,7 @@ export async function rejectClaim(
         to: claim.claimerEmail,
         period: claim.period,
         amountCents: claim.claimAmountCents ?? claim.amountCents,
-        unitLabel: claim.unitLabel,
+        unitName: claim.unitName,
         reason: parsed.data.reason,
         notificationPrefs: claim.claimerPrefs,
       });
@@ -248,7 +257,7 @@ export async function rejectClaim(
     resolution: "rejected",
     period: claim.period,
     amountCents: claim.claimAmountCents ?? claim.amountCents,
-    unitLabel: claim.unitLabel,
+    unitName: claim.unitName,
     reason: parsed.data.reason,
   });
 
@@ -275,6 +284,7 @@ export async function registerPayment(
       id: expenses.id,
       unitId: expenses.unitId,
       unitLabel: units.label,
+      unitFloor: units.floor,
       consorcioId: units.consorcioId,
       period: expenses.period,
       type: expenses.type,
@@ -306,6 +316,10 @@ export async function registerPayment(
   }
   // Como en el flujo del vecino, no se registra de más (v1).
   const applied = Math.min(amountCents, remaining);
+  const unitName = formatUnitWithFloor({
+    label: expense.unitLabel,
+    floor: expense.unitFloor,
+  });
   const now = new Date();
 
   await db.insert(paymentClaims).values({
@@ -349,7 +363,7 @@ export async function registerPayment(
           to: m.email,
           period: expense.period,
           amountCents: applied,
-          unitLabel: expense.unitLabel,
+          unitName,
           notificationPrefs: m.prefs,
         });
       } catch (e) {
@@ -362,7 +376,7 @@ export async function registerPayment(
       resolution: "approved",
       period: expense.period,
       amountCents: applied,
-      unitLabel: expense.unitLabel,
+      unitName,
     });
   }
 
@@ -446,7 +460,7 @@ export async function voidPayment(claimId: string): Promise<ActionResult> {
       unitId: claim.unitId,
       period: claim.period,
       amountCents,
-      unitLabel: claim.unitLabel,
+      unitName: claim.unitName,
       type: claim.expenseType,
     });
   } else {
@@ -456,7 +470,7 @@ export async function voidPayment(claimId: string): Promise<ActionResult> {
           to: claim.claimerEmail,
           period: claim.period,
           amountCents,
-          unitLabel: claim.unitLabel,
+          unitName: claim.unitName,
           reason: VOID_REASON,
           notificationPrefs: claim.claimerPrefs,
         });
@@ -470,7 +484,7 @@ export async function voidPayment(claimId: string): Promise<ActionResult> {
       resolution: "rejected",
       period: claim.period,
       amountCents,
-      unitLabel: claim.unitLabel,
+      unitName: claim.unitName,
       reason: VOID_REASON,
     });
   }

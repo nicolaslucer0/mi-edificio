@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { CancelReservationButton } from "@/components/cancel-reservation-button";
 import { createReservation } from "@/lib/actions/amenities";
 import { hourLabel } from "@/lib/amenities";
+import { formatUnitWithFloor } from "@/lib/format";
 
 type Reservation = {
   id: string;
@@ -18,6 +19,7 @@ type Reservation = {
   reservedByUserId: string;
   reservedByName: string | null;
   unitLabel: string | null;
+  unitFloor: string | null;
 };
 
 type Props = {
@@ -133,7 +135,9 @@ export function AmenityDay({
                         </p>
                         <p className="truncate text-xs text-muted-foreground">
                           {mine ? "Vos" : (r.reservedByName ?? "Vecino")}
-                          {r.unitLabel ? ` · Unidad ${r.unitLabel}` : ""}
+                          {r.unitLabel
+                            ? ` · ${formatUnitWithFloor({ label: r.unitLabel, floor: r.unitFloor })}`
+                            : ""}
                         </p>
                       </div>
                       {canCancel && (

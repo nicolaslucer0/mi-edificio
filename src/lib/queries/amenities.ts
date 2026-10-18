@@ -106,6 +106,7 @@ export type DayReservation = {
   reservedByUserId: string;
   reservedByName: string | null;
   unitLabel: string | null;
+  unitFloor: string | null;
 };
 
 /** Reservas de una amenity en un día, con quién y qué unidad. */
@@ -121,6 +122,7 @@ export async function getReservationsForDay(
       reservedByUserId: amenityReservations.reservedByUserId,
       reservedByName: users.name,
       unitLabel: units.label,
+      unitFloor: units.floor,
     })
     .from(amenityReservations)
     .innerJoin(users, eq(users.id, amenityReservations.reservedByUserId))

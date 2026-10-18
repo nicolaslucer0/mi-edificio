@@ -154,7 +154,7 @@ Si no pediste este acceso, podés ignorar este mensaje.`;
 
 export type ClaimNotificationParams = {
   consorcioId: string;
-  unitLabel: string;
+  unitName: string;
   period: string;
   amountCents: number;
   claimedBy: string;
@@ -171,10 +171,10 @@ export async function sendClaimNotification(
   const periodLabel = formatPeriod(params.period);
   const amountLabel = formatCurrencyCents(params.amountCents);
 
-  const subject = `Pago por validar: ${periodLabel} — Unidad ${params.unitLabel}`;
+  const subject = `Pago por validar: ${periodLabel} — ${params.unitName}`;
 
   const noteLine = params.note ? `\nNotas del vecino: ${params.note}\n` : "";
-  const text = `${params.claimedBy} marcó como pagada la expensa de ${periodLabel} (${amountLabel}) en la unidad ${params.unitLabel}.
+  const text = `${params.claimedBy} marcó como pagada la expensa de ${periodLabel} (${amountLabel}) en ${params.unitName}.
 ${noteLine}
 Ingresá a Mi edificio para validar contra el extracto bancario:
 ${baseUrl}/`;
@@ -185,7 +185,7 @@ ${baseUrl}/`;
 
   const html = `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#18181b;">
 <h2 style="margin:0 0 16px;font-size:20px;">Pago por validar</h2>
-<p style="line-height:1.6;"><strong>${escapeHtml(params.claimedBy)}</strong> marcó como pagada la expensa de <strong>${periodLabel}</strong> (<strong>${amountLabel}</strong>) en la <strong>unidad ${escapeHtml(params.unitLabel)}</strong>.</p>
+<p style="line-height:1.6;"><strong>${escapeHtml(params.claimedBy)}</strong> marcó como pagada la expensa de <strong>${periodLabel}</strong> (<strong>${amountLabel}</strong>) en <strong>${escapeHtml(params.unitName)}</strong>.</p>
 ${noteHtml}
 <p style="margin-top:24px;"><a href="${baseUrl}/" style="display:inline-block;padding:12px 24px;background:#18181b;color:#ffffff;border-radius:8px;text-decoration:none;font-weight:500;">Validar en Mi edificio</a></p>
 <p style="color:#71717a;font-size:13px;line-height:1.5;margin-top:24px;">Validá contra tu extracto bancario antes de confirmar el pago.</p>
@@ -205,7 +205,7 @@ export type PaymentConfirmedParams = {
   to: string;
   period: string;
   amountCents: number;
-  unitLabel: string;
+  unitName: string;
   notificationPrefs: NotificationPrefs | null;
 };
 
@@ -218,13 +218,13 @@ export async function sendPaymentConfirmedEmail(
   const periodLabel = formatPeriod(params.period);
   const amountLabel = formatCurrencyCents(params.amountCents);
   const subject = `Pago confirmado: ${periodLabel}`;
-  const text = `Tu pago de ${periodLabel} (${amountLabel}) en la unidad ${params.unitLabel} fue confirmado por el administrador.
+  const text = `Tu pago de ${periodLabel} (${amountLabel}) en ${params.unitName} fue confirmado por el administrador.
 
 ¡Gracias!`;
 
   const html = `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#18181b;">
 <h2 style="margin:0 0 16px;font-size:20px;">Pago confirmado ✓</h2>
-<p style="line-height:1.6;">Tu pago de <strong>${periodLabel}</strong> (<strong>${amountLabel}</strong>) en la unidad <strong>${escapeHtml(params.unitLabel)}</strong> fue confirmado por el administrador.</p>
+<p style="line-height:1.6;">Tu pago de <strong>${periodLabel}</strong> (<strong>${amountLabel}</strong>) en <strong>${escapeHtml(params.unitName)}</strong> fue confirmado por el administrador.</p>
 <p style="line-height:1.6;">¡Gracias!</p>
 </div>`;
 
@@ -368,7 +368,7 @@ export type PaymentRejectedParams = {
   to: string;
   period: string;
   amountCents: number;
-  unitLabel: string;
+  unitName: string;
   reason: string;
   notificationPrefs: NotificationPrefs | null;
 };
@@ -382,7 +382,7 @@ export async function sendPaymentRejectedEmail(
   const periodLabel = formatPeriod(params.period);
   const amountLabel = formatCurrencyCents(params.amountCents);
   const subject = `Pago rechazado: ${periodLabel}`;
-  const text = `El administrador rechazó tu pago de ${periodLabel} (${amountLabel}) en la unidad ${params.unitLabel}.
+  const text = `El administrador rechazó tu pago de ${periodLabel} (${amountLabel}) en ${params.unitName}.
 
 Motivo: ${params.reason}
 
@@ -391,7 +391,7 @@ ${baseUrl}/expensas`;
 
   const html = `<div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#18181b;">
 <h2 style="margin:0 0 16px;font-size:20px;">Pago rechazado</h2>
-<p style="line-height:1.6;">El administrador rechazó tu pago de <strong>${periodLabel}</strong> (<strong>${amountLabel}</strong>) en la unidad <strong>${escapeHtml(params.unitLabel)}</strong>.</p>
+<p style="line-height:1.6;">El administrador rechazó tu pago de <strong>${periodLabel}</strong> (<strong>${amountLabel}</strong>) en <strong>${escapeHtml(params.unitName)}</strong>.</p>
 <p style="line-height:1.6;"><strong>Motivo:</strong> ${escapeHtml(params.reason)}</p>
 <p style="margin-top:24px;"><a href="${baseUrl}/expensas" style="display:inline-block;padding:12px 24px;background:#18181b;color:#ffffff;border-radius:8px;text-decoration:none;font-weight:500;">Ver tus expensas</a></p>
 <p style="color:#71717a;font-size:13px;line-height:1.5;margin-top:24px;">Cuando resuelvas el problema, volvé a apretar "Ya pagué".</p>

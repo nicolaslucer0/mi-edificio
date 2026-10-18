@@ -31,7 +31,8 @@ type Props = {
   amountCents: number;
   claimAmountCents: number | null;
   paidCents: number;
-  unitLabel: string;
+  /** Con edificio o piso (formatUnitWithFloor). */
+  unitName: string;
   consorcioName: string;
   claimedByName: string | null;
   claimedByEmail: string | null;
@@ -46,7 +47,7 @@ export function ClaimDecisionCard({
   amountCents,
   claimAmountCents,
   paidCents,
-  unitLabel,
+  unitName,
   consorcioName,
   claimedByName,
   claimedByEmail,
@@ -108,7 +109,7 @@ export function ClaimDecisionCard({
           <p className="text-base font-semibold text-balance">
             {claimerLabel}{" "}
             <span className="font-normal text-muted-foreground">
-              · Unidad {unitLabel}
+              · {unitName}
             </span>
           </p>
           <p className="text-xs text-muted-foreground">{consorcioName}</p>

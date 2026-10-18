@@ -23,7 +23,8 @@ import { formatCurrencyCents } from "@/lib/format";
 type Props = {
   depositId: string;
   amountCents: number;
-  unitLabel: string;
+  /** Con edificio o piso (formatUnitWithFloor). */
+  unitName: string;
   consorcioName: string;
   requestedByName: string | null;
   requestedByEmail: string | null;
@@ -35,7 +36,7 @@ type Props = {
 export function DepositDecisionCard({
   depositId,
   amountCents,
-  unitLabel,
+  unitName,
   consorcioName,
   requestedByName,
   requestedByEmail,
@@ -89,7 +90,7 @@ export function DepositDecisionCard({
           <p className="text-base font-semibold text-balance">
             {requesterLabel}{" "}
             <span className="font-normal text-muted-foreground">
-              · Unidad {unitLabel}
+              · {unitName}
             </span>
           </p>
           <p className="text-xs text-muted-foreground">{consorcioName}</p>

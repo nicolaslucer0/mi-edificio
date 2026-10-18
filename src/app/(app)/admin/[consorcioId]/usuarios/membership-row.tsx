@@ -113,7 +113,9 @@ function describeMembership(m: UserMembershipRow): string {
   if (m.role === "admin") {
     return `${role}${consorcioSuffix}`;
   }
-  const unitPart = m.unitLabel ? `Unidad ${m.unitLabel}` : "";
+  const unitPart = m.unitLabel
+    ? formatUnitWithFloor({ label: m.unitLabel, floor: m.unitFloor })
+    : "";
   const consorcioPart = consorcioSuffix;
   return `${role} · ${unitPart}${consorcioPart}`;
 }

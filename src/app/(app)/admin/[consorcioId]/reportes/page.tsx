@@ -12,7 +12,12 @@ import {
   isValidPeriod,
   summarizeReport,
 } from "@/lib/reports";
-import { currentPeriod, formatCurrencyCents, formatPeriod } from "@/lib/format";
+import {
+  currentPeriod,
+  formatCurrencyCents,
+  formatPeriod,
+  formatUnitWithFloor,
+} from "@/lib/format";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -247,7 +252,12 @@ export default async function ReportesPage({
                     key={u.unitId}
                     className="flex items-center justify-between px-5 py-3"
                   >
-                    <span className="text-sm">Unidad {u.unitLabel}</span>
+                    <span className="text-sm">
+                      {formatUnitWithFloor({
+                        label: u.unitLabel,
+                        floor: u.unitFloor,
+                      })}
+                    </span>
                     <span className="text-sm font-semibold tabular-nums text-success">
                       {formatCurrencyCents(u.creditCents)}
                     </span>

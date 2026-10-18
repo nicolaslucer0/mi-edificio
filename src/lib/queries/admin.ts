@@ -52,6 +52,7 @@ export async function getPendingClaimsForAdmin(
       amountCents: expenses.amountCents,
       paidCents: expenses.paidCents,
       unitLabel: units.label,
+      unitFloor: units.floor,
       consorcioId: consorcios.id,
       consorcioName: consorcios.name,
       claimedByName: users.name,
@@ -90,6 +91,7 @@ export async function getPendingCreditDepositsForAdmin(
       receiptUrl: creditDeposits.receiptUrl,
       createdAt: creditDeposits.createdAt,
       unitLabel: units.label,
+      unitFloor: units.floor,
       consorcioId: consorcios.id,
       consorcioName: consorcios.name,
       requestedByName: users.name,
@@ -109,11 +111,12 @@ export async function getUnitCreditsForConsorcio(consorcioId: string) {
     .select({
       unitId: units.id,
       unitLabel: units.label,
+      unitFloor: units.floor,
       creditCents: units.creditCents,
     })
     .from(units)
     .where(and(eq(units.consorcioId, consorcioId), gt(units.creditCents, 0)))
-    .orderBy(units.label);
+    .orderBy(units.floor, units.label);
 }
 
 export type AdminConsorcio = {

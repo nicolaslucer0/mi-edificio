@@ -1,6 +1,7 @@
 import { ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/session";
+import { formatUnitWithFloor } from "@/lib/format";
 import {
   getPendingClaimsForAdmin,
   getPendingCreditDepositsForAdmin,
@@ -75,7 +76,10 @@ export default async function AprobarPagosPage({
                       <DepositDecisionCard
                         depositId={deposit.depositId}
                         amountCents={deposit.amountCents}
-                        unitLabel={deposit.unitLabel}
+                        unitName={formatUnitWithFloor({
+                          label: deposit.unitLabel,
+                          floor: deposit.unitFloor,
+                        })}
                         consorcioName={deposit.consorcioName}
                         requestedByName={deposit.requestedByName}
                         requestedByEmail={deposit.requestedByEmail}
@@ -112,7 +116,10 @@ export default async function AprobarPagosPage({
                         amountCents={claim.amountCents}
                         claimAmountCents={claim.claimAmountCents}
                         paidCents={claim.paidCents}
-                        unitLabel={claim.unitLabel}
+                        unitName={formatUnitWithFloor({
+                          label: claim.unitLabel,
+                          floor: claim.unitFloor,
+                        })}
                         consorcioName={claim.consorcioName}
                         claimedByName={claim.claimedByName}
                         claimedByEmail={claim.claimedByEmail}

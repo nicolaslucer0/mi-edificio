@@ -19,11 +19,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { requestCreditDeposit } from "@/lib/actions/expensas";
-import { formatCurrencyCents } from "@/lib/format";
+import { formatCurrencyCents, formatUnitWithFloor } from "@/lib/format";
 
 type UnitCredit = {
   unitId: string;
   unitLabel: string;
+  unitFloor: string | null;
   creditCents: number;
 };
 
@@ -132,7 +133,10 @@ export function CreditPanel({ units }: Readonly<{ units: UnitCredit[] }>) {
                   >
                     {units.map((u) => (
                       <option key={u.unitId} value={u.unitId}>
-                        Unidad {u.unitLabel}
+                        {formatUnitWithFloor({
+                          label: u.unitLabel,
+                          floor: u.unitFloor,
+                        })}
                       </option>
                     ))}
                   </select>
